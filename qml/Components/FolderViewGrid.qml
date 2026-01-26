@@ -30,6 +30,8 @@ Item {
     readonly property int currentIndex: grid.currentIndex
     readonly property real contentY: grid.contentY
     readonly property bool gridActiveFocus: grid.activeFocus
+    readonly property int minimumPageRows: 1
+    readonly property int pageRows: Math.max(minimumPageRows, Math.floor(grid.height / grid.cellHeight))
     property int contextMenuIndex: -1
     signal viewSyncRequested()
     signal copyLeftRequested()
@@ -108,6 +110,17 @@ Item {
             activeFocusOnTab: true
             highlightFollowsCurrentItem: false
             highlight: null
+            ScrollBar.vertical: ScrollBar {
+                id: verticalScrollBar
+                policy: ScrollBar.AsNeeded
+                onPressedChanged: {
+                    if (pressed) {
+                        root.unlockScroll()
+                    } else {
+                        root.lockScroll()
+                    }
+                }
+            }
             onContentYChanged: {
                 if (root.scrollLockEnabled && root.scrollLockActive && !root.applyingScrollLock) {
                     if (Math.abs(grid.contentY - root.lockedContentY) > 0.5) {
@@ -180,6 +193,12 @@ Item {
                 } else if (event.key === Qt.Key_Down) {
                     const cols = Math.max(1, Math.floor(grid.width / grid.cellWidth))
                     next = Math.min(grid.count - 1, current + cols)
+                } else if (event.key === Qt.Key_PageUp) {
+                    const cols = Math.max(1, Math.floor(grid.width / grid.cellWidth))
+                    next = Math.max(0, current - (cols * root.pageRows))
+                } else if (event.key === Qt.Key_PageDown) {
+                    const cols = Math.max(1, Math.floor(grid.width / grid.cellWidth))
+                    next = Math.min(grid.count - 1, current + (cols * root.pageRows))
                 } else if (event.key === Qt.Key_Home) {
                     next = 0
                 } else if (event.key === Qt.Key_End) {
@@ -291,6 +310,7 @@ Item {
         MouseArea {
             id: rubberBandArea
             anchors.fill: parent
+            anchors.rightMargin: verticalScrollBar.implicitWidth
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
             z: 4
@@ -445,7 +465,7 @@ Item {
                 contextMenu.popup(point.x, point.y)
             }
 
-            onPressed: {
+            onPressed: (mouse) => {
                 grid.forceActiveFocus()
                 startX = mouseX
                 startY = mouseY

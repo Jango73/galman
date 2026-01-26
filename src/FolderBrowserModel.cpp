@@ -38,6 +38,7 @@
 
 #include "CopyWorker.h"
 #include "PlatformUtils.h"
+#include "TrashWorker.h"
 
 namespace {
 
@@ -196,6 +197,12 @@ bool fileInfoEquivalent(const QFileInfo &left, const QFileInfo &right)
         && left.lastModified() == right.lastModified();
 }
 
+struct FolderBrowserTrashConstants {
+    static constexpr int emptyCount = 0;
+    static constexpr qreal zeroProgress = 0.0;
+    static constexpr bool pendingTrue = true;
+};
+
 } // namespace
 
 /**
@@ -210,14 +217,14 @@ FolderBrowserModel::FolderBrowserModel(QObject *parent)
     connect(&m_refreshTimer, &QTimer::timeout, this, &FolderBrowserModel::refresh);
 
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this](const QString &) {
-        if (m_copyInProgress) {
+        if (m_copyInProgress || m_trashInProgress) {
             m_pendingWatcherRefresh = true;
             return;
         }
         scheduleRefresh();
     });
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this](const QString &) {
-        if (m_copyInProgress) {
+        if (m_copyInProgress || m_trashInProgress) {
             m_pendingWatcherRefresh = true;
             return;
         }
@@ -438,6 +445,24 @@ bool FolderBrowserModel::copyInProgress() const
 qreal FolderBrowserModel::copyProgress() const
 {
     return m_copyProgress;
+}
+
+/**
+ * @brief Returns whether a trash operation is in progress.
+ * @return True when trashing is active, false otherwise.
+ */
+bool FolderBrowserModel::trashInProgress() const
+{
+    return m_trashInProgress;
+}
+
+/**
+ * @brief Returns the current trash progress ratio.
+ * @return Trash progress in the range 0.0 to 1.0.
+ */
+qreal FolderBrowserModel::trashProgress() const
+{
+    return m_trashProgress;
 }
 
 /**
@@ -1089,49 +1114,81 @@ void FolderBrowserModel::cancelCopy()
 }
 
 /**
- * @brief Moves selected items to trash or deletes them.
- * @return Result map including ok, moved, failed, and error fields.
+ * @brief Starts an asynchronous move of selected items to trash.
+ * @return Result map indicating the operation was started.
  */
 QVariantMap FolderBrowserModel::moveSelectedToTrash()
 {
     QVariantMap result;
-    result.insert("ok", false);
-
-    int moved = 0;
-    int failed = 0;
-    QString firstError;
-
-    for (const QString &path : m_selectedPaths) {
-        if (!QFileInfo::exists(path)) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = tr("Source not found");
-            }
-            continue;
-        }
-        QString error;
-        if (!PlatformUtils::moveToTrashOrDelete(path, &error)) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = error.isEmpty() ? tr("Failed to move to trash") : error;
-            }
-            continue;
-        }
-        moved += 1;
+    const bool hasSelection = !m_selectedPaths.isEmpty();
+    if (!hasSelection) {
+        result.insert("ok", false);
+        result.insert("error", tr("Nothing to delete"));
+        return result;
     }
-
-    result.insert("moved", moved);
-    result.insert("failed", failed);
-    if (!firstError.isEmpty()) {
-        result.insert("error", firstError);
-    }
-    result.insert("ok", failed == 0);
-
-    if (moved > 0) {
-        refresh();
-    }
-    clearSelection();
+    startMoveSelectedToTrash();
+    result.insert("ok", true);
+    result.insert("pending", FolderBrowserTrashConstants::pendingTrue);
     return result;
+}
+
+/**
+ * @brief Starts an asynchronous trash operation for selected items.
+ */
+void FolderBrowserModel::startMoveSelectedToTrash()
+{
+    if (m_trashInProgress) {
+        return;
+    }
+    const QStringList paths = m_selectedPaths;
+    if (paths.isEmpty()) {
+        QVariantMap result;
+        result.insert("ok", false);
+        result.insert("error", tr("Nothing to delete"));
+        emit trashFinished(result);
+        return;
+    }
+
+    auto *thread = new QThread(this);
+    auto *worker = new TrashWorker(paths);
+    worker->moveToThread(thread);
+
+    m_trashThread = thread;
+    m_trashWorker = worker;
+    setTrashInProgress(true);
+    updateTrashProgress(FolderBrowserTrashConstants::emptyCount, paths.size());
+
+    connect(thread, &QThread::started, worker, &TrashWorker::start);
+    connect(worker, &TrashWorker::progress, this, &FolderBrowserModel::updateTrashProgress);
+    connect(worker, &TrashWorker::finished, this, [this, thread](const QVariantMap &result) {
+        setTrashInProgress(false);
+        updateTrashProgress(FolderBrowserTrashConstants::emptyCount, FolderBrowserTrashConstants::emptyCount);
+        emit trashFinished(result);
+
+        const int moved = result.value("moved").toInt();
+        if (moved > FolderBrowserTrashConstants::emptyCount) {
+            refresh();
+        }
+        clearSelection();
+
+        m_trashWorker = nullptr;
+        m_trashThread = nullptr;
+        thread->quit();
+    });
+    connect(thread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+/**
+ * @brief Requests cancellation of the current trash operation.
+ */
+void FolderBrowserModel::cancelTrash()
+{
+    if (!m_trashWorker) {
+        return;
+    }
+    QMetaObject::invokeMethod(m_trashWorker, "cancel", Qt::QueuedConnection);
 }
 
 /**
@@ -1192,7 +1249,7 @@ void FolderBrowserModel::setCopyInProgress(bool inProgress)
     }
     m_copyInProgress = inProgress;
     emit copyInProgressChanged();
-    if (!m_copyInProgress && m_pendingWatcherRefresh) {
+    if (!m_copyInProgress && !m_trashInProgress && m_pendingWatcherRefresh) {
         m_pendingWatcherRefresh = false;
         scheduleRefresh();
     }
@@ -1209,10 +1266,45 @@ void FolderBrowserModel::updateCopyProgress(int completed, int total)
     m_copyTotal = total;
     const qreal nextProgress = total > 0
         ? static_cast<qreal>(completed) / static_cast<qreal>(total)
-        : 0.0;
+        : FolderBrowserTrashConstants::zeroProgress;
     if (!qFuzzyCompare(m_copyProgress, nextProgress)) {
         m_copyProgress = nextProgress;
         emit copyProgressChanged();
+    }
+}
+
+/**
+ * @brief Updates the trash-in-progress state and schedules refresh if needed.
+ * @param inProgress True when trash is active, false otherwise.
+ */
+void FolderBrowserModel::setTrashInProgress(bool inProgress)
+{
+    if (m_trashInProgress == inProgress) {
+        return;
+    }
+    m_trashInProgress = inProgress;
+    emit trashInProgressChanged();
+    if (!m_trashInProgress && !m_copyInProgress && m_pendingWatcherRefresh) {
+        m_pendingWatcherRefresh = false;
+        scheduleRefresh();
+    }
+}
+
+/**
+ * @brief Updates trash counters and emits progress when it changes.
+ * @param completed Number of completed entries.
+ * @param total Total number of entries to trash.
+ */
+void FolderBrowserModel::updateTrashProgress(int completed, int total)
+{
+    m_trashCompleted = completed;
+    m_trashTotal = total;
+    const qreal nextProgress = total > FolderBrowserTrashConstants::emptyCount
+        ? static_cast<qreal>(completed) / static_cast<qreal>(total)
+        : FolderBrowserTrashConstants::zeroProgress;
+    if (!qFuzzyCompare(m_trashProgress, nextProgress)) {
+        m_trashProgress = nextProgress;
+        emit trashProgressChanged();
     }
 }
 

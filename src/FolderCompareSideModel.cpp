@@ -37,6 +37,7 @@
 #include "CopyWorker.h"
 #include "FolderCompareModel.h"
 #include "PlatformUtils.h"
+#include "TrashWorker.h"
 
 namespace {
 
@@ -56,6 +57,12 @@ void applyFileTimes(const QFileInfo &sourceInfo, const QString &targetPath)
     }
     targetFile.close();
 }
+
+struct FolderCompareTrashConstants {
+    static constexpr int emptyCount = 0;
+    static constexpr qreal zeroProgress = 0.0;
+    static constexpr bool pendingTrue = true;
+};
 
 /**
  * @brief Copies a folder recursively from source to target.
@@ -389,6 +396,24 @@ bool FolderCompareSideModel::copyInProgress() const
 qreal FolderCompareSideModel::copyProgress() const
 {
     return m_copyProgress;
+}
+
+/**
+ * @brief Returns whether a trash operation is in progress.
+ * @return True when trashing is active, false otherwise.
+ */
+bool FolderCompareSideModel::trashInProgress() const
+{
+    return m_trashInProgress;
+}
+
+/**
+ * @brief Returns the current trash progress ratio.
+ * @return Trash progress in the range 0.0 to 1.0.
+ */
+qreal FolderCompareSideModel::trashProgress() const
+{
+    return m_trashProgress;
 }
 
 /**
@@ -1021,19 +1046,36 @@ void FolderCompareSideModel::cancelCopy()
 }
 
 /**
- * @brief Moves selected items to trash or deletes them.
- * @return Result map including ok, moved, failed, and error fields.
+ * @brief Starts an asynchronous move of selected items to trash.
+ * @return Result map indicating the operation was started.
  */
 QVariantMap FolderCompareSideModel::moveSelectedToTrash()
 {
     QVariantMap result;
-    result.insert("ok", false);
+    if (m_selectedIds.isEmpty()) {
+        result.insert("ok", false);
+        result.insert("error", tr("Nothing to delete"));
+        return result;
+    }
+    startMoveSelectedToTrash();
+    result.insert("ok", true);
+    result.insert("pending", FolderCompareTrashConstants::pendingTrue);
+    return result;
+}
 
-    int moved = 0;
-    int failed = 0;
-    QString firstError;
-    QStringList touchedPaths;
+/**
+ * @brief Starts an asynchronous trash operation for selected items.
+ */
+void FolderCompareSideModel::startMoveSelectedToTrash()
+{
+    if (m_trashInProgress) {
+        return;
+    }
 
+    QStringList paths;
+    paths.reserve(m_selectedIds.size());
+    int preFailed = FolderCompareTrashConstants::emptyCount;
+    QString preError;
     for (const QString &id : m_selectedIds) {
         auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
             return entry.id == id;
@@ -1043,47 +1085,89 @@ QVariantMap FolderCompareSideModel::moveSelectedToTrash()
         }
         const CompareEntry &entry = *it;
         if (entry.isGhost) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = tr("Cannot trash ghost items");
+            preFailed += 1;
+            if (preError.isEmpty()) {
+                preError = tr("Cannot trash ghost items");
             }
             continue;
         }
         if (entry.filePath.isEmpty() || !QFileInfo::exists(entry.filePath)) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = tr("Source not found");
+            preFailed += 1;
+            if (preError.isEmpty()) {
+                preError = tr("Source not found");
             }
             continue;
         }
-        touchedPaths.append(entry.filePath);
-        QString error;
-        if (!PlatformUtils::moveToTrashOrDelete(entry.filePath, &error)) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = error.isEmpty() ? tr("Failed to move to trash") : error;
+        paths.append(entry.filePath);
+    }
+
+    if (paths.isEmpty()) {
+        QVariantMap result;
+        result.insert("ok", false);
+        result.insert("failed", preFailed);
+        if (!preError.isEmpty()) {
+            result.insert("error", preError);
+        }
+        emit trashFinished(result);
+        clearSelection();
+        return;
+    }
+
+    auto *thread = new QThread(this);
+    auto *worker = new TrashWorker(paths);
+    worker->moveToThread(thread);
+
+    m_trashThread = thread;
+    m_trashWorker = worker;
+    setTrashInProgress(true);
+    updateTrashProgress(FolderCompareTrashConstants::emptyCount, paths.size());
+
+    connect(thread, &QThread::started, worker, &TrashWorker::start);
+    connect(worker, &TrashWorker::progress, this, &FolderCompareSideModel::updateTrashProgress);
+    connect(worker, &TrashWorker::finished, this, [this, thread, preFailed, preError](QVariantMap result) {
+        int failed = result.value("failed").toInt();
+        failed += preFailed;
+        result.insert("failed", failed);
+        if (!preError.isEmpty() && !result.contains("error")) {
+            result.insert("error", preError);
+        }
+        if (failed > FolderCompareTrashConstants::emptyCount || result.value("cancelled").toBool()) {
+            result.insert("ok", false);
+        }
+
+        setTrashInProgress(false);
+        updateTrashProgress(FolderCompareTrashConstants::emptyCount, FolderCompareTrashConstants::emptyCount);
+        emit trashFinished(result);
+
+        const int moved = result.value("moved").toInt();
+        const QStringList touchedPaths = result.value("touchedPaths").toStringList();
+        if (moved > FolderCompareTrashConstants::emptyCount && m_compareModel) {
+            if (m_side == FolderCompareModel::Left) {
+                m_compareModel->refreshFiles(touchedPaths, {});
+            } else {
+                m_compareModel->refreshFiles({}, touchedPaths);
             }
-            continue;
         }
-        moved += 1;
-    }
+        clearSelection();
 
-    result.insert("moved", moved);
-    result.insert("failed", failed);
-    if (!firstError.isEmpty()) {
-        result.insert("error", firstError);
-    }
-    result.insert("ok", failed == 0);
+        m_trashWorker = nullptr;
+        m_trashThread = nullptr;
+        thread->quit();
+    });
+    connect(thread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
 
-    if (moved > 0 && m_compareModel) {
-        if (m_side == FolderCompareModel::Left) {
-            m_compareModel->refreshFiles(touchedPaths, {});
-        } else {
-            m_compareModel->refreshFiles({}, touchedPaths);
-        }
+/**
+ * @brief Requests cancellation of the current trash operation.
+ */
+void FolderCompareSideModel::cancelTrash()
+{
+    if (!m_trashWorker) {
+        return;
     }
-    clearSelection();
-    return result;
+    QMetaObject::invokeMethod(m_trashWorker, "cancel", Qt::QueuedConnection);
 }
 
 /**
@@ -1173,10 +1257,41 @@ void FolderCompareSideModel::updateCopyProgress(int completed, int total)
     m_copyTotal = total;
     const qreal nextProgress = total > 0
         ? static_cast<qreal>(completed) / static_cast<qreal>(total)
-        : 0.0;
+        : FolderCompareTrashConstants::zeroProgress;
     if (!qFuzzyCompare(m_copyProgress, nextProgress)) {
         m_copyProgress = nextProgress;
         emit copyProgressChanged();
+    }
+}
+
+/**
+ * @brief Updates the trash-in-progress state and emits change notification.
+ * @param inProgress True when trash is active, false otherwise.
+ */
+void FolderCompareSideModel::setTrashInProgress(bool inProgress)
+{
+    if (m_trashInProgress == inProgress) {
+        return;
+    }
+    m_trashInProgress = inProgress;
+    emit trashInProgressChanged();
+}
+
+/**
+ * @brief Updates trash counters and emits progress when it changes.
+ * @param completed Number of completed entries.
+ * @param total Total number of entries to trash.
+ */
+void FolderCompareSideModel::updateTrashProgress(int completed, int total)
+{
+    m_trashCompleted = completed;
+    m_trashTotal = total;
+    const qreal nextProgress = total > FolderCompareTrashConstants::emptyCount
+        ? static_cast<qreal>(completed) / static_cast<qreal>(total)
+        : FolderCompareTrashConstants::zeroProgress;
+    if (!qFuzzyCompare(m_trashProgress, nextProgress)) {
+        m_trashProgress = nextProgress;
+        emit trashProgressChanged();
     }
 }
 

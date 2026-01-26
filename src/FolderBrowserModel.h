@@ -12,6 +12,7 @@
 
 class QThread;
 class CopyWorker;
+class TrashWorker;
 
 class FolderBrowserModel : public QAbstractListModel
 {
@@ -29,6 +30,8 @@ class FolderBrowserModel : public QAbstractListModel
     Q_PROPERTY(bool selectedIsImage READ selectedIsImage NOTIFY selectedIsImageChanged)
     Q_PROPERTY(bool copyInProgress READ copyInProgress NOTIFY copyInProgressChanged)
     Q_PROPERTY(qreal copyProgress READ copyProgress NOTIFY copyProgressChanged)
+    Q_PROPERTY(bool trashInProgress READ trashInProgress NOTIFY trashInProgressChanged)
+    Q_PROPERTY(qreal trashProgress READ trashProgress NOTIFY trashProgressChanged)
 
 public:
     enum SortKey {
@@ -77,6 +80,8 @@ public:
     bool selectedIsImage() const;
     bool copyInProgress() const;
     qreal copyProgress() const;
+    bool trashInProgress() const;
+    qreal trashProgress() const;
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
@@ -104,6 +109,8 @@ public:
     Q_INVOKABLE void startCopySelectedTo(const QString &targetDir);
     Q_INVOKABLE void cancelCopy();
     Q_INVOKABLE QVariantMap moveSelectedToTrash();
+    Q_INVOKABLE void startMoveSelectedToTrash();
+    Q_INVOKABLE void cancelTrash();
     Q_INVOKABLE QVariantMap renamePath(const QString &path, const QString &newName);
 
 signals:
@@ -119,6 +126,9 @@ signals:
     void copyInProgressChanged();
     void copyProgressChanged();
     void copyFinished(QVariantMap result);
+    void trashInProgressChanged();
+    void trashProgressChanged();
+    void trashFinished(QVariantMap result);
 
     void folderActivated(const QString &path);
     void fileActivated(const QString &path);
@@ -127,6 +137,8 @@ private:
     void setLoading(bool loading);
     void setCopyInProgress(bool inProgress);
     void updateCopyProgress(int completed, int total);
+    void setTrashInProgress(bool inProgress);
+    void updateTrashProgress(int completed, int total);
     void scheduleRefresh();
     void updateFileWatchers(const QVector<QFileInfo> &entries);
     void applyEntriesIncremental(const QVector<QFileInfo> &entries);
@@ -148,6 +160,12 @@ private:
     qreal m_copyProgress = 0.0;
     QThread *m_copyThread = nullptr;
     CopyWorker *m_copyWorker = nullptr;
+    bool m_trashInProgress = false;
+    int m_trashCompleted = 0;
+    int m_trashTotal = 0;
+    qreal m_trashProgress = 0.0;
+    QThread *m_trashThread = nullptr;
+    TrashWorker *m_trashWorker = nullptr;
 
     QVector<QFileInfo> m_entries;
     QFileSystemWatcher m_watcher;

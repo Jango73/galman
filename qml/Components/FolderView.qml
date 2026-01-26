@@ -15,6 +15,7 @@ FocusScope {
     signal selectionChanged(var paths)
     signal viewSyncRequested()
     signal trashConfirmationRequested(int itemCount)
+    signal trashFinished(var result)
     signal copyLeftRequested()
     signal copyRightRequested()
     signal copyFinished(var result)
@@ -52,6 +53,7 @@ FocusScope {
     property string selectedImagePath: ""
     property int selectedCompareStatus: 0
     property bool selectedGhost: false
+    readonly property bool pendingTrue: true
     readonly property int statusPending: 1
     readonly property int statusIdentical: 2
     readonly property int statusDifferent: 3
@@ -374,10 +376,17 @@ FocusScope {
     }
 
     function trashSelected() {
-        if (browserModel) {
+        if (!browserModel) {
+            return { "ok": false, "error": "No model" }
+        }
+        if (browserModel.startMoveSelectedToTrash) {
+            browserModel.startMoveSelectedToTrash()
+            return { "ok": true, "pending": pendingTrue }
+        }
+        if (browserModel.moveSelectedToTrash) {
             return browserModel.moveSelectedToTrash()
         }
-        return { "ok": false, "error": "No model" }
+        return { "ok": false, "error": "Trash not supported" }
     }
 
     function requestRenameSelected() {
@@ -509,6 +518,9 @@ FocusScope {
         target: browserModel
         function onCopyFinished(result) {
             root.copyFinished(result)
+        }
+        function onTrashFinished(result) {
+            root.trashFinished(result)
         }
         function onLoadingChanged() {
             if (!root.browserModel) {

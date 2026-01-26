@@ -528,38 +528,30 @@ FolderCompareModel::FolderCompareModel(QObject *parent)
     m_rightModel = new FolderCompareSideModel(this, Right, this);
     m_leftModel->setHideIdentical(m_hideIdentical);
     m_rightModel->setHideIdentical(m_hideIdentical);
-    connect(m_leftModel, &FolderCompareSideModel::copyInProgressChanged, this, [this]() {
-        if (!isCopyInProgress() && (m_pendingWatcherFullRefresh || !m_pendingWatcherLeftPaths.isEmpty() || !m_pendingWatcherRightPaths.isEmpty())) {
-            if (m_pendingWatcherFullRefresh) {
-                m_pendingWatcherFullRefresh = false;
-                m_pendingWatcherLeftPaths.clear();
-                m_pendingWatcherRightPaths.clear();
-                requestRefresh();
-                return;
-            }
-            const QStringList leftPaths = QStringList(m_pendingWatcherLeftPaths.begin(), m_pendingWatcherLeftPaths.end());
-            const QStringList rightPaths = QStringList(m_pendingWatcherRightPaths.begin(), m_pendingWatcherRightPaths.end());
+    const auto handleSideOperationChanged = [this]() {
+        const bool hasPending = m_pendingWatcherFullRefresh
+            || !m_pendingWatcherLeftPaths.isEmpty()
+            || !m_pendingWatcherRightPaths.isEmpty();
+        if (isCopyInProgress() || !hasPending) {
+            return;
+        }
+        if (m_pendingWatcherFullRefresh) {
+            m_pendingWatcherFullRefresh = false;
             m_pendingWatcherLeftPaths.clear();
             m_pendingWatcherRightPaths.clear();
-            refreshFiles(leftPaths, rightPaths);
+            requestRefresh();
+            return;
         }
-    });
-    connect(m_rightModel, &FolderCompareSideModel::copyInProgressChanged, this, [this]() {
-        if (!isCopyInProgress() && (m_pendingWatcherFullRefresh || !m_pendingWatcherLeftPaths.isEmpty() || !m_pendingWatcherRightPaths.isEmpty())) {
-            if (m_pendingWatcherFullRefresh) {
-                m_pendingWatcherFullRefresh = false;
-                m_pendingWatcherLeftPaths.clear();
-                m_pendingWatcherRightPaths.clear();
-                requestRefresh();
-                return;
-            }
-            const QStringList leftPaths = QStringList(m_pendingWatcherLeftPaths.begin(), m_pendingWatcherLeftPaths.end());
-            const QStringList rightPaths = QStringList(m_pendingWatcherRightPaths.begin(), m_pendingWatcherRightPaths.end());
-            m_pendingWatcherLeftPaths.clear();
-            m_pendingWatcherRightPaths.clear();
-            refreshFiles(leftPaths, rightPaths);
-        }
-    });
+        const QStringList leftPaths = QStringList(m_pendingWatcherLeftPaths.begin(), m_pendingWatcherLeftPaths.end());
+        const QStringList rightPaths = QStringList(m_pendingWatcherRightPaths.begin(), m_pendingWatcherRightPaths.end());
+        m_pendingWatcherLeftPaths.clear();
+        m_pendingWatcherRightPaths.clear();
+        refreshFiles(leftPaths, rightPaths);
+    };
+    connect(m_leftModel, &FolderCompareSideModel::copyInProgressChanged, this, handleSideOperationChanged);
+    connect(m_rightModel, &FolderCompareSideModel::copyInProgressChanged, this, handleSideOperationChanged);
+    connect(m_leftModel, &FolderCompareSideModel::trashInProgressChanged, this, handleSideOperationChanged);
+    connect(m_rightModel, &FolderCompareSideModel::trashInProgressChanged, this, handleSideOperationChanged);
 
     m_refreshTimer.setInterval(150);
     m_refreshTimer.setSingleShot(true);
@@ -964,7 +956,9 @@ bool FolderCompareModel::isCopyInProgress() const
 {
     const bool leftCopying = m_leftModel && m_leftModel->copyInProgress();
     const bool rightCopying = m_rightModel && m_rightModel->copyInProgress();
-    return leftCopying || rightCopying;
+    const bool leftTrashing = m_leftModel && m_leftModel->trashInProgress();
+    const bool rightTrashing = m_rightModel && m_rightModel->trashInProgress();
+    return leftCopying || rightCopying || leftTrashing || rightTrashing;
 }
 
 /**

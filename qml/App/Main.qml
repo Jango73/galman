@@ -53,6 +53,8 @@ ApplicationWindow {
     property var activeCopyTargetPane: null
     property var activeCopySourcePaths: []
     property bool activeCopyCompare: false
+    property var activeTrashSourcePane: null
+    property var activeTrashSourcePaths: []
 
     function syncBrowserState(source, target) {
         if (!compareModel.enabled || compareModel.loading || compareSyncing || !source || !target) {
@@ -172,6 +174,20 @@ ApplicationWindow {
         }
     }
 
+    function startTrashSelection(sourcePane) {
+        if (!sourcePane) {
+            return
+        }
+        activeTrashSourcePane = sourcePane
+        activeTrashSourcePaths = sourcePane.selectedPaths()
+        const result = sourcePane.trashSelected()
+        if (result && result.error) {
+            pushError(result.error)
+            activeTrashSourcePane = null
+            activeTrashSourcePaths = []
+        }
+    }
+
     function refreshDisplays() {
         if (comparePreview && comparePreview.refreshImages) {
             comparePreview.refreshImages()
@@ -224,6 +240,29 @@ ApplicationWindow {
         activeCopyTargetPane = null
         activeCopySourcePaths = []
         activeCopyCompare = false
+    }
+
+    function handleTrashFinished(sourcePane, result) {
+        if (sourcePane !== activeTrashSourcePane) {
+            return
+        }
+        if (result && result.error) {
+            pushError(result.error)
+        }
+        const moved = result && result.moved ? result.moved : emptyItemCount
+        if (moved > emptyItemCount && !result.cancelled) {
+            const hasSingleItem = activeTrashSourcePaths
+                && activeTrashSourcePaths.length === singleItemCount
+            if (hasSingleItem) {
+                const deletedName = baseNameFromPath(activeTrashSourcePaths[emptyItemCount])
+                pushStatus(qsTr("Deleted: %1").arg(deletedName))
+            } else {
+                pushStatus(qsTr("Delete completed"))
+            }
+            refreshDisplays()
+        }
+        activeTrashSourcePane = null
+        activeTrashSourcePaths = []
     }
 
     function buildTargetPaths(sourcePaths, targetDir) {
@@ -386,14 +425,6 @@ ApplicationWindow {
         }
 
         Menu {
-            title: qsTr("Help")
-            MenuItem {
-                text: qsTr("Shortcuts")
-                onTriggered: shortcutsDialog.open()
-            }
-        }
-
-        Menu {
             id: languageMenu
             title: qsTr("Language")
             Instantiator {
@@ -410,6 +441,14 @@ ApplicationWindow {
                 }
                 onObjectAdded: (index, object) => languageMenu.addItem(object)
                 onObjectRemoved: (index, object) => languageMenu.removeItem(object)
+            }
+        }
+
+        Menu {
+            title: qsTr("Help")
+            MenuItem {
+                text: qsTr("Shortcuts")
+                onTriggered: shortcutsDialog.open()
             }
         }
     }
@@ -702,12 +741,18 @@ ApplicationWindow {
                 function onCopyFinished(result) {
                     handleCopyFinished(leftBrowser, result)
                 }
+                function onTrashFinished(result) {
+                    handleTrashFinished(leftBrowser, result)
+                }
             }
 
             Connections {
                 target: rightBrowser
                 function onCopyFinished(result) {
                     handleCopyFinished(rightBrowser, result)
+                }
+                function onTrashFinished(result) {
+                    handleTrashFinished(rightBrowser, result)
                 }
             }
 
@@ -809,15 +854,12 @@ ApplicationWindow {
     ConfirmDialog {
         id: confirmDialog
         parent: window.contentItem
-        onTrashConfirmed: {
+        onTrashConfirmed: (sourcePane) => {
             if (sourcePane) {
-                const result = sourcePane.trashSelected()
-                if (result && result.error) {
-                    pushError(result.error)
-                }
+                startTrashSelection(sourcePane)
             }
         }
-        onCopyConfirmed: {
+        onCopyConfirmed: (sourcePane, targetPane) => {
             if (!sourcePane || !targetPane) {
                 return
             }
