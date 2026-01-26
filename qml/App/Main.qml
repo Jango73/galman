@@ -16,6 +16,8 @@ ApplicationWindow {
     property var errorQueue: []
     property string currentError: ""
     property bool statusActive: false
+    property int emptyItemCount: 0
+    property int singleItemCount: 1
     property bool copyInProgress: leftBrowser.copyInProgress || rightBrowser.copyInProgress
     property real copyProgress: leftBrowser.copyInProgress
         ? leftBrowser.copyProgress
@@ -167,6 +169,15 @@ ApplicationWindow {
         }
     }
 
+    function refreshDisplays() {
+        if (comparePreview && comparePreview.refreshImages) {
+            comparePreview.refreshImages()
+        }
+        if (singlePreview && singlePreview.refreshImages) {
+            singlePreview.refreshImages()
+        }
+    }
+
     function handleCopyFinished(sourcePane, result) {
         if (sourcePane !== activeCopySourcePane) {
             return
@@ -175,17 +186,36 @@ ApplicationWindow {
             pushError(result.error)
         }
         const copied = result && result.copied ? result.copied : 0
-        if (copied > 0 && activeCopyTargetPane) {
+        const targetPaths = copied > emptyItemCount && activeCopyTargetPane
+            ? buildTargetPaths(activeCopySourcePaths, activeCopyTargetPane.currentPath)
+            : []
+        if (copied > emptyItemCount && !result.cancelled) {
+            const hasSingleItem = activeCopySourcePaths
+                && activeCopySourcePaths.length === singleItemCount
+            if (hasSingleItem && activeCopyTargetPane) {
+                const destinationPath = targetPaths.length > emptyItemCount ? targetPaths[emptyItemCount] : ""
+                if (destinationPath !== "") {
+                    pushStatus(qsTr("Copy completed: %1").arg(destinationPath))
+                } else {
+                    pushStatus(qsTr("Copy completed"))
+                }
+            } else {
+                pushStatus(qsTr("Copy completed"))
+            }
+        }
+        if (copied > emptyItemCount && activeCopyTargetPane) {
             if (activeCopyCompare) {
-                const targetPaths = buildTargetPaths(activeCopySourcePaths, activeCopyTargetPane.currentPath)
                 if (sourcePane === leftBrowser) {
                     compareModel.refreshFiles([], targetPaths)
                 } else {
                     compareModel.refreshFiles(targetPaths, [])
                 }
             } else {
-                activeCopyTargetPane.refresh()
+                activeCopyTargetPane.refreshPaths(targetPaths)
             }
+        }
+        if (copied > emptyItemCount && !result.cancelled) {
+            refreshDisplays()
         }
         activeCopySourcePane = null
         activeCopyTargetPane = null
@@ -259,9 +289,6 @@ ApplicationWindow {
         repeat: false
         onTriggered: {
             statusActive = false
-            if (errorQueue.length === 0) {
-                currentError = ""
-            }
         }
     }
 
@@ -457,6 +484,8 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 panelBackground: window.panelBackground
                 syncEnabled: compareModel.enabled
+                previousPanelFocusItem: null
+                nextPanelFocusItem: leftBrowser.firstFocusItem
                 onErrorRaised: (message) => pushError(message)
                 onSyncEnabledChanged: {
                     if (compareModel.enabled === syncEnabled) {
@@ -494,6 +523,8 @@ ApplicationWindow {
                 useExternalModel: compareModel.enabled
                 externalModel: compareModel.leftModel
                 syncEnabled: compareModel.enabled && !compareModel.loading
+                previousPanelFocusItem: leftPanel.lastFocusItem
+                nextPanelFocusItem: copyPanel.firstFocusItem
                 Layout.preferredWidth: viewContainer.verticalSplit ? -1 : 0
                 Layout.minimumWidth: 0
                 Layout.fillWidth: true
@@ -534,6 +565,7 @@ ApplicationWindow {
             }
 
             Item {
+                id: copyPanel
                 Layout.row: viewContainer.verticalSplit ? 1 : 0
                 Layout.column: viewContainer.verticalSplit ? 0 : 1
                 Layout.preferredWidth: viewContainer.verticalSplit ? -1 : window.copyBarSize
@@ -543,6 +575,16 @@ ApplicationWindow {
                 Layout.minimumHeight: viewContainer.verticalSplit ? window.copyBarSize : 0
                 Layout.fillWidth: viewContainer.verticalSplit
                 Layout.fillHeight: !viewContainer.verticalSplit
+                property Item previousPanelFocusItem: leftBrowser.lastFocusItem
+                property Item nextPanelFocusItem: rightBrowser.firstFocusItem
+                readonly property Item copyLeftFocusButton: viewContainer.verticalSplit
+                    ? copyLeftButtonVertical
+                    : copyLeftButtonHorizontal
+                readonly property Item copyRightFocusButton: viewContainer.verticalSplit
+                    ? copyRightButtonVertical
+                    : copyRightButtonHorizontal
+                readonly property Item firstFocusItem: copyLeftFocusButton
+                readonly property Item lastFocusItem: copyRightFocusButton
 
                 RowLayout {
                     anchors.centerIn: parent
@@ -550,16 +592,22 @@ ApplicationWindow {
                     visible: viewContainer.verticalSplit
 
                     ToolButton {
+                        id: copyLeftButtonVertical
                         text: "\u2190"
                         font.pixelSize: 18
+                        KeyNavigation.backtab: copyPanel.previousPanelFocusItem
+                        KeyNavigation.tab: copyPanel.copyRightFocusButton
                         onClicked: {
                             triggerCopyRightToLeft()
                         }
                     }
 
                     ToolButton {
+                        id: copyRightButtonVertical
                         text: "\u2192"
                         font.pixelSize: 18
+                        KeyNavigation.backtab: copyPanel.copyLeftFocusButton
+                        KeyNavigation.tab: copyPanel.nextPanelFocusItem
                         onClicked: {
                             triggerCopyLeftToRight()
                         }
@@ -572,16 +620,22 @@ ApplicationWindow {
                     visible: !viewContainer.verticalSplit
 
                     ToolButton {
+                        id: copyLeftButtonHorizontal
                         text: "\u2190"
                         font.pixelSize: 18
+                        KeyNavigation.backtab: copyPanel.previousPanelFocusItem
+                        KeyNavigation.tab: copyPanel.copyRightFocusButton
                         onClicked: {
                             triggerCopyRightToLeft()
                         }
                     }
 
                     ToolButton {
+                        id: copyRightButtonHorizontal
                         text: "\u2192"
                         font.pixelSize: 18
+                        KeyNavigation.backtab: copyPanel.copyLeftFocusButton
+                        KeyNavigation.tab: copyPanel.nextPanelFocusItem
                         onClicked: {
                             triggerCopyLeftToRight()
                         }
@@ -595,6 +649,8 @@ ApplicationWindow {
                 useExternalModel: compareModel.enabled
                 externalModel: compareModel.rightModel
                 syncEnabled: compareModel.enabled && !compareModel.loading
+                previousPanelFocusItem: copyPanel.lastFocusItem
+                nextPanelFocusItem: leftPanel.firstFocusItem
                 Layout.preferredWidth: viewContainer.verticalSplit ? -1 : 0
                 Layout.minimumWidth: 0
                 Layout.fillWidth: true

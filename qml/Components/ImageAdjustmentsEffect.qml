@@ -52,6 +52,10 @@ Item {
     readonly property real blurOffset6: Math.max(1.0, blurRadiusScaled * blurOffsetScale6)
     readonly property real blurOffset7: Math.max(1.0, blurRadiusScaled * blurOffsetScale7)
     readonly property real blurOffset8: Math.max(1.0, blurRadiusScaled * blurOffsetScale8)
+    property rect sourceRect: Qt.rect(opacityHidden,
+                                      opacityHidden,
+                                      sourceItem ? sourceItem.width : opacityHidden,
+                                      sourceItem ? sourceItem.height : opacityHidden)
 
     visible: active && sourceItem
 
@@ -61,6 +65,7 @@ Item {
         hideSource: root.active
         live: true
         visible: root.active && root.sourceItem
+        sourceRect: root.sourceRect
     }
 
     ShaderEffect {

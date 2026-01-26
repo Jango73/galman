@@ -11,6 +11,11 @@ ColumnLayout {
     property bool volumeUpdating: false
     property alias pathField: pathField
     property alias volumeCombo: volumeCombo
+    property alias goButton: goButton
+    property alias upButton: upButton
+    property alias refreshButton: refreshButton
+    property Item previousFocusItem: null
+    property Item nextFocusItem: null
     property bool pathFieldActiveFocus: pathField.activeFocus
     signal goUpRequested()
 
@@ -30,6 +35,8 @@ ColumnLayout {
             model: root.volumeModel
             textRole: "label"
             Layout.fillWidth: true
+            KeyNavigation.backtab: root.previousFocusItem
+            KeyNavigation.tab: pathField
             onActivated: {
                 if (!root.browserModel || root.volumeUpdating) {
                     return
@@ -55,6 +62,8 @@ ColumnLayout {
             id: pathField
             text: root.browserModel ? root.browserModel.rootPath : ""
             Layout.fillWidth: true
+            KeyNavigation.backtab: volumeCombo
+            KeyNavigation.tab: goButton
             onAccepted: {
                 if (root.browserModel) {
                     root.browserModel.rootPath = text
@@ -63,7 +72,10 @@ ColumnLayout {
         }
 
         Button {
+            id: goButton
             text: qsTr("Go")
+            KeyNavigation.backtab: pathField
+            KeyNavigation.tab: upButton
             onClicked: {
                 if (root.browserModel) {
                     root.browserModel.rootPath = pathField.text
@@ -72,14 +84,20 @@ ColumnLayout {
         }
 
         Button {
+            id: upButton
             text: qsTr("Up")
+            KeyNavigation.backtab: goButton
+            KeyNavigation.tab: refreshButton
             onClicked: {
                 root.goUpRequested()
             }
         }
 
         Button {
+            id: refreshButton
             text: qsTr("Refresh")
+            KeyNavigation.backtab: upButton
+            KeyNavigation.tab: root.nextFocusItem
             onClicked: {
                 if (root.browserModel) {
                     root.browserModel.refresh()

@@ -42,6 +42,10 @@ FocusScope {
     property bool rootPathSyncing: false
     property bool textInputActive: toolbar.pathFieldActiveFocus || sortBar.filterFieldActiveFocus
     property bool hasFocus: browserGrid.gridActiveFocus || textInputActive
+    property Item previousPanelFocusItem: null
+    property Item nextPanelFocusItem: null
+    readonly property Item firstFocusItem: toolbar.volumeCombo
+    readonly property Item lastFocusItem: browserGrid.focusItem
     property bool volumeUpdating: false
     property string selectedImagePath: ""
     property int selectedCompareStatus: 0
@@ -288,6 +292,17 @@ FocusScope {
         }
     }
 
+    function refreshPaths(paths) {
+        if (!browserModel) {
+            return
+        }
+        if (browserModel.refreshFiles) {
+            browserModel.refreshFiles(paths)
+        } else {
+            browserModel.refresh()
+        }
+    }
+
     function rememberScrollOffset() {
         if (browserGrid) {
             pendingScrollOffset = browserGrid.contentY
@@ -389,6 +404,8 @@ FocusScope {
                 browserModel: root.browserModel
                 volumeModel: volumeModel
                 volumeUpdating: root.volumeUpdating
+                previousFocusItem: root.previousPanelFocusItem
+                nextFocusItem: sortBar.sortCombo
                 onGoUpRequested: {
                     if (browserModel) {
                         browserModel.goUp()
@@ -401,6 +418,8 @@ FocusScope {
                 id: sortBar
                 Layout.fillWidth: true
                 browserModel: root.browserModel
+                previousFocusItem: toolbar.refreshButton
+                nextFocusItem: browserGrid.focusItem
                 onSortKeyChangedByUser: (sortKey) => root.sortKeyChangedByUser(sortKey)
                 onSortOrderChangedByUser: (sortOrder) => root.sortOrderChangedByUser(sortOrder)
                 onDirsFirstChangedByUser: (enabled) => root.dirsFirstChangedByUser(enabled)
@@ -418,8 +437,8 @@ FocusScope {
                 statusDifferent: root.statusDifferent
                 statusIdenticalColor: root.statusIdenticalColor
                 statusDifferentColor: root.statusDifferentColor
-                tabFocusItem: sortBar.filterField
-                backtabFocusItem: sortBar.dirsFirstBox
+                tabFocusItem: root.nextPanelFocusItem
+                backtabFocusItem: sortBar.clearButton
                 onViewSyncRequested: root.viewSyncRequested()
                 onCopyLeftRequested: root.copyLeftRequested()
                 onCopyRightRequested: root.copyRightRequested()

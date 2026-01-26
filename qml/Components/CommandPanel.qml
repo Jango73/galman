@@ -16,6 +16,10 @@ Item {
     property bool syncEnabled: false
     property bool syncPreviewEnabled: false
     property bool hideIdentical: false
+    property Item previousPanelFocusItem: null
+    property Item nextPanelFocusItem: null
+    readonly property Item firstFocusItem: syncModeCheckBox
+    readonly property Item lastFocusItem: runScriptButton
     signal errorRaised(string message)
 
     onSyncEnabledChanged: {
@@ -164,11 +168,13 @@ Item {
                     }
 
                     CheckBox {
+                        id: syncModeCheckBox
                         text: qsTr("Synchronize mode")
                         checked: root.syncEnabled
                         topPadding: Theme.controlPaddingV
                         bottomPadding: Theme.controlPaddingV
                         Layout.fillWidth: true
+                        KeyNavigation.backtab: root.previousPanelFocusItem
                         onToggled: root.syncEnabled = checked
                     }
 
@@ -333,9 +339,11 @@ Item {
                         }
 
                         Button {
+                            id: runScriptButton
                             text: qsTr("Run script")
                             Layout.fillWidth: true
                             enabled: scriptPath !== "" && !root.syncEnabled
+                            KeyNavigation.tab: root.nextPanelFocusItem
                             onClicked: {
                                 if (scriptPath === "") {
                                     return

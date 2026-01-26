@@ -25,6 +25,7 @@ Item {
     property color statusDifferentColor: Theme.statusDifferent
     property Item tabFocusItem: null
     property Item backtabFocusItem: null
+    property Item focusItem: grid
     readonly property int count: grid.count
     readonly property int currentIndex: grid.currentIndex
     readonly property real contentY: grid.contentY
@@ -87,11 +88,8 @@ Item {
     Frame {
         anchors.fill: parent
         padding: 0
-        background: Rectangle {
-            color: "transparent"
-            radius: 0
-            border.color: grid.activeFocus ? Material.accent : "transparent"
-            border.width: grid.activeFocus ? 2 : 0
+        background: FocusFrame {
+            active: grid.activeFocus
         }
 
         GridView {

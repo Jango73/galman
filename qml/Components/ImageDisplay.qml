@@ -25,6 +25,25 @@ Pane {
     property real contrastValue: 0.0
     readonly property real opacityVisible: 1.0
     readonly property real opacityHidden: 0.0
+    readonly property real centerFactor: 0.5
+    property int reloadToken: 0
+    property int invalidIndex: -1
+    property string reloadQueryKey: "reload"
+    property string querySeparator: "?"
+    property string queryJoiner: "&"
+    readonly property string resolvedImageSource: {
+        if (root.imagePath === "") {
+            return ""
+        }
+        const separator = root.imagePath.indexOf(root.querySeparator) === root.invalidIndex
+            ? root.querySeparator
+            : root.queryJoiner
+        return root.imagePath + separator + root.reloadQueryKey + "=" + root.reloadToken
+    }
+    readonly property real paintedWidth: imageItem.paintedWidth
+    readonly property real paintedHeight: imageItem.paintedHeight
+    readonly property real paintedHorizontalOffset: (imageItem.width - paintedWidth) * centerFactor
+    readonly property real paintedVerticalOffset: (imageItem.height - paintedHeight) * centerFactor
 
     padding: Theme.panelPadding
     Material.background: panelBackground
@@ -50,19 +69,26 @@ Pane {
             anchors.fill: parent
             fillMode: Image.PreserveAspectFit
             cache: false
-            source: root.imagePath
+            source: root.resolvedImageSource
             asynchronous: true
             opacity: root.useAdjustments ? root.opacityHidden : root.opacityVisible
         }
 
         ImageAdjustmentsEffect {
-            anchors.fill: parent
+            x: imageItem.x + root.paintedHorizontalOffset
+            y: imageItem.y + root.paintedVerticalOffset
+            width: root.paintedWidth
+            height: root.paintedHeight
             sourceItem: imageItem
             active: root.useAdjustments
             bloomValue: root.bloomValue
             bloomRadiusPercent: root.bloomRadiusPercent
             brightnessValue: root.brightnessValue
             contrastValue: root.contrastValue
+            sourceRect: Qt.rect(root.paintedHorizontalOffset,
+                                root.paintedVerticalOffset,
+                                root.paintedWidth,
+                                root.paintedHeight)
         }
 
         Label {

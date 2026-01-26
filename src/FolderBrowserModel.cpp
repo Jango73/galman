@@ -709,6 +709,88 @@ void FolderBrowserModel::goUp()
 }
 
 /**
+ * @brief Refreshes specific files within the current folder.
+ * @param paths Absolute paths to refresh.
+ */
+void FolderBrowserModel::refreshFiles(const QStringList &paths)
+{
+    if (m_rootPath.isEmpty() || paths.isEmpty()) {
+        return;
+    }
+
+    const QString rootPath = QDir::cleanPath(m_rootPath);
+    const QString parentPrefix = QLatin1String("..");
+    const QChar separator = QLatin1Char('/');
+    const int invalidIndex = -1;
+
+    QVector<QFileInfo> nextEntries = m_entries;
+    bool changed = false;
+
+    for (const QString &path : paths) {
+        const QString cleanPath = QDir::cleanPath(path);
+        if (cleanPath.isEmpty()) {
+            continue;
+        }
+        if (!cleanPath.startsWith(rootPath)) {
+            continue;
+        }
+        if (cleanPath.size() > rootPath.size()) {
+            const QChar boundary = cleanPath.at(rootPath.size());
+            if (boundary != separator) {
+                continue;
+            }
+        }
+
+        const QString relativePath = QDir(rootPath).relativeFilePath(cleanPath);
+        if (relativePath == parentPrefix || relativePath.startsWith(parentPrefix + separator)) {
+            continue;
+        }
+
+        const QFileInfo info(cleanPath);
+        int existingIndex = invalidIndex;
+        for (int i = 0; i < nextEntries.size(); i += 1) {
+            if (nextEntries.at(i).absoluteFilePath() == cleanPath) {
+                existingIndex = i;
+                break;
+            }
+        }
+
+        if (info.exists()) {
+            if (existingIndex == invalidIndex) {
+                nextEntries.append(info);
+            } else {
+                nextEntries[existingIndex] = info;
+            }
+            changed = true;
+        } else if (existingIndex != invalidIndex) {
+            nextEntries.remove(existingIndex);
+            changed = true;
+        }
+    }
+
+    if (!changed) {
+        return;
+    }
+
+    applyFilterAndSort(nextEntries);
+    updateFileWatchers(nextEntries);
+    applyEntriesIncremental(nextEntries);
+
+    QStringList nextSelection;
+    nextSelection.reserve(m_selectedPaths.size());
+    for (const QString &path : m_selectedPaths) {
+        const QFileInfo info(path);
+        if (info.exists()) {
+            nextSelection.append(path);
+        }
+    }
+    if (nextSelection != m_selectedPaths) {
+        m_selectedPaths = nextSelection;
+        notifySelectionChanged();
+    }
+}
+
+/**
  * @brief Sets the selection from a list of row indices.
  * @param rows List of row indices to select.
  * @param additive True to add to current selection, false to replace it.

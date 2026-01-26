@@ -11,6 +11,9 @@ RowLayout {
     property alias sortOrderBox: sortOrderBox
     property alias dirsFirstBox: dirsFirstBox
     property alias filterField: filterField
+    property alias clearButton: clearButton
+    property Item previousFocusItem: null
+    property Item nextFocusItem: null
     property bool filterFieldActiveFocus: filterField.activeFocus
     signal sortKeyChangedByUser(int sortKey)
     signal sortOrderChangedByUser(int sortOrder)
@@ -38,6 +41,8 @@ RowLayout {
     ComboBox {
         id: sortCombo
         model: root.sortOptions
+        KeyNavigation.backtab: root.previousFocusItem
+        KeyNavigation.tab: sortOrderBox
         onCurrentIndexChanged: {
             if (root.browserModel) {
                 root.browserModel.sortKey = currentIndex
@@ -49,6 +54,8 @@ RowLayout {
     CheckBox {
         id: sortOrderBox
         text: qsTr("Descending")
+        KeyNavigation.backtab: sortCombo
+        KeyNavigation.tab: dirsFirstBox
         onToggled: {
             if (root.browserModel) {
                 root.browserModel.sortOrder = checked ? Qt.DescendingOrder : Qt.AscendingOrder
@@ -60,6 +67,8 @@ RowLayout {
     CheckBox {
         id: dirsFirstBox
         text: qsTr("Folders first")
+        KeyNavigation.backtab: sortOrderBox
+        KeyNavigation.tab: filterField
         onToggled: {
             if (root.browserModel) {
                 root.browserModel.showDirsFirst = checked
@@ -74,6 +83,8 @@ RowLayout {
         id: filterField
         placeholderText: qsTr("Filter name...")
         Layout.fillWidth: true
+        KeyNavigation.backtab: dirsFirstBox
+        KeyNavigation.tab: clearButton
         onTextChanged: {
             if (root.browserModel) {
                 root.browserModel.nameFilter = text
@@ -83,7 +94,10 @@ RowLayout {
     }
 
     ToolButton {
+        id: clearButton
         text: qsTr("X")
+        KeyNavigation.backtab: filterField
+        KeyNavigation.tab: root.nextFocusItem
         onClicked: filterField.text = ""
     }
 }

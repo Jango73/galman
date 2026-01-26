@@ -37,6 +37,8 @@ qt_add_qml_module(galman
         src/FolderCompareModel.cpp
         src/FolderCompareSideModel.h
         src/FolderCompareSideModel.cpp
+        src/ImageAutoAdjuster.h
+        src/ImageAutoAdjuster.cpp
         src/VolumeModel.h
         src/VolumeModel.cpp
         src/ScriptEngine.h
@@ -54,6 +56,7 @@ qt_add_qml_module(galman
         qml/Components/FolderViewGrid.qml
         qml/Components/FolderViewSortBar.qml
         qml/Components/FolderViewToolBar.qml
+        qml/Components/FocusFrame.qml
         qml/Components/ImageDisplay.qml
         qml/Components/ImageCompare.qml
         qml/Components/ImagePreview.qml

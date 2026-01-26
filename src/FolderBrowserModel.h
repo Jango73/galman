@@ -91,6 +91,7 @@ public:
     Q_INVOKABLE QString modifiedForRow(int row) const;
     Q_INVOKABLE void clearSelection();
     Q_INVOKABLE void goUp();
+    Q_INVOKABLE void refreshFiles(const QStringList &paths);
     Q_INVOKABLE void setSelection(const QVariantList &rows, bool additive);
     Q_INVOKABLE void setSelectionRange(int start, int end, bool additive);
     Q_INVOKABLE bool allSelected() const;

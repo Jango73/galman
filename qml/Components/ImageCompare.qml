@@ -10,6 +10,8 @@ FocusRememberingScope {
     property var leftBrowser: null
     property var rightBrowser: null
     property color panelBackground: Theme.panelBackground
+    property int reloadToken: 0
+    property int reloadTokenIncrement: 1
     signal copyLeftRequested()
     signal copyRightRequested()
     signal closeRequested()
@@ -64,41 +66,68 @@ FocusRememberingScope {
         event.accepted = false
     }
 
-    RowLayout {
+    Item {
+        id: imagePane
         anchors.fill: parent
-        anchors.margins: 0
-        spacing: Theme.spaceLg
 
-        ImageDisplay {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            panelBackground: root.panelBackground
-            imagePath: leftBrowser && leftBrowser.selectedImagePath !== ""
-                ? ("file://" + leftBrowser.selectedImagePath)
-                : ""
-            compareStatus: leftBrowser ? leftBrowser.selectedCompareStatus : 0
-            ghost: leftBrowser ? leftBrowser.selectedGhost : false
-            statusPending: leftBrowser ? leftBrowser.statusPending : 1
-            statusIdentical: leftBrowser ? leftBrowser.statusIdentical : 2
-            statusDifferent: leftBrowser ? leftBrowser.statusDifferent : 3
-            statusIdenticalColor: leftBrowser ? leftBrowser.statusIdenticalColor : Theme.statusIdentical
-            statusDifferentColor: leftBrowser ? leftBrowser.statusDifferentColor : Theme.statusDifferent
+        FocusFrame {
+            active: root.activeFocus
+            z: 2
         }
 
-        ImageDisplay {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            panelBackground: root.panelBackground
-            imagePath: rightBrowser && rightBrowser.selectedImagePath !== ""
-                ? ("file://" + rightBrowser.selectedImagePath)
-                : ""
-            compareStatus: rightBrowser ? rightBrowser.selectedCompareStatus : 0
-            ghost: rightBrowser ? rightBrowser.selectedGhost : false
-            statusPending: rightBrowser ? rightBrowser.statusPending : 1
-            statusIdentical: rightBrowser ? rightBrowser.statusIdentical : 2
-            statusDifferent: rightBrowser ? rightBrowser.statusDifferent : 3
-            statusIdenticalColor: rightBrowser ? rightBrowser.statusIdenticalColor : Theme.statusIdentical
-            statusDifferentColor: rightBrowser ? rightBrowser.statusDifferentColor : Theme.statusDifferent
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 0
+            spacing: Theme.spaceLg
+
+            ImageDisplay {
+                id: leftImageDisplay
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                panelBackground: root.panelBackground
+                imagePath: leftBrowser && leftBrowser.selectedImagePath !== ""
+                    ? ("file://" + leftBrowser.selectedImagePath)
+                    : ""
+                reloadToken: root.reloadToken
+                compareStatus: leftBrowser ? leftBrowser.selectedCompareStatus : 0
+                ghost: leftBrowser ? leftBrowser.selectedGhost : false
+                statusPending: leftBrowser ? leftBrowser.statusPending : 1
+                statusIdentical: leftBrowser ? leftBrowser.statusIdentical : 2
+                statusDifferent: leftBrowser ? leftBrowser.statusDifferent : 3
+                statusIdenticalColor: leftBrowser ? leftBrowser.statusIdenticalColor : Theme.statusIdentical
+                statusDifferentColor: leftBrowser ? leftBrowser.statusDifferentColor : Theme.statusDifferent
+            }
+
+            ImageDisplay {
+                id: rightImageDisplay
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                panelBackground: root.panelBackground
+                imagePath: rightBrowser && rightBrowser.selectedImagePath !== ""
+                    ? ("file://" + rightBrowser.selectedImagePath)
+                    : ""
+                reloadToken: root.reloadToken
+                compareStatus: rightBrowser ? rightBrowser.selectedCompareStatus : 0
+                ghost: rightBrowser ? rightBrowser.selectedGhost : false
+                statusPending: rightBrowser ? rightBrowser.statusPending : 1
+                statusIdentical: rightBrowser ? rightBrowser.statusIdentical : 2
+                statusDifferent: rightBrowser ? rightBrowser.statusDifferent : 3
+                statusIdenticalColor: rightBrowser ? rightBrowser.statusIdenticalColor : Theme.statusIdentical
+                statusDifferentColor: rightBrowser ? rightBrowser.statusDifferentColor : Theme.statusDifferent
+            }
         }
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onPressed: (mouse) => {
+                root.forceActiveFocus()
+                mouse.accepted = false
+            }
+        }
+    }
+
+    function refreshImages() {
+        reloadToken += reloadTokenIncrement
     }
 }

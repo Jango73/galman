@@ -11,6 +11,8 @@ FocusRememberingScope {
     property var browser: null
     property color panelBackground: Theme.panelBackground
     property bool adjustmentsVisible: false
+    property int reloadToken: 0
+    property int reloadTokenIncrement: 1
     signal copyLeftRequested()
     signal copyRightRequested()
     signal closeRequested()
@@ -73,17 +75,24 @@ FocusRememberingScope {
             anchors.fill: parent
             spacing: Theme.spaceMd
 
-            Item {
+            FocusScope {
                 id: imageArea
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
+                FocusFrame {
+                    active: imageArea.activeFocus
+                    z: 4
+                }
+
                 ImageDisplay {
+                    id: mainImageDisplay
                     anchors.fill: parent
                     panelBackground: root.panelBackground
                     imagePath: browser && browser.selectedImagePath !== ""
                         ? ("file://" + browser.selectedImagePath)
                         : ""
+                    reloadToken: root.reloadToken
                     compareStatus: browser ? browser.selectedCompareStatus : 0
                     ghost: browser ? browser.selectedGhost : false
                     statusPending: browser ? browser.statusPending : 1
@@ -132,6 +141,15 @@ FocusRememberingScope {
                     elide: Text.ElideNone
                     z: 3
                 }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    onPressed: (mouse) => {
+                        imageArea.forceActiveFocus()
+                        mouse.accepted = false
+                    }
+                }
             }
 
             ImageAdjustmentsPanel {
@@ -143,6 +161,26 @@ FocusRememberingScope {
                 panelBackground: root.panelBackground
                 onSaveRequested: root.saveAdjustedImage()
             }
+        }
+
+        ImageAutoAdjuster {
+            id: autoAdjuster
+            imagePath: browser ? browser.selectedImagePath : ""
+            autoEnabled: adjustmentsPanel.autoEnabled
+        }
+
+        Binding {
+            target: adjustmentsPanel
+            property: "brightnessValue"
+            value: autoAdjuster.brightnessValue
+            when: adjustmentsPanel.autoEnabled
+        }
+
+        Binding {
+            target: adjustmentsPanel
+            property: "contrastValue"
+            value: autoAdjuster.contrastValue
+            when: adjustmentsPanel.autoEnabled
         }
 
         Item {
@@ -158,9 +196,7 @@ FocusRememberingScope {
             Image {
                 id: offscreenImage
                 anchors.fill: parent
-                source: browser && browser.selectedImagePath !== ""
-                    ? ("file://" + browser.selectedImagePath)
-                    : ""
+                source: mainImageDisplay.resolvedImageSource
                 cache: false
                 asynchronous: false
                 fillMode: Image.PreserveAspectFit
@@ -196,5 +232,9 @@ FocusRememberingScope {
             }
             root.saveSucceeded(qsTr("Saved"))
         })
+    }
+
+    function refreshImages() {
+        reloadToken += reloadTokenIncrement
     }
 }

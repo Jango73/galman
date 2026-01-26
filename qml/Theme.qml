@@ -9,6 +9,7 @@ QtObject {
     readonly property color statusMissing: "#c06565"
     readonly property color statusIdenticalAlt: "#86e1aa"
     readonly property color statusDifferentAlt: "#ffcf5a"
+    readonly property color transparentColor: "transparent"
     readonly property int spaceXs: 4
     readonly property int spaceSm: 6
     readonly property int spaceMd: 8
@@ -18,4 +19,6 @@ QtObject {
     readonly property int panelPadding: spaceLg
     readonly property int windowMargin: spaceLg
     readonly property int statusBarPadding: spaceSm
+    readonly property int focusFrameWidth: 2
+    readonly property int focusFrameRadius: 0
 }
