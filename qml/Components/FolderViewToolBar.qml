@@ -1,0 +1,97 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Controls.Material 2.15
+import QtQuick.Layouts 1.15
+import Galman 1.0
+
+ColumnLayout {
+    id: root
+    property var browserModel: null
+    property var volumeModel: null
+    property bool volumeUpdating: false
+    property alias pathField: pathField
+    property alias volumeCombo: volumeCombo
+    property bool pathFieldActiveFocus: pathField.activeFocus
+    signal goUpRequested()
+
+    spacing: Theme.spaceSm
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Theme.spaceMd
+
+        Label {
+            text: qsTr("Volume")
+            opacity: 0.7
+        }
+
+        ComboBox {
+            id: volumeCombo
+            model: root.volumeModel
+            textRole: "label"
+            Layout.fillWidth: true
+            onActivated: {
+                if (!root.browserModel || root.volumeUpdating) {
+                    return
+                }
+                const path = root.volumeModel ? root.volumeModel.pathForIndex(index) : ""
+                if (path && path !== root.browserModel.rootPath) {
+                    root.browserModel.rootPath = path
+                }
+            }
+        }
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Theme.spaceMd
+
+        Label {
+            text: qsTr("Path")
+            opacity: 0.7
+        }
+
+        TextField {
+            id: pathField
+            text: root.browserModel ? root.browserModel.rootPath : ""
+            Layout.fillWidth: true
+            onAccepted: {
+                if (root.browserModel) {
+                    root.browserModel.rootPath = text
+                }
+            }
+        }
+
+        Button {
+            text: qsTr("Go")
+            onClicked: {
+                if (root.browserModel) {
+                    root.browserModel.rootPath = pathField.text
+                }
+            }
+        }
+
+        Button {
+            text: qsTr("Up")
+            onClicked: {
+                root.goUpRequested()
+            }
+        }
+
+        Button {
+            text: qsTr("Refresh")
+            onClicked: {
+                if (root.browserModel) {
+                    root.browserModel.refresh()
+                }
+            }
+        }
+
+        BusyIndicator {
+            running: root.browserModel ? root.browserModel.loading : false
+            visible: running
+            width: 24
+            height: 24
+        }
+    }
+}
