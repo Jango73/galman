@@ -1135,6 +1135,39 @@ QVariantMap FolderBrowserModel::moveSelectedToTrash()
 }
 
 /**
+ * @brief Renames a file or folder within the current folder.
+ * @param path Full path to rename.
+ * @param newName New file or folder name (without path).
+ * @return Result map including ok, newPath, and error fields.
+ */
+QVariantMap FolderBrowserModel::renamePath(const QString &path, const QString &newName)
+{
+    QVariantMap result;
+    result.insert("ok", false);
+    QString targetPath;
+    QString error;
+    if (!PlatformUtils::renamePath(path, newName, &targetPath, &error)) {
+        result.insert("error", error.isEmpty() ? tr("Rename failed") : error);
+        return result;
+    }
+
+    QStringList nextSelection = m_selectedPaths;
+    const int selectedIndex = nextSelection.indexOf(path);
+    if (selectedIndex >= 0) {
+        nextSelection[selectedIndex] = targetPath;
+    }
+    if (nextSelection != m_selectedPaths) {
+        m_selectedPaths = nextSelection;
+        notifySelectionChanged();
+    }
+
+    refreshFiles({path, targetPath});
+    result.insert("ok", true);
+    result.insert("newPath", targetPath);
+    return result;
+}
+
+/**
  * @brief Updates the loading state and emits change notification.
  * @param loading True when loading is active, false otherwise.
  */

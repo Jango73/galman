@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15
 import "."
 import Galman 1.0
 
@@ -22,6 +23,7 @@ FocusScope {
     signal dirsFirstChangedByUser(bool enabled)
     signal nameFilterChangedByUser(string filter)
     signal goUpRequested()
+    signal renameSucceeded(string message)
     property string settingsKey: ""
     property bool useExternalModel: false
     property var externalModel: null
@@ -378,6 +380,28 @@ FocusScope {
         return { "ok": false, "error": "No model" }
     }
 
+    function requestRenameSelected() {
+        if (!browserModel) {
+            return
+        }
+        const paths = browserModel.selectedPaths || []
+        if (paths.length !== 1) {
+            return
+        }
+        requestRenamePath(paths[0])
+    }
+
+    function requestRenamePath(path) {
+        if (!browserModel || !path) {
+            return
+        }
+        renameDialog.sourcePath = path
+        renameDialog.currentName = baseNameFromPath(path)
+        renameDialog.errorText = ""
+        renameDialog.proposedName = ""
+        renameDialog.open()
+    }
+
     Shortcut {
         sequences: ["F5"]
         context: Qt.ApplicationShortcut
@@ -387,6 +411,13 @@ FocusScope {
                 browserModel.refresh()
             }
         }
+    }
+
+    Shortcut {
+        sequences: ["F2"]
+        context: Qt.ApplicationShortcut
+        enabled: root.hasFocus && !root.textInputActive
+        onActivated: root.requestRenameSelected()
     }
 
     Pane {
@@ -442,6 +473,7 @@ FocusScope {
                 onViewSyncRequested: root.viewSyncRequested()
                 onCopyLeftRequested: root.copyLeftRequested()
                 onCopyRightRequested: root.copyRightRequested()
+                onRenameRequested: (path) => root.requestRenamePath(path)
                 onCurrentIndexUpdated: (value) => {
                     if (root.restoringIndex) {
                         return
@@ -450,6 +482,25 @@ FocusScope {
                     root.rememberCurrentPath()
                 }
             }
+        }
+    }
+
+    RenameDialog {
+        id: renameDialog
+        parent: root.Window.window ? root.Window.window.contentItem : null
+        onRenameConfirmed: (path, newName) => {
+            if (!browserModel || !browserModel.renamePath) {
+                return
+            }
+            const result = browserModel.renamePath(path, newName)
+            if (!result || !result.ok) {
+                renameDialog.errorText = result && result.error ? result.error : qsTr("Rename failed")
+                renameDialog.proposedName = newName
+                renameDialog.open()
+                return
+            }
+            const targetName = result.newPath ? baseNameFromPath(result.newPath) : newName
+            renameSucceeded(qsTr("Renamed to %1").arg(targetName))
         }
     }
 

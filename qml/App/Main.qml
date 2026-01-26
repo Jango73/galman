@@ -27,6 +27,9 @@ ApplicationWindow {
     Material.theme: Material.Dark
     Material.primary: Material.Blue
     Material.accent: Material.DeepOrange
+    Overlay.modal: Rectangle {
+        color: Theme.modalOverlayColor
+    }
 
     FolderCompareModel {
         id: compareModel
@@ -562,6 +565,7 @@ ApplicationWindow {
                 onDirsFirstChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onNameFilterChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onGoUpRequested: syncGoUp(leftBrowser, rightBrowser)
+                onRenameSucceeded: (message) => pushStatus(message)
             }
 
             Item {
@@ -688,6 +692,7 @@ ApplicationWindow {
                 onDirsFirstChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onNameFilterChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onGoUpRequested: syncGoUp(rightBrowser, leftBrowser)
+                onRenameSucceeded: (message) => pushStatus(message)
             }
 
             }

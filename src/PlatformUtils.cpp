@@ -96,4 +96,73 @@ bool moveToTrashOrDelete(const QString &path, QString *error)
     return ok;
 }
 
+/**
+ * @brief Renames a file or folder within its parent folder.
+ * @param path Existing file or folder path.
+ * @param newName New name without path separators.
+ * @param newPath Optional output path for the renamed entry.
+ * @param error Optional output error message.
+ * @return True if rename succeeds, false otherwise.
+ */
+bool renamePath(const QString &path, const QString &newName, QString *newPath, QString *error)
+{
+    if (path.isEmpty()) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Source not found");
+        }
+        return false;
+    }
+    const QString trimmedName = newName.trimmed();
+    if (trimmedName.isEmpty()) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Name cannot be empty");
+        }
+        return false;
+    }
+
+    const QChar forwardSlash = QLatin1Char('/');
+    const QChar backSlash = QLatin1Char('\\');
+    if (trimmedName.contains(forwardSlash) || trimmedName.contains(backSlash)) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Name cannot contain path separators");
+        }
+        return false;
+    }
+
+    const QFileInfo info(path);
+    if (!info.exists()) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Source not found");
+        }
+        return false;
+    }
+
+    QDir parentDir = info.dir();
+    const QString targetPath = parentDir.filePath(trimmedName);
+    if (QDir::cleanPath(targetPath) == QDir::cleanPath(path)) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Name unchanged");
+        }
+        return false;
+    }
+    if (QFileInfo::exists(targetPath)) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Target already exists");
+        }
+        return false;
+    }
+
+    if (!parentDir.rename(info.fileName(), trimmedName)) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Rename failed");
+        }
+        return false;
+    }
+
+    if (newPath) {
+        *newPath = targetPath;
+    }
+    return true;
+}
+
 } // namespace PlatformUtils

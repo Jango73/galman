@@ -9,6 +9,9 @@ Dialog {
     modal: true
     title: qsTr("Shortcuts")
     standardButtons: Dialog.Ok
+    Overlay.modal: Rectangle {
+        color: Theme.modalOverlayColor
+    }
     focus: true
     width: Math.min(620, dialog.parent ? Math.round(dialog.parent.width * 0.8) : 620)
     height: Math.min(560, dialog.parent ? Math.round(dialog.parent.height * 0.8) : 560)

@@ -1087,6 +1087,56 @@ QVariantMap FolderCompareSideModel::moveSelectedToTrash()
 }
 
 /**
+ * @brief Renames a file or folder within the current compare side.
+ * @param path Full path to rename.
+ * @param newName New file or folder name (without path).
+ * @return Result map including ok, newPath, and error fields.
+ */
+QVariantMap FolderCompareSideModel::renamePath(const QString &path, const QString &newName)
+{
+    QVariantMap result;
+    result.insert("ok", false);
+
+    if (path.isEmpty()) {
+        result.insert("error", tr("Source not found"));
+        return result;
+    }
+
+    auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
+        return entry.filePath == path;
+    });
+    if (it != m_entries.end() && it->isGhost) {
+        result.insert("error", tr("Cannot rename ghost items"));
+        return result;
+    }
+
+    QString targetPath;
+    QString error;
+    if (!PlatformUtils::renamePath(path, newName, &targetPath, &error)) {
+        result.insert("error", error.isEmpty() ? tr("Rename failed") : error);
+        return result;
+    }
+
+    const int selectedIndex = m_selectedIds.indexOf(path);
+    if (selectedIndex >= 0) {
+        m_selectedIds[selectedIndex] = targetPath;
+    }
+    notifySelectionChanged();
+
+    if (m_compareModel) {
+        if (m_side == FolderCompareModel::Left) {
+            m_compareModel->refreshFiles({path, targetPath}, {});
+        } else {
+            m_compareModel->refreshFiles({}, {path, targetPath});
+        }
+    }
+
+    result.insert("ok", true);
+    result.insert("newPath", targetPath);
+    return result;
+}
+
+/**
  * @brief Updates the loading state and emits change notification.
  * @param loading True when loading is active, false otherwise.
  */

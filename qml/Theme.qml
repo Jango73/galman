@@ -10,6 +10,7 @@ QtObject {
     readonly property color statusIdenticalAlt: "#86e1aa"
     readonly property color statusDifferentAlt: "#ffcf5a"
     readonly property color transparentColor: "transparent"
+    readonly property color modalOverlayColor: Qt.rgba(0, 0, 0, 0.4)
     readonly property int spaceXs: 4
     readonly property int spaceSm: 6
     readonly property int spaceMd: 8

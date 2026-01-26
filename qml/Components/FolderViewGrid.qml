@@ -30,11 +30,13 @@ Item {
     readonly property int currentIndex: grid.currentIndex
     readonly property real contentY: grid.contentY
     readonly property bool gridActiveFocus: grid.activeFocus
+    property int contextMenuIndex: -1
     signal viewSyncRequested()
     signal copyLeftRequested()
     signal copyRightRequested()
     signal contentYUpdated(real value)
     signal currentIndexUpdated(int value)
+    signal renameRequested(string path)
 
     Timer {
         id: scrollRelockTimer
@@ -260,6 +262,23 @@ Item {
             }
         }
 
+        Menu {
+            id: contextMenu
+            MenuItem {
+                text: qsTr("Rename")
+                enabled: root.contextMenuIndex >= 0 && root.browserModel
+                onTriggered: {
+                    if (!root.browserModel || !root.browserModel.pathForRow) {
+                        return
+                    }
+                    const path = root.browserModel.pathForRow(root.contextMenuIndex)
+                    if (path) {
+                        root.renameRequested(path)
+                    }
+                }
+            }
+        }
+
         Rectangle {
             id: rubberBand
             color: Qt.rgba(Material.accent.r, Material.accent.g, Material.accent.b, 0.18)
@@ -272,7 +291,7 @@ Item {
         MouseArea {
             id: rubberBandArea
             anchors.fill: parent
-            acceptedButtons: Qt.LeftButton
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
             z: 4
 
@@ -405,6 +424,27 @@ Item {
                 didDrag = true
             }
 
+            function openContextMenu(mouse) {
+                if (!root.browserModel) {
+                    return
+                }
+                const idx = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
+                if (idx < 0) {
+                    return
+                }
+                contextMenuIndex = idx
+                const selected = root.browserModel.isSelected
+                    ? root.browserModel.isSelected(idx)
+                    : false
+                if (!selected) {
+                    root.browserModel.select(idx, false)
+                    root.anchorIndex = idx
+                    grid.currentIndex = idx
+                }
+                const point = mapToItem(null, mouseX, mouseY)
+                contextMenu.popup(point.x, point.y)
+            }
+
             onPressed: {
                 grid.forceActiveFocus()
                 startX = mouseX
@@ -412,10 +452,18 @@ Item {
                 dragging = false
                 didDrag = false
                 pressIndex = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
+                if (mouse.button === Qt.RightButton) {
+                    openContextMenu(mouse)
+                    mouse.accepted = true
+                    return
+                }
             }
 
             onPositionChanged: (mouse) => {
                 if (!pressed) {
+                    return
+                }
+                if ((mouse.buttons & Qt.RightButton) !== 0) {
                     return
                 }
                 if (Drag.active) {
@@ -457,6 +505,9 @@ Item {
             }
 
             onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    return
+                }
                 grid.forceActiveFocus()
                 if (didDrag) {
                     didDrag = false

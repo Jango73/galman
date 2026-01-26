@@ -124,6 +124,7 @@ public:
     Q_INVOKABLE void startCopySelectedTo(const QString &targetDir);
     Q_INVOKABLE void cancelCopy();
     Q_INVOKABLE QVariantMap moveSelectedToTrash();
+    Q_INVOKABLE QVariantMap renamePath(const QString &path, const QString &newName);
 
 signals:
     void rootPathChanged();

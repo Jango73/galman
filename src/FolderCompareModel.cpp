@@ -400,31 +400,6 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         }
     }
 
-    for (MatchEntry &left : leftImages) {
-        if (left.matched) {
-            continue;
-        }
-        if (!left.signature.valid) {
-            continue;
-        }
-        for (MatchEntry &right : rightImages) {
-            if (right.matched) {
-                continue;
-            }
-            if (!right.signature.valid) {
-                continue;
-            }
-            if (!compareSignatures(left.signature, right.signature, tolerance)) {
-                continue;
-            }
-            left.matched = true;
-            right.matched = true;
-            result.leftEntries[left.entryIndex].status = FolderCompareSideModel::StatusDifferent;
-            result.rightEntries[right.entryIndex].status = FolderCompareSideModel::StatusDifferent;
-            break;
-        }
-    }
-
     for (MatchEntry &left : leftOthers) {
         if (left.matched) {
             continue;
