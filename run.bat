@@ -7,7 +7,7 @@ set "VERBOSE_ENABLED=1"
 set "VERBOSE_DISABLED=0"
 
 set "ROOT_FOLDER=%~dp0"
-set "BUILD_TYPE=Debug"
+set "BUILD_TYPE=Release"
 set "VERBOSE_BUILD=%VERBOSE_DISABLED%"
 
 :parse

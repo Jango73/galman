@@ -20,7 +20,7 @@ On Windows, ensure Qt 6, CMake, and Ninja are in `PATH`.
 ```
 
 Useful options:
-- `--debug` or `--release`
+- `--debug` or `--release` (default is release)
 - `-c Debug` or `-c Release`
 - `--verbose` for verbose build output
 
