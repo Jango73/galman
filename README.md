@@ -16,7 +16,7 @@ On Windows, ensure Qt 6, CMake, and Ninja are in `PATH`.
 
 ### Build
 ```bash
-./build.sh --debug
+./build.sh
 ```
 
 Useful options:
@@ -26,22 +26,22 @@ Useful options:
 
 Windows:
 ```bat
-build.bat --debug
+build.bat
 ```
 
 ### Run
 ```bash
-./run.sh --debug
+./run.sh
 ```
 
-`run.sh` triggers a build if the matching build folder is missing. Output is logged to `temp/run.log`.
+`run.sh` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
 
 Windows:
 ```bat
-run.bat --debug
+run.bat
 ```
 
-`run.bat` triggers a build if the matching build folder is missing. Output is logged to `temp/run.log`.
+`run.bat` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
 
 ## Architecture
 - **User interface (QML)**: `qml/App/Main.qml` drives the main screen. Reusable components live in `qml/Components`. Visual theme is defined in `qml/Theme.qml`.
