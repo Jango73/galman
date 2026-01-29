@@ -270,7 +270,9 @@ Item {
                     isGhost: model.isGhost
                     filePath: model.filePath
                     fileName: model.fileName
-                    modifiedText: model.modified ? Qt.formatDateTime(model.modified, Qt.DefaultLocaleShortDate) : ""
+                    modifiedText: model.isGhost
+                        ? ""
+                        : (model.modified ? Qt.formatDateTime(model.modified, Qt.DefaultLocaleShortDate) : "")
                     compareStatus: model.compareStatus
                     statusPending: root.statusPending
                     statusIdentical: root.statusIdentical
@@ -298,15 +300,6 @@ Item {
             }
         }
 
-        Rectangle {
-            id: rubberBand
-            color: Qt.rgba(Material.accent.r, Material.accent.g, Material.accent.b, 0.18)
-            border.color: Material.accent
-            border.width: 1
-            visible: false
-            z: 3
-        }
-
         MouseArea {
             id: rubberBandArea
             anchors.fill: parent
@@ -317,7 +310,6 @@ Item {
 
             property real startX: 0
             property real startY: 0
-            property bool dragging: false
             property bool didDrag: false
             property int pressIndex: -1
             property var dragMimeData: ({})
@@ -331,49 +323,6 @@ Item {
                 const paths = dragMimeData["text/plain"] || ""
                 Drag.active = false
                 dragMimeData = ({})
-            }
-
-            function currentRect() {
-                const x1 = Math.min(startX, mouseX)
-                const y1 = Math.min(startY, mouseY)
-                const x2 = Math.max(startX, mouseX)
-                const y2 = Math.max(startY, mouseY)
-                return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }
-            }
-
-            function applySelection(additive) {
-                if (!root.browserModel) {
-                    return
-                }
-                const rect = currentRect()
-                const left = rect.x + grid.contentX
-                const top = rect.y + grid.contentY
-                const right = left + rect.w
-                const bottom = top + rect.h
-
-                const columns = Math.max(1, Math.floor(grid.width / grid.cellWidth))
-                const count = grid.count
-                const hits = []
-
-                for (let i = 0; i < count; i++) {
-                    const col = i % columns
-                    const row = Math.floor(i / columns)
-                    const x = col * grid.cellWidth
-                    const y = row * grid.cellHeight
-                    const x2 = x + grid.cellWidth
-                    const y2 = y + grid.cellHeight
-
-                    const intersect = !(x2 < left || x > right || y2 < top || y > bottom)
-                    if (intersect) {
-                        hits.push(i)
-                    }
-                }
-
-                root.browserModel.setSelection(hits, additive)
-                if (hits.length > 0) {
-                    grid.currentIndex = hits[0]
-                    root.anchorIndex = hits[0]
-                }
             }
 
             function prepareDragSelection(modifiers) {
@@ -469,7 +418,6 @@ Item {
                 grid.forceActiveFocus()
                 startX = mouseX
                 startY = mouseY
-                dragging = false
                 didDrag = false
                 pressIndex = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
                 if (mouse.button === Qt.RightButton) {
@@ -491,35 +439,13 @@ Item {
                 }
                 const dx = Math.abs(mouseX - startX)
                 const dy = Math.abs(mouseY - startY)
-                if (!dragging && (dx > 6 || dy > 6)) {
-                    if (pressIndex >= 0) {
-                        startExternalDrag(mouse.modifiers)
-                        return
-                    }
-                    dragging = true
-                    didDrag = true
-                    rubberBand.visible = true
-                }
-
-                if (dragging) {
-                    const rect = currentRect()
-                    rubberBand.x = rect.x
-                    rubberBand.y = rect.y
-                    rubberBand.width = rect.w
-                    rubberBand.height = rect.h
+                if (pressIndex >= 0 && (dx > 6 || dy > 6)) {
+                    startExternalDrag(mouse.modifiers)
                 }
             }
 
             onReleased: (mouse) => {
                 if (Drag.active) {
-                    return
-                }
-                if (dragging) {
-                    const additive = (mouse.modifiers & Qt.ControlModifier) !== 0
-                    applySelection(additive)
-                    rubberBand.visible = false
-                    dragging = false
-                    didDrag = true
                     return
                 }
             }

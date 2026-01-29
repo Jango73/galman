@@ -37,6 +37,8 @@ FocusScope {
     property color panelBackground: Material.background
     property int lastCurrentIndex: -1
     property int restoreCurrentIndex: -1
+    property int pendingDeletionIndex: -1
+    property bool pendingDeletionFocus: false
     property string lastSelectedPath: ""
     property bool restoringIndex: false
     property bool pendingIndexReset: false
@@ -340,9 +342,10 @@ FocusScope {
         }
         if (browserGrid.count === 0) {
             restoringIndex = false
+            pendingDeletionIndex = -1
             return
         }
-        const targetPath = lastSelectedPath
+        const targetPath = pendingDeletionIndex >= 0 ? "" : lastSelectedPath
         let nextIndex = -1
         if (targetPath !== "" && browserModel && browserModel.pathForRow) {
             const count = browserGrid.count
@@ -366,6 +369,7 @@ FocusScope {
         lastCurrentIndex = browserGrid.currentIndex
         rememberCurrentPath()
         updateSelectedImagePath()
+        pendingDeletionIndex = -1
     }
 
     function confirmTrashSelected() {
@@ -379,12 +383,33 @@ FocusScope {
         if (!browserModel) {
             return { "ok": false, "error": "No model" }
         }
+        const rows = selectedRows()
+        if (rows.length > 0) {
+            let maxRow = -1
+            for (let i = 0; i < rows.length; i += 1) {
+                const row = rows[i]
+                if (row > maxRow) {
+                    maxRow = row
+                }
+            }
+            pendingDeletionIndex = maxRow
+            pendingDeletionFocus = true
+            lastSelectedPath = ""
+        } else {
+            pendingDeletionIndex = -1
+            pendingDeletionFocus = false
+        }
         if (browserModel.startMoveSelectedToTrash) {
             browserModel.startMoveSelectedToTrash()
             return { "ok": true, "pending": pendingTrue }
         }
         if (browserModel.moveSelectedToTrash) {
-            return browserModel.moveSelectedToTrash()
+            const result = browserModel.moveSelectedToTrash()
+            if (!result || !result.ok) {
+                pendingDeletionIndex = -1
+                pendingDeletionFocus = false
+            }
+            return result
         }
         return { "ok": false, "error": "Trash not supported" }
     }
@@ -541,6 +566,17 @@ FocusScope {
             } else {
                 root.restoreScrollOffset()
             }
+            if (root.pendingDeletionFocus) {
+                const nextIndex = root.clampIndex(root.pendingDeletionIndex, browserGrid.count)
+                if (nextIndex >= 0) {
+                    browserGrid.setCurrentIndex(nextIndex)
+                    browserGrid.positionViewAtIndex(nextIndex)
+                    root.lastCurrentIndex = nextIndex
+                    root.rememberCurrentPath()
+                }
+                root.pendingDeletionIndex = -1
+                root.pendingDeletionFocus = false
+            }
         }
         function onRootPathChanged() {
             if (toolbar.pathField.text !== browserModel.rootPath) {
@@ -594,7 +630,9 @@ FocusScope {
         }
         function onModelAboutToBeReset() {
             root.restoringIndex = true
-            root.restoreCurrentIndex = root.lastCurrentIndex
+            root.restoreCurrentIndex = root.pendingDeletionIndex >= 0
+                ? root.pendingDeletionIndex
+                : root.lastCurrentIndex
             if (root.restoreCurrentIndex < 0 && root.lastSelectedPath === "") {
                 root.restoringIndex = false
             }

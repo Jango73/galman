@@ -22,4 +22,15 @@ QtObject {
     readonly property int statusBarPadding: spaceSm
     readonly property int focusFrameWidth: 2
     readonly property int focusFrameRadius: 0
+    readonly property int fileNameMaxLength: 20
+    readonly property string fileNameEllipsis: "..."
+
+    function elideFileName(name) {
+        const raw = String(name || "")
+        if (raw.length <= fileNameMaxLength) {
+            return raw
+        }
+        const keepLength = Math.max(0, fileNameMaxLength - fileNameEllipsis.length)
+        return raw.slice(0, keepLength) + fileNameEllipsis
+    }
 }

@@ -427,7 +427,7 @@ Item {
                     Label {
                         text: selectedPath === ""
                             ? qsTr("No item selected")
-                            : qsTr("Name: %1").arg(selectedName)
+                            : qsTr("Name: %1").arg(Theme.elideFileName(selectedName))
                         elide: Text.ElideRight
                         maximumLineCount: 2
                         wrapMode: Text.WordWrap

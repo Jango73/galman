@@ -128,7 +128,7 @@ Item {
         }
 
         Label {
-            text: root.fileName
+            text: Theme.elideFileName(root.fileName)
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             Layout.fillWidth: true
@@ -138,6 +138,7 @@ Item {
 
         Label {
             text: root.modifiedText
+            visible: root.modifiedText !== ""
             opacity: 0.7
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
