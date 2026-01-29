@@ -34,7 +34,8 @@ ColumnLayout {
             id: volumeCombo
             model: root.volumeModel
             textRole: "label"
-            Layout.fillWidth: true
+            Layout.preferredWidth: Theme.volumeComboPreferredWidth
+            Layout.minimumWidth: Theme.volumeComboMinimumWidth
             KeyNavigation.backtab: root.previousFocusItem
             KeyNavigation.tab: pathField
             onActivated: {
@@ -47,11 +48,6 @@ ColumnLayout {
                 }
             }
         }
-    }
-
-    RowLayout {
-        Layout.fillWidth: true
-        spacing: Theme.spaceMd
 
         Label {
             text: qsTr("Path")

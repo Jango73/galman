@@ -24,6 +24,7 @@ ApplicationWindow {
         : (rightBrowser.copyInProgress ? rightBrowser.copyProgress : 0)
     property bool singlePreviewEnabled: false
     property var singlePreviewBrowser: null
+    property var activeSelectionPane: null
     Material.theme: Material.Dark
     Material.primary: Material.Blue
     Material.accent: Material.DeepOrange
@@ -81,6 +82,12 @@ ApplicationWindow {
         target.browserModel.sortOrder = source.browserModel.sortOrder
         target.browserModel.showDirsFirst = source.browserModel.showDirsFirst
         target.browserModel.nameFilter = source.browserModel.nameFilter
+        target.browserModel.minimumByteSize = source.browserModel.minimumByteSize
+        target.browserModel.maximumByteSize = source.browserModel.maximumByteSize
+        target.browserModel.minimumImageWidth = source.browserModel.minimumImageWidth
+        target.browserModel.maximumImageWidth = source.browserModel.maximumImageWidth
+        target.browserModel.minimumImageHeight = source.browserModel.minimumImageHeight
+        target.browserModel.maximumImageHeight = source.browserModel.maximumImageHeight
         compareSyncing = false
     }
 
@@ -96,6 +103,7 @@ ApplicationWindow {
         confirmDialog.fileCount = stats.files || 0
         confirmDialog.dirCount = stats.dirs || 0
         confirmDialog.itemCount = leftBrowser.selectionCount
+        confirmDialog.nameConflictCount = leftBrowser.copyNameConflictCount(rightBrowser.currentPath)
         confirmDialog.open()
     }
 
@@ -111,6 +119,7 @@ ApplicationWindow {
         confirmDialog.fileCount = stats.files || 0
         confirmDialog.dirCount = stats.dirs || 0
         confirmDialog.itemCount = rightBrowser.selectionCount
+        confirmDialog.nameConflictCount = rightBrowser.copyNameConflictCount(leftBrowser.currentPath)
         confirmDialog.open()
     }
 
@@ -122,6 +131,19 @@ ApplicationWindow {
             return rightBrowser
         }
         return leftBrowser
+    }
+
+    function focusOtherBrowser() {
+        const current = focusedBrowser()
+        const target = current === leftBrowser ? rightBrowser : leftBrowser
+        if (!target) {
+            return
+        }
+        if (target.lastFocusItem) {
+            target.lastFocusItem.forceActiveFocus()
+            return
+        }
+        target.forceActiveFocus()
     }
 
     function openInternalPreviewForBrowser(browser) {
@@ -174,18 +196,26 @@ ApplicationWindow {
         }
     }
 
-    function startTrashSelection(sourcePane) {
+    function startRemovalSelection(sourcePane, moveToTrash) {
         if (!sourcePane) {
             return
         }
         activeTrashSourcePane = sourcePane
         activeTrashSourcePaths = sourcePane.selectedPaths()
-        const result = sourcePane.trashSelected()
+        const result = moveToTrash ? sourcePane.trashSelected() : sourcePane.deleteSelectedPermanently()
         if (result && result.error) {
             pushError(result.error)
             activeTrashSourcePane = null
             activeTrashSourcePaths = []
         }
+    }
+
+    function startTrashSelection(sourcePane) {
+        startRemovalSelection(sourcePane, true)
+    }
+
+    function startDeleteSelection(sourcePane) {
+        startRemovalSelection(sourcePane, false)
     }
 
     function refreshDisplays() {
@@ -501,6 +531,23 @@ ApplicationWindow {
     }
 
     Shortcut {
+        sequences: ["Shift+Delete"]
+        context: Qt.ApplicationShortcut
+        enabled: (leftBrowser.hasFocus || rightBrowser.hasFocus)
+            && !(leftBrowser.textInputActive || rightBrowser.textInputActive)
+            && !confirmDialog.visible
+        onActivated: {
+            if (leftBrowser.hasFocus) {
+                leftBrowser.confirmDeleteSelectedPermanently()
+                return
+            }
+            if (rightBrowser.hasFocus) {
+                rightBrowser.confirmDeleteSelectedPermanently()
+            }
+        }
+    }
+
+    Shortcut {
         sequences: ["Ctrl+Return", "Ctrl+Enter"]
         context: Qt.ApplicationShortcut
         enabled: !(leftBrowser.textInputActive || rightBrowser.textInputActive)
@@ -508,6 +555,14 @@ ApplicationWindow {
         onActivated: {
             openExternalFileForBrowser(focusedBrowser())
         }
+    }
+
+    Shortcut {
+        sequences: ["Alt+Left", "Alt+Right", "Alt+Up", "Alt+Down"]
+        context: Qt.ApplicationShortcut
+        enabled: !(leftBrowser.textInputActive || rightBrowser.textInputActive)
+            && !confirmDialog.visible
+        onActivated: focusOtherBrowser()
     }
 
     ColumnLayout {
@@ -583,13 +638,24 @@ ApplicationWindow {
                     openInternalPreviewForBrowser(leftBrowser)
                 }
                 onSelectionChanged: (paths) => {
+                    window.activeSelectionPane = leftBrowser
                     leftPanel.selectedPaths = paths
                     leftPanel.selectedIsImage = leftBrowser.selectedIsImage
+                    leftPanel.selectedFileCount = leftBrowser.selectedFileCount
+                    leftPanel.selectedTotalBytes = leftBrowser.selectedTotalBytes
                     scriptEngine.setSelection(paths)
                     syncBrowserState(leftBrowser, rightBrowser)
                 }
                 onTrashConfirmationRequested: (count) => {
                     confirmDialog.action = "trash"
+                    confirmDialog.sourcePane = leftBrowser
+                    confirmDialog.targetPane = null
+                    confirmDialog.itemCount = count
+                    confirmDialog.directionText = ""
+                    confirmDialog.open()
+                }
+                onDeleteConfirmationRequested: (count) => {
+                    confirmDialog.action = "delete"
                     confirmDialog.sourcePane = leftBrowser
                     confirmDialog.targetPane = null
                     confirmDialog.itemCount = count
@@ -603,6 +669,12 @@ ApplicationWindow {
                 onSortOrderChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onDirsFirstChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onNameFilterChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onMinimumByteSizeChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onMaximumByteSizeChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onMinimumImageWidthChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onMaximumImageWidthChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onMinimumImageHeightChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onMaximumImageHeightChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onGoUpRequested: syncGoUp(leftBrowser, rightBrowser)
                 onRenameSucceeded: (message) => pushStatus(message)
             }
@@ -710,13 +782,24 @@ ApplicationWindow {
                     openInternalPreviewForBrowser(rightBrowser)
                 }
                 onSelectionChanged: (paths) => {
+                    window.activeSelectionPane = rightBrowser
                     leftPanel.selectedPaths = paths
                     leftPanel.selectedIsImage = rightBrowser.selectedIsImage
+                    leftPanel.selectedFileCount = rightBrowser.selectedFileCount
+                    leftPanel.selectedTotalBytes = rightBrowser.selectedTotalBytes
                     scriptEngine.setSelection(paths)
                     syncBrowserState(rightBrowser, leftBrowser)
                 }
                 onTrashConfirmationRequested: (count) => {
                     confirmDialog.action = "trash"
+                    confirmDialog.sourcePane = rightBrowser
+                    confirmDialog.targetPane = null
+                    confirmDialog.itemCount = count
+                    confirmDialog.directionText = ""
+                    confirmDialog.open()
+                }
+                onDeleteConfirmationRequested: (count) => {
+                    confirmDialog.action = "delete"
                     confirmDialog.sourcePane = rightBrowser
                     confirmDialog.targetPane = null
                     confirmDialog.itemCount = count
@@ -730,6 +813,12 @@ ApplicationWindow {
                 onSortOrderChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onDirsFirstChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onNameFilterChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onMinimumByteSizeChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onMaximumByteSizeChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onMinimumImageWidthChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onMaximumImageWidthChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onMinimumImageHeightChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onMaximumImageHeightChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onGoUpRequested: syncGoUp(rightBrowser, leftBrowser)
                 onRenameSucceeded: (message) => pushStatus(message)
             }
@@ -744,6 +833,18 @@ ApplicationWindow {
                 function onTrashFinished(result) {
                     handleTrashFinished(leftBrowser, result)
                 }
+                function onSelectedFileCountChanged() {
+                    if (window.activeSelectionPane !== leftBrowser) {
+                        return
+                    }
+                    leftPanel.selectedFileCount = leftBrowser.selectedFileCount
+                }
+                function onSelectedTotalBytesChanged() {
+                    if (window.activeSelectionPane !== leftBrowser) {
+                        return
+                    }
+                    leftPanel.selectedTotalBytes = leftBrowser.selectedTotalBytes
+                }
             }
 
             Connections {
@@ -753,6 +854,18 @@ ApplicationWindow {
                 }
                 function onTrashFinished(result) {
                     handleTrashFinished(rightBrowser, result)
+                }
+                function onSelectedFileCountChanged() {
+                    if (window.activeSelectionPane !== rightBrowser) {
+                        return
+                    }
+                    leftPanel.selectedFileCount = rightBrowser.selectedFileCount
+                }
+                function onSelectedTotalBytesChanged() {
+                    if (window.activeSelectionPane !== rightBrowser) {
+                        return
+                    }
+                    leftPanel.selectedTotalBytes = rightBrowser.selectedTotalBytes
                 }
             }
 
@@ -857,6 +970,11 @@ ApplicationWindow {
         onTrashConfirmed: (sourcePane) => {
             if (sourcePane) {
                 startTrashSelection(sourcePane)
+            }
+        }
+        onDeleteConfirmed: (sourcePane) => {
+            if (sourcePane) {
+                startDeleteSelection(sourcePane)
             }
         }
         onCopyConfirmed: (sourcePane, targetPane) => {

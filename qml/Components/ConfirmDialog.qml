@@ -14,16 +14,22 @@ Dialog {
         color: Theme.modalOverlayColor
     }
     standardButtons: Dialog.Ok | Dialog.Cancel
-    title: action === "trash" ? qsTr("Move to trash?") : qsTr("Copy files?")
+    title: action === "trash"
+        ? qsTr("Move to trash?")
+        : action === "delete"
+            ? qsTr("Permanently delete?")
+            : qsTr("Copy files?")
     property var sourcePane: null
     property var targetPane: null
     property int itemCount: 0
     property int fileCount: 0
     property int dirCount: 0
+    property int nameConflictCount: 0
     property string directionText: ""
     property string action: "copy"
     signal copyConfirmed(var sourcePane, var targetPane)
     signal trashConfirmed(var sourcePane)
+    signal deleteConfirmed(var sourcePane)
     x: Math.round(((dialog.parent ? dialog.parent.width : 0) - width) / 2)
     y: Math.round(((dialog.parent ? dialog.parent.height : 0) - height) / 2)
     focus: true
@@ -39,6 +45,10 @@ Dialog {
     onAccepted: {
         if (action === "trash") {
             dialog.trashConfirmed(sourcePane)
+            return
+        }
+        if (action === "delete") {
+            dialog.deleteConfirmed(sourcePane)
             return
         }
         dialog.copyConfirmed(sourcePane, targetPane)
@@ -68,6 +78,13 @@ Dialog {
                 Layout.fillWidth: true
             }
             Label {
+                visible: dialog.action === "copy" && dialog.nameConflictCount > 0
+                text: qsTr("Warning: %1 already exist in target.")
+                    .arg(qsTr("%n item", "", dialog.nameConflictCount))
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            Label {
                 visible: dialog.action === "copy"
                 text: qsTr("Target: %1").arg(dialog.targetPane ? dialog.targetPane.currentPath : "")
                 wrapMode: Text.WordWrap
@@ -76,6 +93,12 @@ Dialog {
             Label {
                 visible: dialog.action === "trash"
                 text: qsTr("%1 will be moved to the trash.").arg(qsTr("%n item", "", dialog.itemCount))
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: dialog.action === "delete"
+                text: qsTr("%1 will be permanently deleted.").arg(qsTr("%n item", "", dialog.itemCount))
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }

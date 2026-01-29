@@ -36,10 +36,13 @@ Dialog {
                 title: qsTr("Folder View"),
                 items: [
                     { keys: "Del", action: qsTr("Move selection to trash (asks for confirmation)") },
+                    { keys: "Shift+Del", action: qsTr("Permanently delete selection (asks for confirmation)") },
                     { keys: "F5", action: qsTr("Refresh current folder") },
                     { keys: "Ctrl+Left", action: qsTr("Copy selection right to left") },
                     { keys: "Ctrl+Right", action: qsTr("Copy selection left to right") },
+                    { keys: "Alt+Arrows", action: qsTr("Switch focus between folder views") },
                     { keys: "Arrows", action: qsTr("Move current item") },
+                    { keys: "Letters", action: qsTr("Jump to next item starting with typed letters") },
                     { keys: "Shift+Arrows / Shift+Home / Shift+End", action: qsTr("Extend selection range") },
                     { keys: "Ctrl+Up / Ctrl+Down / Ctrl+Home / Ctrl+End", action: qsTr("Move current item without changing selection") },
                     { keys: "Home / End", action: qsTr("Go to first / last item") },

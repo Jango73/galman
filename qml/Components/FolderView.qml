@@ -16,6 +16,7 @@ FocusScope {
     signal viewSyncRequested()
     signal trashConfirmationRequested(int itemCount)
     signal trashFinished(var result)
+    signal deleteConfirmationRequested(int itemCount)
     signal copyLeftRequested()
     signal copyRightRequested()
     signal copyFinished(var result)
@@ -23,6 +24,12 @@ FocusScope {
     signal sortOrderChangedByUser(int sortOrder)
     signal dirsFirstChangedByUser(bool enabled)
     signal nameFilterChangedByUser(string filter)
+    signal minimumByteSizeChangedByUser(int value)
+    signal maximumByteSizeChangedByUser(int value)
+    signal minimumImageWidthChangedByUser(int value)
+    signal maximumImageWidthChangedByUser(int value)
+    signal minimumImageHeightChangedByUser(int value)
+    signal maximumImageHeightChangedByUser(int value)
     signal goUpRequested()
     signal renameSucceeded(string message)
     property string settingsKey: ""
@@ -32,6 +39,8 @@ FocusScope {
     property string currentPath: browserModel ? browserModel.rootPath : ""
     property int selectionCount: browserModel ? browserModel.selectedPaths.length : 0
     property bool selectedIsImage: browserModel ? browserModel.selectedIsImage : false
+    property int selectedFileCount: browserModel ? browserModel.selectedFileCount : 0
+    property real selectedTotalBytes: browserModel ? browserModel.selectedTotalBytes : 0
     property bool copyInProgress: browserModel ? browserModel.copyInProgress : false
     property real copyProgress: browserModel ? browserModel.copyProgress : 0
     property color panelBackground: Material.background
@@ -116,6 +125,13 @@ FocusScope {
 
     function selectedPaths() {
         return browserModel ? browserModel.selectedPaths : []
+    }
+
+    function copyNameConflictCount(targetPath) {
+        if (!browserModel || !browserModel.copyNameConflictCount) {
+            return 0
+        }
+        return browserModel.copyNameConflictCount(targetPath)
     }
 
     function selectionStats() {
@@ -379,6 +395,13 @@ FocusScope {
         root.trashConfirmationRequested(browserModel.selectedPaths.length)
     }
 
+    function confirmDeleteSelectedPermanently() {
+        if (!browserModel || browserModel.selectedPaths.length === 0) {
+            return
+        }
+        root.deleteConfirmationRequested(browserModel.selectedPaths.length)
+    }
+
     function trashSelected() {
         if (!browserModel) {
             return { "ok": false, "error": "No model" }
@@ -412,6 +435,41 @@ FocusScope {
             return result
         }
         return { "ok": false, "error": "Trash not supported" }
+    }
+
+    function deleteSelectedPermanently() {
+        if (!browserModel) {
+            return { "ok": false, "error": "No model" }
+        }
+        const rows = selectedRows()
+        if (rows.length > 0) {
+            let maxRow = -1
+            for (let i = 0; i < rows.length; i += 1) {
+                const row = rows[i]
+                if (row > maxRow) {
+                    maxRow = row
+                }
+            }
+            pendingDeletionIndex = maxRow
+            pendingDeletionFocus = true
+            lastSelectedPath = ""
+        } else {
+            pendingDeletionIndex = -1
+            pendingDeletionFocus = false
+        }
+        if (browserModel.startDeleteSelectedPermanently) {
+            browserModel.startDeleteSelectedPermanently()
+            return { "ok": true, "pending": pendingTrue }
+        }
+        if (browserModel.deleteSelectedPermanently) {
+            const result = browserModel.deleteSelectedPermanently()
+            if (!result || !result.ok) {
+                pendingDeletionIndex = -1
+                pendingDeletionFocus = false
+            }
+            return result
+        }
+        return { "ok": false, "error": "Delete not supported" }
     }
 
     function requestRenameSelected() {
@@ -489,6 +547,12 @@ FocusScope {
                 onSortOrderChangedByUser: (sortOrder) => root.sortOrderChangedByUser(sortOrder)
                 onDirsFirstChangedByUser: (enabled) => root.dirsFirstChangedByUser(enabled)
                 onNameFilterChangedByUser: (filter) => root.nameFilterChangedByUser(filter)
+                onMinimumByteSizeChangedByUser: (value) => root.minimumByteSizeChangedByUser(value)
+                onMaximumByteSizeChangedByUser: (value) => root.maximumByteSizeChangedByUser(value)
+                onMinimumImageWidthChangedByUser: (value) => root.minimumImageWidthChangedByUser(value)
+                onMaximumImageWidthChangedByUser: (value) => root.maximumImageWidthChangedByUser(value)
+                onMinimumImageHeightChangedByUser: (value) => root.minimumImageHeightChangedByUser(value)
+                onMaximumImageHeightChangedByUser: (value) => root.maximumImageHeightChangedByUser(value)
             }
 
             FolderViewGrid {
@@ -607,8 +671,50 @@ FocusScope {
             }
         }
         function onNameFilterChanged() {
-            if (sortBar.filterField.text !== browserModel.nameFilter) {
-                sortBar.filterField.text = browserModel.nameFilter
+            if (sortBar.nameFilterField.text !== browserModel.nameFilter) {
+                sortBar.nameFilterField.text = browserModel.nameFilter
+            }
+        }
+        function onMinimumByteSizeChanged() {
+            const value = browserModel.minimumByteSize
+            const textValue = value < 0 ? "" : String(value)
+            if (sortBar.minimumByteSizeField.text !== textValue) {
+                sortBar.minimumByteSizeField.text = textValue
+            }
+        }
+        function onMaximumByteSizeChanged() {
+            const value = browserModel.maximumByteSize
+            const textValue = value < 0 ? "" : String(value)
+            if (sortBar.maximumByteSizeField.text !== textValue) {
+                sortBar.maximumByteSizeField.text = textValue
+            }
+        }
+        function onMinimumImageWidthChanged() {
+            const value = browserModel.minimumImageWidth
+            const textValue = value < 0 ? "" : String(value)
+            if (sortBar.minimumImageWidthField.text !== textValue) {
+                sortBar.minimumImageWidthField.text = textValue
+            }
+        }
+        function onMaximumImageWidthChanged() {
+            const value = browserModel.maximumImageWidth
+            const textValue = value < 0 ? "" : String(value)
+            if (sortBar.maximumImageWidthField.text !== textValue) {
+                sortBar.maximumImageWidthField.text = textValue
+            }
+        }
+        function onMinimumImageHeightChanged() {
+            const value = browserModel.minimumImageHeight
+            const textValue = value < 0 ? "" : String(value)
+            if (sortBar.minimumImageHeightField.text !== textValue) {
+                sortBar.minimumImageHeightField.text = textValue
+            }
+        }
+        function onMaximumImageHeightChanged() {
+            const value = browserModel.maximumImageHeight
+            const textValue = value < 0 ? "" : String(value)
+            if (sortBar.maximumImageHeightField.text !== textValue) {
+                sortBar.maximumImageHeightField.text = textValue
             }
         }
         function onFolderActivated(path) {
@@ -649,7 +755,13 @@ FocusScope {
         sortBar.sortCombo.currentIndex = browserModel.sortKey
         sortBar.sortOrderBox.checked = browserModel.sortOrder === Qt.DescendingOrder
         sortBar.dirsFirstBox.checked = browserModel.showDirsFirst
-        sortBar.filterField.text = browserModel.nameFilter
+        sortBar.nameFilterField.text = browserModel.nameFilter
+        sortBar.minimumByteSizeField.text = browserModel.minimumByteSize < 0 ? "" : String(browserModel.minimumByteSize)
+        sortBar.maximumByteSizeField.text = browserModel.maximumByteSize < 0 ? "" : String(browserModel.maximumByteSize)
+        sortBar.minimumImageWidthField.text = browserModel.minimumImageWidth < 0 ? "" : String(browserModel.minimumImageWidth)
+        sortBar.maximumImageWidthField.text = browserModel.maximumImageWidth < 0 ? "" : String(browserModel.maximumImageWidth)
+        sortBar.minimumImageHeightField.text = browserModel.minimumImageHeight < 0 ? "" : String(browserModel.minimumImageHeight)
+        sortBar.maximumImageHeightField.text = browserModel.maximumImageHeight < 0 ? "" : String(browserModel.maximumImageHeight)
         const volumeIndex = volumeModel.indexForPath(browserModel.rootPath)
         if (volumeIndex >= 0) {
             volumeUpdating = true

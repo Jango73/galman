@@ -33,6 +33,7 @@ Item {
     readonly property int minimumPageRows: 1
     readonly property int pageRows: Math.max(minimumPageRows, Math.floor(grid.height / grid.cellHeight))
     property int contextMenuIndex: -1
+    property string typeAheadBuffer: ""
     signal viewSyncRequested()
     signal copyLeftRequested()
     signal copyRightRequested()
@@ -45,6 +46,13 @@ Item {
         interval: root.scrollRelockDelayMs
         repeat: false
         onTriggered: root.lockScroll()
+    }
+
+    Timer {
+        id: typeAheadResetTimer
+        interval: Theme.typeAheadResetMilliseconds
+        repeat: false
+        onTriggered: root.typeAheadBuffer = ""
     }
 
     function lockScroll() {
@@ -180,6 +188,36 @@ Item {
                     return
                 }
 
+                const hasAlt = (event.modifiers & Qt.AltModifier) !== 0
+                const hasMeta = (event.modifiers & Qt.MetaModifier) !== 0
+                const hasCtrl = (event.modifiers & Qt.ControlModifier) !== 0
+                if (!hasAlt && !hasMeta && !hasCtrl && event.text && event.text.length === 1) {
+                    const typed = event.text.toLowerCase()
+                    if (typed >= "a" && typed <= "z") {
+                        root.typeAheadBuffer = root.typeAheadBuffer + typed
+                        typeAheadResetTimer.restart()
+                        if (root.browserModel && root.browserModel.rowForPrefix) {
+                            const startRow = grid.currentIndex >= 0 ? grid.currentIndex + 1 : 0
+                            let row = root.browserModel.rowForPrefix(root.typeAheadBuffer, startRow)
+                            if (row < 0 && root.typeAheadBuffer.length > 1) {
+                                root.typeAheadBuffer = typed
+                                typeAheadResetTimer.restart()
+                                row = root.browserModel.rowForPrefix(typed, startRow)
+                            }
+                            if (row >= 0) {
+                                root.browserModel.select(row, false)
+                                root.anchorIndex = row
+                                root.allowProgrammaticScroll()
+                                grid.currentIndex = row
+                                grid.positionViewAtIndex(row, GridView.Visible)
+                                Qt.callLater(root.lockScroll)
+                            }
+                        }
+                        event.accepted = true
+                        return
+                    }
+                }
+
                 const current = grid.currentIndex < 0 ? 0 : grid.currentIndex
                 let next = current
 
@@ -236,7 +274,6 @@ Item {
                 }
 
                 const hasShift = (event.modifiers & Qt.ShiftModifier) !== 0
-                const hasCtrl = (event.modifiers & Qt.ControlModifier) !== 0
 
                 if (root.browserModel) {
                     if (hasShift) {

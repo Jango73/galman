@@ -41,6 +41,8 @@ qt_add_qml_module(galman
         src/FolderCompareSideModel.cpp
         src/ImageAutoAdjuster.h
         src/ImageAutoAdjuster.cpp
+        src/SelectionStatisticsUtils.h
+        src/SelectionStatisticsUtils.cpp
         src/VolumeModel.h
         src/VolumeModel.cpp
         src/ScriptEngine.h
@@ -49,6 +51,8 @@ qt_add_qml_module(galman
         src/ComfyClient.h
         src/ComfyWorkflowParser.h
         src/PlatformUtils.h
+        src/ImageMetadataUtils.h
+        src/ImageMetadataUtils.cpp
     QML_FILES
         qml/App/Main.qml
         qml/Theme.qml

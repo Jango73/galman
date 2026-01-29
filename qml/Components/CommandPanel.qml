@@ -10,6 +10,8 @@ Item {
     property string selectedPath: ""
     property string selectedName: ""
     property bool selectedIsImage: false
+    property int selectedFileCount: 0
+    property real selectedTotalBytes: 0
     property int imageWidth: 0
     property int imageHeight: 0
     property bool imageReady: false
@@ -34,6 +36,7 @@ Item {
     property var scriptValues: ({})
     property string scriptResult: ""
     property color panelBackground: Material.background
+    readonly property bool multiSelection: selectedPaths && selectedPaths.length > 1
 
     function sanitizeTextValue(value, fallback) {
         if (value === null || value === undefined) {
@@ -428,6 +431,7 @@ Item {
                         text: selectedPath === ""
                             ? qsTr("No item selected")
                             : qsTr("Name: %1").arg(Theme.elideFileName(selectedName))
+                        visible: !root.multiSelection
                         elide: Text.ElideRight
                         maximumLineCount: 2
                         wrapMode: Text.WordWrap
@@ -435,12 +439,26 @@ Item {
                     }
 
                     Label {
+                        text: qsTr("Files: %1").arg(selectedFileCount)
+                        visible: root.multiSelection
+                        opacity: 0.9
+                    }
+
+                    Label {
+                        text: qsTr("Total size: %1").arg(Theme.formatByteSize(selectedTotalBytes))
+                        visible: root.multiSelection
+                        opacity: 0.8
+                    }
+
+                    Label {
                         text: qsTr("Width: %1").arg(imageReady ? imageWidth : qsTr("-"))
+                        visible: !root.multiSelection
                         opacity: selectedPath === "" ? 0.7 : 0.8
                     }
 
                     Label {
                         text: qsTr("Height: %1").arg(imageReady ? imageHeight : qsTr("-"))
+                        visible: !root.multiSelection
                         opacity: 0.8
                     }
                 }

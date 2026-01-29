@@ -29,6 +29,46 @@
 
 namespace PlatformUtils {
 
+namespace {
+
+struct RemovalConstants {
+    static constexpr bool allowTrash = true;
+    static constexpr bool skipTrash = false;
+};
+
+bool removePathInternal(const QString &path, bool allowTrash, const QString &failureMessage, QString *error)
+{
+    if (path.isEmpty()) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Path is empty");
+        }
+        return false;
+    }
+    if (!QFileInfo::exists(path)) {
+        if (error) {
+            *error = QCoreApplication::translate("PlatformUtils", "Source not found");
+        }
+        return false;
+    }
+    if (allowTrash && QFile::moveToTrash(path)) {
+        return true;
+    }
+    QFileInfo info(path);
+    bool ok = false;
+    if (info.isDir()) {
+        QDir dir(path);
+        ok = dir.removeRecursively();
+    } else {
+        ok = QFile::remove(path);
+    }
+    if (!ok && error) {
+        *error = failureMessage;
+    }
+    return ok;
+}
+
+} // namespace
+
 /**
  * @brief Normalizes a path for consistent comparisons across platforms.
  * @param path Input path to normalize.
@@ -67,33 +107,14 @@ QString comfyDefaultOutputDir()
  */
 bool moveToTrashOrDelete(const QString &path, QString *error)
 {
-    if (path.isEmpty()) {
-        if (error) {
-            *error = QCoreApplication::translate("PlatformUtils", "Path is empty");
-        }
-        return false;
-    }
-    if (!QFileInfo::exists(path)) {
-        if (error) {
-            *error = QCoreApplication::translate("PlatformUtils", "Source not found");
-        }
-        return false;
-    }
-    if (QFile::moveToTrash(path)) {
-        return true;
-    }
-    QFileInfo info(path);
-    bool ok = false;
-    if (info.isDir()) {
-        QDir dir(path);
-        ok = dir.removeRecursively();
-    } else {
-        ok = QFile::remove(path);
-    }
-    if (!ok && error) {
-        *error = QCoreApplication::translate("PlatformUtils", "Failed to move to trash");
-    }
-    return ok;
+    const QString failureMessage = QCoreApplication::translate("PlatformUtils", "Failed to move to trash");
+    return removePathInternal(path, RemovalConstants::allowTrash, failureMessage, error);
+}
+
+bool deletePermanently(const QString &path, QString *error)
+{
+    const QString failureMessage = QCoreApplication::translate("PlatformUtils", "Failed to delete");
+    return removePathInternal(path, RemovalConstants::skipTrash, failureMessage, error);
 }
 
 /**

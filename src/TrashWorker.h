@@ -10,7 +10,12 @@ class TrashWorker : public QObject
     Q_OBJECT
 
 public:
-    explicit TrashWorker(const QStringList &paths, QObject *parent = nullptr);
+    enum RemovalMode {
+        MoveToTrash = 0,
+        DeletePermanently
+    };
+
+    explicit TrashWorker(const QStringList &paths, RemovalMode mode, QObject *parent = nullptr);
 
 public slots:
     void start();
@@ -25,6 +30,6 @@ private:
     void tick(int &completed, int total);
 
     QStringList m_paths;
+    RemovalMode m_mode = MoveToTrash;
     QAtomicInt m_cancelled = 0;
 };
-

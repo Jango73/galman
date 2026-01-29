@@ -33,9 +33,10 @@ struct TrashWorkerConstants {
 };
 } // namespace
 
-TrashWorker::TrashWorker(const QStringList &paths, QObject *parent)
+TrashWorker::TrashWorker(const QStringList &paths, RemovalMode mode, QObject *parent)
     : QObject(parent)
     , m_paths(paths)
+    , m_mode(mode)
 {
 }
 
@@ -93,10 +94,16 @@ void TrashWorker::start()
         }
 
         QString error;
-        if (!PlatformUtils::moveToTrashOrDelete(path, &error)) {
+        const bool ok = (m_mode == DeletePermanently)
+            ? PlatformUtils::deletePermanently(path, &error)
+            : PlatformUtils::moveToTrashOrDelete(path, &error);
+        if (!ok) {
             failed += TrashWorkerConstants::singleStep;
             if (firstError.isEmpty()) {
-                firstError = error.isEmpty() ? tr("Failed to move to trash") : error;
+                const QString fallback = (m_mode == DeletePermanently)
+                    ? tr("Failed to delete")
+                    : tr("Failed to move to trash");
+                firstError = error.isEmpty() ? fallback : error;
             }
             tick(completed, total);
             continue;
@@ -121,4 +128,3 @@ void TrashWorker::start()
 
     emit finished(result);
 }
-

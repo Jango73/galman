@@ -27,16 +27,20 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QFutureWatcher>
 #include <QLocale>
 #include <QMetaObject>
 #include <QIODevice>
 #include <QSettings>
 #include <QThread>
+#include <QtConcurrent>
 #include <algorithm>
 
 #include "CopyWorker.h"
 #include "FolderCompareModel.h"
+#include "ImageMetadataUtils.h"
 #include "PlatformUtils.h"
+#include "SelectionStatisticsUtils.h"
 #include "TrashWorker.h"
 
 namespace {
@@ -62,6 +66,12 @@ struct FolderCompareTrashConstants {
     static constexpr int emptyCount = 0;
     static constexpr qreal zeroProgress = 0.0;
     static constexpr bool pendingTrue = true;
+};
+
+struct FolderCompareFilterConstants {
+    static constexpr qint64 unsetByteSize = -1;
+    static constexpr int unsetDimension = -1;
+    static constexpr int signatureDimension = 32;
 };
 
 /**
@@ -118,30 +128,6 @@ bool copyDirectoryRecursive(const QString &sourcePath, const QString &targetPath
         }
     }
     return true;
-}
-
-/**
- * @brief Counts folders and files under a path recursively.
- * @param path Root path to count.
- * @param dirCount Reference to folder counter to update.
- * @param fileCount Reference to file counter to update.
- */
-void countPathRecursive(const QString &path, int &dirCount, int &fileCount)
-{
-    const QFileInfo info(path);
-    if (!info.exists()) {
-        return;
-    }
-    if (info.isDir()) {
-        dirCount += 1;
-        const QDir dir(path);
-        const QFileInfoList entries = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
-        for (const QFileInfo &entry : entries) {
-            countPathRecursive(entry.absoluteFilePath(), dirCount, fileCount);
-        }
-    } else {
-        fileCount += 1;
-    }
 }
 
 /**
@@ -341,6 +327,150 @@ void FolderCompareSideModel::setShowDirsFirst(bool enabled)
 }
 
 /**
+ * @brief Returns the minimum file size filter in bytes.
+ * @return Minimum byte size or -1 when unset.
+ */
+qint64 FolderCompareSideModel::minimumByteSize() const
+{
+    return m_minimumByteSize;
+}
+
+/**
+ * @brief Sets the minimum file size filter in bytes.
+ * @param value Minimum byte size, or -1 to clear.
+ */
+void FolderCompareSideModel::setMinimumByteSize(qint64 value)
+{
+    const qint64 normalized = value < 0 ? FolderCompareFilterConstants::unsetByteSize : value;
+    if (normalized == m_minimumByteSize) {
+        return;
+    }
+    m_minimumByteSize = normalized;
+    emit minimumByteSizeChanged();
+    rebuildEntries();
+}
+
+/**
+ * @brief Returns the maximum file size filter in bytes.
+ * @return Maximum byte size or -1 when unset.
+ */
+qint64 FolderCompareSideModel::maximumByteSize() const
+{
+    return m_maximumByteSize;
+}
+
+/**
+ * @brief Sets the maximum file size filter in bytes.
+ * @param value Maximum byte size, or -1 to clear.
+ */
+void FolderCompareSideModel::setMaximumByteSize(qint64 value)
+{
+    const qint64 normalized = value < 0 ? FolderCompareFilterConstants::unsetByteSize : value;
+    if (normalized == m_maximumByteSize) {
+        return;
+    }
+    m_maximumByteSize = normalized;
+    emit maximumByteSizeChanged();
+    rebuildEntries();
+}
+
+/**
+ * @brief Returns the minimum image width filter in pixels.
+ * @return Minimum width or -1 when unset.
+ */
+int FolderCompareSideModel::minimumImageWidth() const
+{
+    return m_minimumImageWidth;
+}
+
+/**
+ * @brief Sets the minimum image width filter in pixels.
+ * @param value Minimum width, or -1 to clear.
+ */
+void FolderCompareSideModel::setMinimumImageWidth(int value)
+{
+    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
+    if (normalized == m_minimumImageWidth) {
+        return;
+    }
+    m_minimumImageWidth = normalized;
+    emit minimumImageWidthChanged();
+    rebuildEntries();
+}
+
+/**
+ * @brief Returns the maximum image width filter in pixels.
+ * @return Maximum width or -1 when unset.
+ */
+int FolderCompareSideModel::maximumImageWidth() const
+{
+    return m_maximumImageWidth;
+}
+
+/**
+ * @brief Sets the maximum image width filter in pixels.
+ * @param value Maximum width, or -1 to clear.
+ */
+void FolderCompareSideModel::setMaximumImageWidth(int value)
+{
+    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
+    if (normalized == m_maximumImageWidth) {
+        return;
+    }
+    m_maximumImageWidth = normalized;
+    emit maximumImageWidthChanged();
+    rebuildEntries();
+}
+
+/**
+ * @brief Returns the minimum image height filter in pixels.
+ * @return Minimum height or -1 when unset.
+ */
+int FolderCompareSideModel::minimumImageHeight() const
+{
+    return m_minimumImageHeight;
+}
+
+/**
+ * @brief Sets the minimum image height filter in pixels.
+ * @param value Minimum height, or -1 to clear.
+ */
+void FolderCompareSideModel::setMinimumImageHeight(int value)
+{
+    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
+    if (normalized == m_minimumImageHeight) {
+        return;
+    }
+    m_minimumImageHeight = normalized;
+    emit minimumImageHeightChanged();
+    rebuildEntries();
+}
+
+/**
+ * @brief Returns the maximum image height filter in pixels.
+ * @return Maximum height or -1 when unset.
+ */
+int FolderCompareSideModel::maximumImageHeight() const
+{
+    return m_maximumImageHeight;
+}
+
+/**
+ * @brief Sets the maximum image height filter in pixels.
+ * @param value Maximum height, or -1 to clear.
+ */
+void FolderCompareSideModel::setMaximumImageHeight(int value)
+{
+    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
+    if (normalized == m_maximumImageHeight) {
+        return;
+    }
+    m_maximumImageHeight = normalized;
+    emit maximumImageHeightChanged();
+    rebuildEntries();
+}
+
+/**
  * @brief Returns whether the compare model is loading entries.
  * @return True when loading is in progress, false otherwise.
  */
@@ -378,6 +508,24 @@ QStringList FolderCompareSideModel::selectedPaths() const
 bool FolderCompareSideModel::selectedIsImage() const
 {
     return m_selectedIsImage;
+}
+
+/**
+ * @brief Returns the number of selected files (recursive).
+ * @return File count for the current selection.
+ */
+int FolderCompareSideModel::selectedFileCount() const
+{
+    return m_selectedFileCount;
+}
+
+/**
+ * @brief Returns the total bytes for selected files (recursive).
+ * @return Total byte size of the current selection.
+ */
+qint64 FolderCompareSideModel::selectedTotalBytes() const
+{
+    return m_selectedTotalBytes;
 }
 
 /**
@@ -587,6 +735,37 @@ QString FolderCompareSideModel::pathForRow(int row) const
 }
 
 /**
+ * @brief Finds the next row whose name starts with a prefix.
+ * @param prefix Search prefix (case-insensitive).
+ * @param startRow Row index to start searching from.
+ * @return Matching row index, or -1 if none found.
+ */
+int FolderCompareSideModel::rowForPrefix(const QString &prefix, int startRow) const
+{
+    const QString trimmed = prefix.trimmed();
+    if (trimmed.isEmpty() || m_entries.isEmpty()) {
+        return -1;
+    }
+    int start = startRow;
+    if (start < 0) {
+        start = 0;
+    } else if (start >= m_entries.size()) {
+        start = m_entries.size() - 1;
+    }
+    for (int i = start; i < m_entries.size(); ++i) {
+        if (m_entries.at(i).fileName.startsWith(trimmed, Qt::CaseInsensitive)) {
+            return i;
+        }
+    }
+    for (int i = 0; i < start; ++i) {
+        if (m_entries.at(i).fileName.startsWith(trimmed, Qt::CaseInsensitive)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
  * @brief Formats the last modified time for a row.
  * @param row Row index to inspect.
  * @return Localized short format timestamp string.
@@ -598,6 +777,16 @@ QString FolderCompareSideModel::modifiedForRow(int row) const
         return {};
     }
     return QLocale().toString(entry->modified, QLocale::ShortFormat);
+}
+
+/**
+ * @brief Counts selected items that already exist in a target folder.
+ * @param targetDir Target folder path.
+ * @return Number of conflicting items.
+ */
+int FolderCompareSideModel::copyNameConflictCount(const QString &targetDir) const
+{
+    return SelectionStatisticsUtils::countNameConflicts(m_selectedPaths, targetDir);
 }
 
 /**
@@ -784,8 +973,8 @@ bool FolderCompareSideModel::selectedIsGhost() const
 QVariantMap FolderCompareSideModel::selectionStats() const
 {
     QVariantMap result;
-    int dirs = 0;
-    int files = 0;
+    QStringList paths;
+    paths.reserve(m_selectedIds.size());
     for (const QString &id : m_selectedIds) {
         auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
             return entry.id == id;
@@ -797,10 +986,12 @@ QVariantMap FolderCompareSideModel::selectionStats() const
         if (entry.isGhost || entry.filePath.isEmpty()) {
             continue;
         }
-        countPathRecursive(entry.filePath, dirs, files);
+        paths.append(entry.filePath);
     }
-    result.insert("dirs", dirs);
-    result.insert("files", files);
+    const SelectionStatisticsUtils::SelectionStatisticsResult stats
+        = SelectionStatisticsUtils::computeStatistics(paths);
+    result.insert("dirs", stats.folderCount);
+    result.insert("files", stats.fileCount);
     return result;
 }
 
@@ -1051,22 +1242,58 @@ void FolderCompareSideModel::cancelCopy()
  */
 QVariantMap FolderCompareSideModel::moveSelectedToTrash()
 {
-    QVariantMap result;
-    if (m_selectedIds.isEmpty()) {
-        result.insert("ok", false);
-        result.insert("error", tr("Nothing to delete"));
-        return result;
-    }
-    startMoveSelectedToTrash();
-    result.insert("ok", true);
-    result.insert("pending", FolderCompareTrashConstants::pendingTrue);
-    return result;
+    return requestRemoval(true);
 }
 
 /**
  * @brief Starts an asynchronous trash operation for selected items.
  */
 void FolderCompareSideModel::startMoveSelectedToTrash()
+{
+    startRemoval(true);
+}
+
+/**
+ * @brief Starts an asynchronous permanent delete of selected items.
+ * @return Result map indicating the operation was started.
+ */
+QVariantMap FolderCompareSideModel::deleteSelectedPermanently()
+{
+    return requestRemoval(false);
+}
+
+/**
+ * @brief Starts an asynchronous permanent delete operation for selected items.
+ */
+void FolderCompareSideModel::startDeleteSelectedPermanently()
+{
+    startRemoval(false);
+}
+
+/**
+ * @brief Starts an asynchronous removal of selected items.
+ * @param moveToTrash True to move to trash when supported, false to delete permanently.
+ * @return Result map indicating the operation was started.
+ */
+QVariantMap FolderCompareSideModel::requestRemoval(bool moveToTrash)
+{
+    QVariantMap result;
+    if (m_selectedIds.isEmpty()) {
+        result.insert("ok", false);
+        result.insert("error", tr("Nothing to delete"));
+        return result;
+    }
+    startRemoval(moveToTrash);
+    result.insert("ok", true);
+    result.insert("pending", FolderCompareTrashConstants::pendingTrue);
+    return result;
+}
+
+/**
+ * @brief Starts an asynchronous removal operation for selected items.
+ * @param moveToTrash True to move to trash when supported, false to delete permanently.
+ */
+void FolderCompareSideModel::startRemoval(bool moveToTrash)
 {
     if (m_trashInProgress) {
         return;
@@ -1087,7 +1314,7 @@ void FolderCompareSideModel::startMoveSelectedToTrash()
         if (entry.isGhost) {
             preFailed += 1;
             if (preError.isEmpty()) {
-                preError = tr("Cannot trash ghost items");
+                preError = moveToTrash ? tr("Cannot trash ghost items") : tr("Cannot delete ghost items");
             }
             continue;
         }
@@ -1114,7 +1341,8 @@ void FolderCompareSideModel::startMoveSelectedToTrash()
     }
 
     auto *thread = new QThread(this);
-    auto *worker = new TrashWorker(paths);
+    const TrashWorker::RemovalMode mode = moveToTrash ? TrashWorker::MoveToTrash : TrashWorker::DeletePermanently;
+    auto *worker = new TrashWorker(paths, mode);
     worker->moveToThread(thread);
 
     m_trashThread = thread;
@@ -1302,9 +1530,8 @@ void FolderCompareSideModel::updateTrashProgress(int completed, int total)
 void FolderCompareSideModel::setBaseEntries(const QVector<CompareEntry> &entries)
 {
     m_baseEntries = entries;
-    QVector<CompareEntry> filtered = m_baseEntries;
-    applyFilterAndSort(filtered);
-    applyEntriesIncremental(filtered);
+    pruneCaches(m_baseEntries);
+    rebuildEntries();
 }
 
 /**
@@ -1341,6 +1568,7 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
     }
 
     m_baseEntries = std::move(nextBase);
+    pruneCaches(m_baseEntries);
     QVector<CompareEntry> filtered = m_baseEntries;
     applyFilterAndSort(filtered);
     applyEntriesIncremental(filtered);
@@ -1351,6 +1579,13 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
  */
 void FolderCompareSideModel::rebuildEntries()
 {
+    if (imageSizeFiltersActive()) {
+        requestImageSizeRefresh();
+    }
+    if (signatureSortActive()) {
+        requestSignatureHashRefresh();
+    }
+
     QVector<CompareEntry> filtered = m_baseEntries;
     applyFilterAndSort(filtered);
 
@@ -1441,6 +1676,195 @@ void FolderCompareSideModel::applyEntriesIncremental(const QVector<CompareEntry>
 }
 
 /**
+ * @brief Returns whether byte size filters are active.
+ * @return True when any byte size filter is set.
+ */
+bool FolderCompareSideModel::byteSizeFiltersActive() const
+{
+    return m_minimumByteSize > FolderCompareFilterConstants::unsetByteSize
+        || m_maximumByteSize > FolderCompareFilterConstants::unsetByteSize;
+}
+
+/**
+ * @brief Returns whether image size filters are active.
+ * @return True when any image dimension filter is set.
+ */
+bool FolderCompareSideModel::imageSizeFiltersActive() const
+{
+    return m_minimumImageWidth > FolderCompareFilterConstants::unsetDimension
+        || m_maximumImageWidth > FolderCompareFilterConstants::unsetDimension
+        || m_minimumImageHeight > FolderCompareFilterConstants::unsetDimension
+        || m_maximumImageHeight > FolderCompareFilterConstants::unsetDimension;
+}
+
+/**
+ * @brief Returns whether signature-based sorting is active.
+ * @return True when sorting by signature.
+ */
+bool FolderCompareSideModel::signatureSortActive() const
+{
+    return m_sortKey == Signature;
+}
+
+/**
+ * @brief Removes cached entries that are no longer present.
+ * @param entries Current base entries to keep.
+ */
+void FolderCompareSideModel::pruneCaches(const QVector<CompareEntry> &entries)
+{
+    QSet<QString> currentPaths;
+    currentPaths.reserve(entries.size());
+    for (const CompareEntry &entry : entries) {
+        if (!entry.filePath.isEmpty()) {
+            currentPaths.insert(entry.filePath);
+        }
+    }
+
+    for (auto it = m_imageSizeCache.begin(); it != m_imageSizeCache.end();) {
+        if (!currentPaths.contains(it.key())) {
+            it = m_imageSizeCache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    for (auto it = m_imageSizeAttempted.begin(); it != m_imageSizeAttempted.end();) {
+        if (!currentPaths.contains(*it)) {
+            it = m_imageSizeAttempted.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    for (auto it = m_signatureHashCache.begin(); it != m_signatureHashCache.end();) {
+        if (!currentPaths.contains(it.key())) {
+            it = m_signatureHashCache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    for (auto it = m_signatureHashAttempted.begin(); it != m_signatureHashAttempted.end();) {
+        if (!currentPaths.contains(*it)) {
+            it = m_signatureHashAttempted.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+/**
+ * @brief Starts asynchronous image size reads when needed.
+ */
+void FolderCompareSideModel::requestImageSizeRefresh()
+{
+    if (m_imageSizeLoading) {
+        return;
+    }
+    if (!imageSizeFiltersActive()) {
+        return;
+    }
+
+    QStringList pending;
+    pending.reserve(m_baseEntries.size());
+    for (const CompareEntry &entry : m_baseEntries) {
+        if (entry.isDir || !entry.isImage || entry.filePath.isEmpty()) {
+            continue;
+        }
+        if (m_imageSizeAttempted.contains(entry.filePath)) {
+            continue;
+        }
+        pending.append(entry.filePath);
+    }
+
+    if (pending.isEmpty()) {
+        return;
+    }
+
+    m_imageSizeLoading = true;
+    const int token = ++m_imageSizeGeneration;
+
+    auto future = QtConcurrent::run([pending]() {
+        return ImageMetadataUtils::readImageSizes(pending);
+    });
+
+    auto *watcher = new QFutureWatcher<ImageMetadataUtils::ImageSizeBatchResult>(this);
+    connect(watcher, &QFutureWatcher<ImageMetadataUtils::ImageSizeBatchResult>::finished, this, [this, watcher, token]() {
+        const auto result = watcher->result();
+        watcher->deleteLater();
+
+        if (token != m_imageSizeGeneration) {
+            return;
+        }
+
+        for (auto it = result.sizes.constBegin(); it != result.sizes.constEnd(); ++it) {
+            m_imageSizeCache.insert(it.key(), it.value());
+        }
+        for (const QString &path : result.attempted) {
+            m_imageSizeAttempted.insert(path);
+        }
+        m_imageSizeLoading = false;
+        rebuildEntries();
+    });
+
+    watcher->setFuture(future);
+}
+
+/**
+ * @brief Starts asynchronous signature hash reads when needed.
+ */
+void FolderCompareSideModel::requestSignatureHashRefresh()
+{
+    if (m_signatureHashLoading) {
+        return;
+    }
+    if (!signatureSortActive()) {
+        return;
+    }
+
+    QStringList pending;
+    pending.reserve(m_baseEntries.size());
+    for (const CompareEntry &entry : m_baseEntries) {
+        if (entry.isDir || !entry.isImage || entry.filePath.isEmpty()) {
+            continue;
+        }
+        if (m_signatureHashAttempted.contains(entry.filePath)) {
+            continue;
+        }
+        pending.append(entry.filePath);
+    }
+
+    if (pending.isEmpty()) {
+        return;
+    }
+
+    m_signatureHashLoading = true;
+    const int token = ++m_signatureHashGeneration;
+
+    auto future = QtConcurrent::run([pending]() {
+        return ImageMetadataUtils::readSignatureHashes(pending, FolderCompareFilterConstants::signatureDimension);
+    });
+
+    auto *watcher = new QFutureWatcher<ImageMetadataUtils::SignatureHashBatchResult>(this);
+    connect(watcher, &QFutureWatcher<ImageMetadataUtils::SignatureHashBatchResult>::finished, this, [this, watcher, token]() {
+        const auto result = watcher->result();
+        watcher->deleteLater();
+
+        if (token != m_signatureHashGeneration) {
+            return;
+        }
+
+        for (auto it = result.hashes.constBegin(); it != result.hashes.constEnd(); ++it) {
+            m_signatureHashCache.insert(it.key(), it.value());
+        }
+        for (const QString &path : result.attempted) {
+            m_signatureHashAttempted.insert(path);
+        }
+        m_signatureHashLoading = false;
+        rebuildEntries();
+    });
+
+    watcher->setFuture(future);
+}
+
+/**
  * @brief Filters and sorts entries based on current settings.
  * @param entries Entries to filter and sort in place.
  */
@@ -1453,10 +1877,66 @@ void FolderCompareSideModel::applyFilterAndSort(QVector<CompareEntry> &entries) 
     }
 
     const QString trimmed = m_nameFilter.trimmed();
-    if (!trimmed.isEmpty()) {
-        const QString needle = trimmed.toLower();
-        entries.erase(std::remove_if(entries.begin(), entries.end(), [needle](const CompareEntry &entry) {
-            return !entry.fileName.toLower().contains(needle);
+    const bool nameFilterActive = !trimmed.isEmpty();
+    const bool byteSizeActive = byteSizeFiltersActive();
+    const bool imageSizeActive = imageSizeFiltersActive();
+    const QString needle = trimmed.toLower();
+
+    if (nameFilterActive || byteSizeActive || imageSizeActive) {
+        entries.erase(std::remove_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
+            if (nameFilterActive && !entry.fileName.toLower().contains(needle)) {
+                return true;
+            }
+
+            if (byteSizeActive) {
+                if (entry.isGhost || entry.filePath.isEmpty()) {
+                    return true;
+                }
+                if (!entry.isDir) {
+                    const QFileInfo info(entry.filePath);
+                    const qint64 byteSize = info.size();
+                    if (m_minimumByteSize > FolderCompareFilterConstants::unsetByteSize
+                        && byteSize < m_minimumByteSize) {
+                        return true;
+                    }
+                    if (m_maximumByteSize > FolderCompareFilterConstants::unsetByteSize
+                        && byteSize > m_maximumByteSize) {
+                        return true;
+                    }
+                }
+            }
+
+            if (imageSizeActive) {
+                if (!entry.isImage || entry.isDir || entry.isGhost || entry.filePath.isEmpty()) {
+                    return true;
+                }
+                const bool hasSize = m_imageSizeCache.contains(entry.filePath);
+                if (!hasSize) {
+                    return true;
+                }
+                const QSize size = m_imageSizeCache.value(entry.filePath);
+                if (!size.isValid()) {
+                    return true;
+                }
+                if (m_minimumImageWidth > FolderCompareFilterConstants::unsetDimension
+                    && size.width() < m_minimumImageWidth) {
+                    return true;
+                }
+                if (m_maximumImageWidth > FolderCompareFilterConstants::unsetDimension
+                    && size.width() > m_maximumImageWidth) {
+                    return true;
+                }
+                if (m_minimumImageHeight > FolderCompareFilterConstants::unsetDimension
+                    && size.height() < m_minimumImageHeight) {
+                    return true;
+                }
+                if (m_maximumImageHeight > FolderCompareFilterConstants::unsetDimension
+                    && size.height() > m_maximumImageHeight) {
+                    return true;
+                }
+            }
+
+            return false;
         }), entries.end());
     }
 
@@ -1482,6 +1962,23 @@ void FolderCompareSideModel::applyFilterAndSort(QVector<CompareEntry> &entries) 
         case Modified:
             result = left.modified < right.modified;
             break;
+        case Signature: {
+            if (!left.isDir && !right.isDir) {
+                const bool leftHasSignature = m_signatureHashCache.contains(left.filePath);
+                const bool rightHasSignature = m_signatureHashCache.contains(right.filePath);
+                if (leftHasSignature && rightHasSignature) {
+                    result = m_signatureHashCache.value(left.filePath)
+                        < m_signatureHashCache.value(right.filePath);
+                } else if (leftHasSignature != rightHasSignature) {
+                    result = leftHasSignature;
+                } else {
+                    result = collator.compare(left.fileName, right.fileName) < 0;
+                }
+            } else {
+                result = collator.compare(left.fileName, right.fileName) < 0;
+            }
+            break;
+        }
         case Name:
         default:
             result = collator.compare(left.fileName, right.fileName) < 0;
@@ -1517,6 +2014,7 @@ void FolderCompareSideModel::notifySelectionChanged()
         m_selectedIsImage = nextIsImage;
         emit selectedIsImageChanged();
     }
+    updateSelectionTotalsAsync();
 
     if (m_entries.isEmpty()) {
         return;
@@ -1524,6 +2022,62 @@ void FolderCompareSideModel::notifySelectionChanged()
     const QModelIndex first = index(0, 0);
     const QModelIndex last = index(m_entries.size() - 1, 0);
     emit dataChanged(first, last, {SelectedRole});
+}
+
+/**
+ * @brief Updates cached selection totals asynchronously.
+ */
+void FolderCompareSideModel::updateSelectionTotalsAsync()
+{
+    const QStringList paths = m_selectedPaths;
+    const int token = ++m_selectionTotalsGeneration;
+    if (paths.isEmpty()) {
+        setSelectionTotals(0, 0);
+        return;
+    }
+
+    auto future = QtConcurrent::run([paths]() {
+        const SelectionStatisticsUtils::SelectionStatisticsResult stats
+            = SelectionStatisticsUtils::computeStatistics(paths);
+        return qMakePair(stats.fileCount, stats.totalBytes);
+    });
+
+    auto *watcher = new QFutureWatcher<QPair<int, qint64>>(this);
+    connect(watcher, &QFutureWatcher<QPair<int, qint64>>::finished, this, [this, watcher, token]() {
+        if (token != m_selectionTotalsGeneration) {
+            watcher->deleteLater();
+            return;
+        }
+        const auto result = watcher->result();
+        setSelectionTotals(result.first, result.second);
+        watcher->deleteLater();
+    });
+    watcher->setFuture(future);
+}
+
+/**
+ * @brief Sets selection totals and emits change signals if needed.
+ * @param fileCount Selected file count.
+ * @param totalBytes Selected total byte size.
+ */
+void FolderCompareSideModel::setSelectionTotals(int fileCount, qint64 totalBytes)
+{
+    bool countChanged = false;
+    bool bytesChanged = false;
+    if (m_selectedFileCount != fileCount) {
+        m_selectedFileCount = fileCount;
+        countChanged = true;
+    }
+    if (m_selectedTotalBytes != totalBytes) {
+        m_selectedTotalBytes = totalBytes;
+        bytesChanged = true;
+    }
+    if (countChanged) {
+        emit selectedFileCountChanged();
+    }
+    if (bytesChanged) {
+        emit selectedTotalBytesChanged();
+    }
 }
 
 /**

@@ -24,6 +24,14 @@ QtObject {
     readonly property int focusFrameRadius: 0
     readonly property int fileNameMaxLength: 20
     readonly property string fileNameEllipsis: "..."
+    readonly property int volumeComboPreferredWidth: 220
+    readonly property int volumeComboMinimumWidth: 160
+    readonly property int filterNameFieldWidth: 120
+    readonly property int filterNumberFieldWidth: 120
+    readonly property int filterUnsetValue: -1
+    readonly property int typeAheadResetMilliseconds: 900
+    readonly property int byteUnitBase: 1024
+    readonly property int byteUnitPrecision: 1
 
     function elideFileName(name) {
         const raw = String(name || "")
@@ -32,5 +40,24 @@ QtObject {
         }
         const keepLength = Math.max(0, fileNameMaxLength - fileNameEllipsis.length)
         return raw.slice(0, keepLength) + fileNameEllipsis
+    }
+
+    function formatByteSize(bytes) {
+        const value = Number(bytes || 0)
+        if (!Number.isFinite(value) || value <= 0) {
+            return "0b"
+        }
+        const units = ["b", "kb", "mb", "gb", "tb", "pb"]
+        let unitIndex = 0
+        let scaled = value
+        while (scaled >= byteUnitBase && unitIndex < units.length - 1) {
+            scaled = scaled / byteUnitBase
+            unitIndex += 1
+        }
+        let text = scaled.toFixed(byteUnitPrecision)
+        if (byteUnitPrecision > 0) {
+            text = text.replace(/\.0+$/, "")
+        }
+        return text + units[unitIndex]
     }
 }
