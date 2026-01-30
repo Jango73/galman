@@ -29,7 +29,6 @@
 #include <QImageReader>
 #include <QFile>
 #include <QDebug>
-#include <QIODevice>
 #include <QLocale>
 #include <QtConcurrent>
 #include <algorithm>
@@ -37,87 +36,12 @@
 #include <QThread>
 
 #include "CopyWorker.h"
+#include "FileOperationUtils.h"
 #include "ImageMetadataUtils.h"
 #include "PlatformUtils.h"
+#include "RowMatchUtils.h"
 #include "SelectionStatisticsUtils.h"
 #include "TrashWorker.h"
-
-namespace {
-
-/**
- * @brief Applies source timestamps to the target path.
- * @param sourceInfo Source file information to copy timestamps from.
- * @param targetPath Destination file path to update.
- */
-void applyFileTimes(const QFileInfo &sourceInfo, const QString &targetPath)
-{
-    QFile targetFile(targetPath);
-    targetFile.open(QIODevice::ReadWrite);
-    targetFile.setFileTime(sourceInfo.lastModified(), QFileDevice::FileModificationTime);
-    const QDateTime birthTime = sourceInfo.birthTime();
-    if (birthTime.isValid()) {
-        targetFile.setFileTime(birthTime, QFileDevice::FileBirthTime);
-    }
-    targetFile.close();
-}
-
-/**
- * @brief Copies a folder recursively from source to target.
- * @param sourcePath Source folder path.
- * @param targetPath Target folder path.
- * @param error Optional output error message.
- * @return True when the copy succeeds, false otherwise.
- */
-bool copyDirectoryRecursive(const QString &sourcePath, const QString &targetPath, QString *error)
-{
-    const QDir sourceDir(sourcePath);
-    if (!sourceDir.exists()) {
-        if (error) {
-            *error = QCoreApplication::translate("FolderBrowserModel", "Source not found");
-        }
-        return false;
-    }
-    if (QFileInfo::exists(targetPath)) {
-        if (error) {
-            *error = QCoreApplication::translate("FolderBrowserModel", "Target already exists");
-        }
-        return false;
-    }
-    if (!QDir().mkpath(targetPath)) {
-        if (error) {
-            *error = QCoreApplication::translate("FolderBrowserModel", "Cannot create target folder");
-        }
-        return false;
-    }
-
-    const QFileInfoList entries = sourceDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
-    for (const QFileInfo &entry : entries) {
-        const QString entryPath = entry.absoluteFilePath();
-        const QString targetEntryPath = QDir(targetPath).filePath(entry.fileName());
-        if (entry.isDir()) {
-            if (!copyDirectoryRecursive(entryPath, targetEntryPath, error)) {
-                return false;
-            }
-        } else {
-            if (QFileInfo::exists(targetEntryPath)) {
-                if (error) {
-                    *error = QCoreApplication::translate("FolderBrowserModel", "Target already exists");
-                }
-                return false;
-            }
-            if (!QFile::copy(entryPath, targetEntryPath)) {
-                if (error) {
-                    *error = QCoreApplication::translate("FolderBrowserModel", "Copy failed");
-                }
-                return false;
-            }
-            applyFileTimes(entry, targetEntryPath);
-        }
-    }
-    return true;
-}
-
-} // namespace
 
 namespace {
 
@@ -841,27 +765,8 @@ QString FolderBrowserModel::pathForRow(int row) const
  */
 int FolderBrowserModel::rowForPrefix(const QString &prefix, int startRow) const
 {
-    const QString trimmed = prefix.trimmed();
-    if (trimmed.isEmpty() || m_entries.isEmpty()) {
-        return -1;
-    }
-    int start = startRow;
-    if (start < 0) {
-        start = 0;
-    } else if (start >= m_entries.size()) {
-        start = m_entries.size() - 1;
-    }
-    for (int i = start; i < m_entries.size(); ++i) {
-        if (m_entries.at(i).fileName().startsWith(trimmed, Qt::CaseInsensitive)) {
-            return i;
-        }
-    }
-    for (int i = 0; i < start; ++i) {
-        if (m_entries.at(i).fileName().startsWith(trimmed, Qt::CaseInsensitive)) {
-            return i;
-        }
-    }
-    return -1;
+    return RowMatchUtils::rowForPrefix(prefix, startRow, m_entries.size(),
+        [this](int row) { return m_entries.at(row).fileName(); });
 }
 
 /**
@@ -1178,7 +1083,7 @@ QVariantMap FolderBrowserModel::copySelectedTo(const QString &targetDir)
         }
         if (info.isDir()) {
             QString error;
-            if (!copyDirectoryRecursive(path, targetPath, &error)) {
+            if (!FileOperationUtils::copyFolderRecursive(path, targetPath, "FolderBrowserModel", &error)) {
                 failed += 1;
                 if (firstError.isEmpty()) {
                     firstError = error.isEmpty() ? tr("Copy failed") : error;
@@ -1197,7 +1102,7 @@ QVariantMap FolderBrowserModel::copySelectedTo(const QString &targetDir)
                 continue;
             }
             const QFileInfo sourceInfo(path);
-            applyFileTimes(sourceInfo, targetPath);
+            FileOperationUtils::applyFileTimes(sourceInfo, targetPath);
             copied += 1;
         }
         finishItem();
@@ -1986,30 +1891,12 @@ void FolderBrowserModel::notifySelectionChanged()
  */
 void FolderBrowserModel::updateSelectionTotalsAsync()
 {
-    const QStringList paths = m_selectedPaths;
-    const int token = ++m_selectionTotalsGeneration;
-    if (paths.isEmpty()) {
-        setSelectionTotals(0, 0);
-        return;
-    }
-
-    auto future = QtConcurrent::run([paths]() {
-        const SelectionStatisticsUtils::SelectionStatisticsResult stats
-            = SelectionStatisticsUtils::computeStatistics(paths);
-        return qMakePair(stats.fileCount, stats.totalBytes);
-    });
-
-    auto *watcher = new QFutureWatcher<QPair<int, qint64>>(this);
-    connect(watcher, &QFutureWatcher<QPair<int, qint64>>::finished, this, [this, watcher, token]() {
-        if (token != m_selectionTotalsGeneration) {
-            watcher->deleteLater();
-            return;
-        }
-        const auto result = watcher->result();
-        setSelectionTotals(result.first, result.second);
-        watcher->deleteLater();
-    });
-    watcher->setFuture(future);
+    SelectionStatisticsUtils::updateSelectionTotalsAsync(this,
+        m_selectedPaths,
+        &m_selectionTotalsGeneration,
+        [this](int fileCount, qint64 totalBytes) {
+            setSelectionTotals(fileCount, totalBytes);
+        });
 }
 
 /**

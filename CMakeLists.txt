@@ -33,6 +33,9 @@ qt_add_qml_module(galman
         src/CopyWorker.cpp
         src/TrashWorker.h
         src/TrashWorker.cpp
+        src/FileOperationUtils.h
+        src/FileOperationUtils.cpp
+        src/RowMatchUtils.h
         src/FolderBrowserModel.h
         src/FolderBrowserModel.cpp
         src/FolderCompareModel.h

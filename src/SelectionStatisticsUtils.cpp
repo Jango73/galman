@@ -22,6 +22,8 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QFutureWatcher>
+#include <QtConcurrent>
 
 namespace {
 
@@ -78,6 +80,38 @@ int countNameConflicts(const QStringList &paths, const QString &targetFolder)
         }
     }
     return conflicts;
+}
+
+void updateSelectionTotalsAsync(QObject *parent,
+                                const QStringList &paths,
+                                int *generation,
+                                const std::function<void(int, qint64)> &applyTotals)
+{
+    if (!generation) {
+        return;
+    }
+    const int token = ++(*generation);
+    if (paths.isEmpty()) {
+        applyTotals(0, 0);
+        return;
+    }
+
+    auto future = QtConcurrent::run([paths]() {
+        const SelectionStatisticsResult stats = computeStatistics(paths);
+        return qMakePair(stats.fileCount, stats.totalBytes);
+    });
+
+    auto *watcher = new QFutureWatcher<QPair<int, qint64>>(parent);
+    QObject::connect(watcher, &QFutureWatcher<QPair<int, qint64>>::finished, parent, [watcher, generation, token, applyTotals]() {
+        if (generation && token != *generation) {
+            watcher->deleteLater();
+            return;
+        }
+        const auto result = watcher->result();
+        applyTotals(result.first, result.second);
+        watcher->deleteLater();
+    });
+    watcher->setFuture(future);
 }
 
 } // namespace SelectionStatisticsUtils

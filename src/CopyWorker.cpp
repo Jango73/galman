@@ -21,35 +21,13 @@
 
 #include "CopyWorker.h"
 
-#include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
-#include <QIODevice>
 
+#include "FileOperationUtils.h"
 #include "PlatformUtils.h"
-
-namespace {
-
-/**
- * @brief Applies source file timestamps to the target path.
- * @param sourceInfo Source file information to copy timestamps from.
- * @param targetPath Destination file path to update.
- */
-void applyFileTimes(const QFileInfo &sourceInfo, const QString &targetPath)
-{
-    QFile targetFile(targetPath);
-    targetFile.open(QIODevice::ReadWrite);
-    targetFile.setFileTime(sourceInfo.lastModified(), QFileDevice::FileModificationTime);
-    const QDateTime birthTime = sourceInfo.birthTime();
-    if (birthTime.isValid()) {
-        targetFile.setFileTime(birthTime, QFileDevice::FileBirthTime);
-    }
-    targetFile.close();
-}
-
-} // namespace
 
 /**
  * @brief Creates a copy worker for a list of copy items.
@@ -198,7 +176,7 @@ bool CopyWorker::copyDirRecursive(const QString &sourcePath,
             tick(completed, total);
             return false;
         }
-        applyFileTimes(entry, targetEntryPath);
+        FileOperationUtils::applyFileTimes(entry, targetEntryPath);
         tick(completed, total);
     }
     return true;
@@ -248,7 +226,7 @@ bool CopyWorker::copyItem(const CopyItem &item, int &completed, int total, QStri
         tick(completed, total);
         return false;
     }
-    applyFileTimes(info, item.targetPath);
+    FileOperationUtils::applyFileTimes(info, item.targetPath);
     tick(completed, total);
     return true;
 }
