@@ -572,6 +572,8 @@ FocusScope {
                 onCopyLeftRequested: root.copyLeftRequested()
                 onCopyRightRequested: root.copyRightRequested()
                 onRenameRequested: (path) => root.requestRenamePath(path)
+                onTrashRequested: root.confirmTrashSelected()
+                onDeleteRequested: root.confirmDeleteSelectedPermanently()
                 onCurrentIndexUpdated: (value) => {
                     if (root.restoringIndex) {
                         return

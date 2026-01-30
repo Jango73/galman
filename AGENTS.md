@@ -28,3 +28,4 @@ This is an image gallery manager.
 - All General Coding Conventions items apply
 - **UI only**: No heavy business logic in QML, leave that to C++.
 - **QML signal handlers**: NEVER rely on implicit parameter injection (deprecated). Always declare formal parameters, e.g. `onPressed: (mouse) => { ... }`.
+- To mask menu items (when they should be inactive), donc just disable them, use Instantiator.

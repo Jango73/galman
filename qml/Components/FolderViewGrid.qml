@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.15
 import QtQml.Models 2.15
+import QtQuick.Window 2.15
 import "."
 import Galman 1.0
 
@@ -34,12 +35,15 @@ Item {
     readonly property int pageRows: Math.max(minimumPageRows, Math.floor(grid.height / grid.cellHeight))
     property int contextMenuIndex: -1
     property string typeAheadBuffer: ""
+    readonly property int selectedCount: root.browserModel ? root.browserModel.selectedPaths.length : 0
     signal viewSyncRequested()
     signal copyLeftRequested()
     signal copyRightRequested()
     signal contentYUpdated(real value)
     signal currentIndexUpdated(int value)
     signal renameRequested(string path)
+    signal trashRequested()
+    signal deleteRequested()
 
     Timer {
         id: scrollRelockTimer
@@ -322,18 +326,34 @@ Item {
 
         Menu {
             id: contextMenu
-            MenuItem {
-                text: qsTr("Rename")
-                enabled: root.contextMenuIndex >= 0 && root.browserModel
-                onTriggered: {
-                    if (!root.browserModel || !root.browserModel.pathForRow) {
-                        return
-                    }
-                    const path = root.browserModel.pathForRow(root.contextMenuIndex)
-                    if (path) {
-                        root.renameRequested(path)
+            parent: Window.window ? Window.window.contentItem : root
+            Instantiator {
+                id: renameFactory
+                active: root.selectedCount === 1
+                delegate: MenuItem {
+                    text: qsTr("Rename")
+                    onTriggered: {
+                        if (!root.browserModel || !root.browserModel.pathForRow) {
+                            return
+                        }
+                        const path = root.browserModel.pathForRow(root.contextMenuIndex)
+                        if (path) {
+                            root.renameRequested(path)
+                        }
                     }
                 }
+                onObjectAdded: (index, object) => contextMenu.insertItem(0, object)
+                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
+            }
+            MenuItem {
+                text: qsTr("Move to trash")
+                enabled: root.selectedCount > 0
+                onTriggered: root.trashRequested()
+            }
+            MenuItem {
+                text: qsTr("Delete permanently")
+                enabled: root.selectedCount > 0
+                onTriggered: root.deleteRequested()
             }
         }
 
@@ -434,7 +454,8 @@ Item {
                 if (!root.browserModel) {
                     return
                 }
-                const idx = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
+                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
+                const idx = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
                 if (idx < 0) {
                     return
                 }
@@ -447,8 +468,11 @@ Item {
                     root.anchorIndex = idx
                     grid.currentIndex = idx
                 }
-                const point = mapToItem(null, mouseX, mouseY)
-                contextMenu.popup(point.x, point.y)
+                const container = contextMenu.parent ? contextMenu.parent : root
+                const point = mapToItem(container, mouse.x, mouse.y)
+                contextMenu.x = point.x
+                contextMenu.y = point.y
+                contextMenu.open()
             }
 
             onPressed: (mouse) => {
@@ -456,7 +480,8 @@ Item {
                 startX = mouseX
                 startY = mouseY
                 didDrag = false
-                pressIndex = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
+                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
+                pressIndex = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
                 if (mouse.button === Qt.RightButton) {
                     openContextMenu(mouse)
                     mouse.accepted = true
@@ -499,7 +524,8 @@ Item {
                 if (!root.browserModel) {
                     return
                 }
-                const idx = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
+                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
+                const idx = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
                 if (idx >= 0) {
                     if ((mouse.modifiers & Qt.ShiftModifier) !== 0 && root.anchorIndex >= 0) {
                         const additive = (mouse.modifiers & Qt.ControlModifier) !== 0
@@ -528,7 +554,8 @@ Item {
                 if (!root.browserModel) {
                     return
                 }
-                const idx = grid.indexAt(mouseX + grid.contentX, mouseY + grid.contentY)
+                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
+                const idx = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
                 if (idx >= 0) {
                     root.browserModel.activate(idx)
                 }
