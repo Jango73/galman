@@ -79,7 +79,7 @@ qt_add_qml_module(galman
         qml/Components/ShortcutsDialog.qml
         qml/Components/StatusBadge.qml
     RESOURCES
-        qml/Assets/Galman.jpg
+        qml/Assets/Galman.png
 )
 
 qt_add_shaders(galman "galman_shaders"

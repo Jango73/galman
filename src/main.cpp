@@ -31,7 +31,7 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-    app.setWindowIcon(QIcon(":/Galman/qml/Assets/Galman.jpg"));
+    app.setWindowIcon(QIcon(":/Galman/qml/Assets/Galman.png"));
 
     QQmlApplicationEngine engine;
     ScriptEngine scriptEngine;
