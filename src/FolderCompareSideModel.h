@@ -63,6 +63,7 @@ public:
     enum Role {
         FileNameRole = Qt::UserRole + 1,
         FilePathRole,
+        OtherSidePathRole,
         IsDirRole,
         IsImageRole,
         SuffixRole,
@@ -77,6 +78,7 @@ public:
         QString id;
         QString fileName;
         QString filePath;
+        QString otherSidePath;
         QDateTime created;
         QDateTime modified;
         bool isDir = false;

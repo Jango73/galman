@@ -64,6 +64,7 @@ struct RefreshResult {
     CompareResult result;
 };
 
+
 ImageSignature readSignature(const QString &path);
 bool isPathInRoot(const QString &rootPath, const QString &path);
 QHash<QString, FolderCompareModel::CachedEntry> scanCache(const QString &rootPath, bool enabled, bool computeSignatures);
@@ -236,6 +237,7 @@ QHash<QString, FolderCompareModel::CachedEntry> scanCache(const QString &rootPat
     }
     return cache;
 }
+
 
 /**
  * @brief Updates cache entries for a list of paths inside a root.
@@ -438,10 +440,11 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         FolderCompareSideModel::CompareEntry ghost;
         ghost.fileName = leftEntry.fileName;
         ghost.filePath = QString();
+        ghost.otherSidePath = leftEntry.filePath;
         ghost.created = leftEntry.created;
         ghost.modified = leftEntry.modified;
         ghost.isDir = false;
-        ghost.isImage = false;
+        ghost.isImage = true;
         ghost.isGhost = true;
         ghost.status = FolderCompareSideModel::StatusMissing;
         ghost.id = ghostId(ghost.fileName, ghost.modified.toSecsSinceEpoch(), "right", ghostIndex);
@@ -459,10 +462,11 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         FolderCompareSideModel::CompareEntry ghost;
         ghost.fileName = rightEntry.fileName;
         ghost.filePath = QString();
+        ghost.otherSidePath = rightEntry.filePath;
         ghost.created = rightEntry.created;
         ghost.modified = rightEntry.modified;
         ghost.isDir = false;
-        ghost.isImage = false;
+        ghost.isImage = true;
         ghost.isGhost = true;
         ghost.status = FolderCompareSideModel::StatusMissing;
         ghost.id = ghostId(ghost.fileName, ghost.modified.toSecsSinceEpoch(), "left", ghostIndex);
@@ -480,6 +484,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         FolderCompareSideModel::CompareEntry ghost;
         ghost.fileName = leftEntry.fileName;
         ghost.filePath = QString();
+        ghost.otherSidePath = leftEntry.filePath;
         ghost.created = leftEntry.created;
         ghost.modified = leftEntry.modified;
         ghost.isDir = leftEntry.isDir;
@@ -501,6 +506,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         FolderCompareSideModel::CompareEntry ghost;
         ghost.fileName = rightEntry.fileName;
         ghost.filePath = QString();
+        ghost.otherSidePath = rightEntry.filePath;
         ghost.created = rightEntry.created;
         ghost.modified = rightEntry.modified;
         ghost.isDir = rightEntry.isDir;

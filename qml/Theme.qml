@@ -32,6 +32,7 @@ QtObject {
     readonly property int typeAheadResetMilliseconds: 900
     readonly property int byteUnitBase: 1024
     readonly property int byteUnitPrecision: 1
+    readonly property real ghostPreviewOpacity: 0.5
 
     function elideFileName(name) {
         const raw = String(name || "")

@@ -11,6 +11,7 @@ Item {
     property bool isDir: false
     property bool isGhost: false
     property string filePath: ""
+    property string otherSidePath: ""
     property string fileName: ""
     property string modifiedText: ""
     property bool thumbnailReady: false
@@ -37,18 +38,24 @@ Item {
         spacing: Theme.spaceMd
 
         Item {
+            id: previewContainer
             Layout.alignment: Qt.AlignHCenter
             width: 72
             height: 72
+            readonly property string previewPath: root.isGhost && root.otherSidePath !== ""
+                ? root.otherSidePath
+                : root.filePath
+            readonly property bool hasPreviewSource: root.isImage && previewPath !== ""
 
             Image {
                 anchors.fill: parent
-                source: root.isImage ? ("file://" + root.filePath) : ""
+                source: previewContainer.hasPreviewSource ? ("file://" + previewContainer.previewPath) : ""
                 sourceSize.width: 128
                 sourceSize.height: 128
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                visible: root.isImage && !root.isGhost && root.thumbnailReady
+                opacity: root.isGhost ? Theme.ghostPreviewOpacity : 1.0
+                visible: previewContainer.hasPreviewSource && root.thumbnailReady
                 onStatusChanged: root.thumbnailReady = (status === Image.Ready)
                 onSourceChanged: root.thumbnailReady = false
             }
@@ -57,7 +64,7 @@ Item {
                 anchors.centerIn: parent
                 width: 56
                 height: 56
-                visible: !root.isImage || root.isGhost || !root.thumbnailReady
+                visible: !previewContainer.hasPreviewSource || !root.thumbnailReady
                 onVisibleChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()

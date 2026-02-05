@@ -70,6 +70,7 @@ bool compareEntryEquivalent(const FolderCompareSideModel::CompareEntry &left,
     return left.id == right.id
         && left.fileName == right.fileName
         && left.filePath == right.filePath
+        && left.otherSidePath == right.otherSidePath
         && left.created == right.created
         && left.modified == right.modified
         && left.isDir == right.isDir
@@ -522,6 +523,8 @@ QVariant FolderCompareSideModel::data(const QModelIndex &index, int role) const
         return entry.fileName;
     case FilePathRole:
         return entry.filePath;
+    case OtherSidePathRole:
+        return entry.otherSidePath;
     case IsDirRole:
         return entry.isDir;
     case IsImageRole:
@@ -554,6 +557,7 @@ QHash<int, QByteArray> FolderCompareSideModel::roleNames() const
     return {
         {FileNameRole, "fileName"},
         {FilePathRole, "filePath"},
+        {OtherSidePathRole, "otherSidePath"},
         {IsDirRole, "isDir"},
         {IsImageRole, "isImage"},
         {SuffixRole, "suffix"},
@@ -1527,6 +1531,7 @@ void FolderCompareSideModel::applyEntriesIncremental(const QVector<CompareEntry>
     const QVector<int> dataRoles = {
         FileNameRole,
         FilePathRole,
+        OtherSidePathRole,
         IsDirRole,
         IsImageRole,
         SuffixRole,

@@ -326,6 +326,7 @@ Item {
                     isDir: model.isDir
                     isGhost: model.isGhost
                     filePath: model.filePath
+                    otherSidePath: model.otherSidePath ? model.otherSidePath : ""
                     fileName: model.fileName
                     modifiedText: model.isGhost
                         ? ""
