@@ -1118,11 +1118,7 @@ QVariantMap FolderBrowserModel::copySelectedTo(const QString &targetDir)
     return result;
 }
 
-/**
- * @brief Starts an asynchronous copy of selected items to a target folder.
- * @param targetDir Target folder path.
- */
-void FolderBrowserModel::startCopySelectedTo(const QString &targetDir)
+void FolderBrowserModel::startTransferSelectedTo(const QString &targetDir, bool moveItems)
 {
     if (m_copyInProgress) {
         return;
@@ -1154,8 +1150,11 @@ void FolderBrowserModel::startCopySelectedTo(const QString &targetDir)
         items.append(item);
     }
 
+    const CopyWorker::OperationMode mode = moveItems
+        ? CopyWorker::OperationMode::Move
+        : CopyWorker::OperationMode::Copy;
     auto *thread = new QThread(this);
-    auto *worker = new CopyWorker(items);
+    auto *worker = new CopyWorker(items, mode);
     worker->moveToThread(thread);
 
     m_copyThread = thread;
@@ -1176,6 +1175,24 @@ void FolderBrowserModel::startCopySelectedTo(const QString &targetDir)
     connect(thread, &QThread::finished, worker, &QObject::deleteLater);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     thread->start();
+}
+
+/**
+ * @brief Starts an asynchronous copy of selected items to a target folder.
+ * @param targetDir Target folder path.
+ */
+void FolderBrowserModel::startCopySelectedTo(const QString &targetDir)
+{
+    startTransferSelectedTo(targetDir, false);
+}
+
+/**
+ * @brief Starts an asynchronous move of selected items to a target folder.
+ * @param targetDir Target folder path.
+ */
+void FolderBrowserModel::startMoveSelectedTo(const QString &targetDir)
+{
+    startTransferSelectedTo(targetDir, true);
 }
 
 /**

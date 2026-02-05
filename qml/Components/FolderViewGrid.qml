@@ -39,6 +39,9 @@ Item {
     signal viewSyncRequested()
     signal copyLeftRequested()
     signal copyRightRequested()
+    signal moveLeftRequested()
+    signal moveRightRequested()
+    signal moveOtherRequested()
     signal contentYUpdated(real value)
     signal currentIndexUpdated(int value)
     signal renameRequested(string path)
@@ -161,7 +164,25 @@ Item {
                 }
             }
             Keys.onPressed: (event) => {
-                if ((event.modifiers & Qt.ControlModifier) !== 0) {
+                const hasShift = (event.modifiers & Qt.ShiftModifier) !== 0
+                const hasAlt = (event.modifiers & Qt.AltModifier) !== 0
+                const hasMeta = (event.modifiers & Qt.MetaModifier) !== 0
+                const hasCtrl = (event.modifiers & Qt.ControlModifier) !== 0
+
+                if (hasShift && !hasAlt && !hasMeta && !hasCtrl) {
+                    if (event.key === Qt.Key_Left) {
+                        root.moveLeftRequested()
+                        event.accepted = true
+                        return
+                    }
+                    if (event.key === Qt.Key_Right) {
+                        root.moveRightRequested()
+                        event.accepted = true
+                        return
+                    }
+                }
+
+                if (hasCtrl) {
                     if (event.key === Qt.Key_Left) {
                         root.copyLeftRequested()
                         event.accepted = true
@@ -192,9 +213,6 @@ Item {
                     return
                 }
 
-                const hasAlt = (event.modifiers & Qt.AltModifier) !== 0
-                const hasMeta = (event.modifiers & Qt.MetaModifier) !== 0
-                const hasCtrl = (event.modifiers & Qt.ControlModifier) !== 0
                 if (!hasAlt && !hasMeta && !hasCtrl && event.text && event.text.length === 1) {
                     const typed = event.text.toLowerCase()
                     if (typed >= "a" && typed <= "z") {
@@ -277,8 +295,6 @@ Item {
                     return
                 }
 
-                const hasShift = (event.modifiers & Qt.ShiftModifier) !== 0
-
                 if (root.browserModel) {
                     if (hasShift) {
                         if (root.anchorIndex < 0) {
@@ -345,15 +361,35 @@ Item {
                 onObjectAdded: (index, object) => contextMenu.insertItem(0, object)
                 onObjectRemoved: (index, object) => contextMenu.removeItem(object)
             }
-            MenuItem {
-                text: qsTr("Move to trash")
-                enabled: root.selectedCount > 0
-                onTriggered: root.trashRequested()
+            Instantiator {
+                id: moveOtherFactory
+                active: root.selectedCount > 0
+                delegate: MenuItem {
+                    text: qsTr("Move to other pane")
+                    onTriggered: root.moveOtherRequested()
+                }
+                onObjectAdded: (index, object) => contextMenu.insertItem(renameFactory.active ? 1 : 0, object)
+                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
             }
-            MenuItem {
-                text: qsTr("Delete permanently")
-                enabled: root.selectedCount > 0
-                onTriggered: root.deleteRequested()
+            Instantiator {
+                id: trashFactory
+                active: root.selectedCount > 0
+                delegate: MenuItem {
+                    text: qsTr("Move to trash")
+                    onTriggered: root.trashRequested()
+                }
+                onObjectAdded: (index, object) => contextMenu.addItem(object)
+                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
+            }
+            Instantiator {
+                id: deleteFactory
+                active: root.selectedCount > 0
+                delegate: MenuItem {
+                    text: qsTr("Delete permanently")
+                    onTriggered: root.deleteRequested()
+                }
+                onObjectAdded: (index, object) => contextMenu.addItem(object)
+                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
             }
         }
 

@@ -54,6 +54,7 @@ ApplicationWindow {
     property var activeCopyTargetPane: null
     property var activeCopySourcePaths: []
     property bool activeCopyCompare: false
+    property string activeCopyOperation: "copy"
     property var activeTrashSourcePane: null
     property var activeTrashSourcePaths: []
 
@@ -112,6 +113,38 @@ ApplicationWindow {
             return
         }
         confirmDialog.action = "copy"
+        confirmDialog.sourcePane = rightBrowser
+        confirmDialog.targetPane = leftBrowser
+        confirmDialog.directionText = qsTr("right to left")
+        const stats = rightBrowser.selectionStats()
+        confirmDialog.fileCount = stats.files || 0
+        confirmDialog.dirCount = stats.dirs || 0
+        confirmDialog.itemCount = rightBrowser.selectionCount
+        confirmDialog.nameConflictCount = rightBrowser.copyNameConflictCount(leftBrowser.currentPath)
+        confirmDialog.open()
+    }
+
+    function triggerMoveLeftToRight() {
+        if (leftBrowser.selectionCount === 0) {
+            return
+        }
+        confirmDialog.action = "move"
+        confirmDialog.sourcePane = leftBrowser
+        confirmDialog.targetPane = rightBrowser
+        confirmDialog.directionText = qsTr("left to right")
+        const stats = leftBrowser.selectionStats()
+        confirmDialog.fileCount = stats.files || 0
+        confirmDialog.dirCount = stats.dirs || 0
+        confirmDialog.itemCount = leftBrowser.selectionCount
+        confirmDialog.nameConflictCount = leftBrowser.copyNameConflictCount(rightBrowser.currentPath)
+        confirmDialog.open()
+    }
+
+    function triggerMoveRightToLeft() {
+        if (rightBrowser.selectionCount === 0) {
+            return
+        }
+        confirmDialog.action = "move"
         confirmDialog.sourcePane = rightBrowser
         confirmDialog.targetPane = leftBrowser
         confirmDialog.directionText = qsTr("right to left")
@@ -185,7 +218,20 @@ ApplicationWindow {
         activeCopyTargetPane = targetPane
         activeCopySourcePaths = sourcePane.selectedPaths()
         activeCopyCompare = compareModel.enabled
+        activeCopyOperation = "copy"
         sourcePane.startCopySelectionTo(targetPane.currentPath)
+    }
+
+    function startMove(sourcePane, targetPane) {
+        if (!sourcePane || !targetPane) {
+            return
+        }
+        activeCopySourcePane = sourcePane
+        activeCopyTargetPane = targetPane
+        activeCopySourcePaths = sourcePane.selectedPaths()
+        activeCopyCompare = compareModel.enabled
+        activeCopyOperation = "move"
+        sourcePane.startMoveSelectionTo(targetPane.currentPath)
     }
 
     function stopCopy() {
@@ -234,42 +280,60 @@ ApplicationWindow {
         if (result && result.error) {
             pushError(result.error)
         }
-        const copied = result && result.copied ? result.copied : 0
-        const targetPaths = copied > emptyItemCount && activeCopyTargetPane
+        const operationKey = activeCopyOperation === "move" ? "moved" : "copied"
+        const transferred = result && result[operationKey] ? result[operationKey] : 0
+        const targetPaths = transferred > emptyItemCount && activeCopyTargetPane
             ? buildTargetPaths(activeCopySourcePaths, activeCopyTargetPane.currentPath)
             : []
-        if (copied > emptyItemCount && !result.cancelled) {
+        if (transferred > emptyItemCount && !result.cancelled) {
             const hasSingleItem = activeCopySourcePaths
                 && activeCopySourcePaths.length === singleItemCount
             if (hasSingleItem && activeCopyTargetPane) {
                 const destinationPath = targetPaths.length > emptyItemCount ? targetPaths[emptyItemCount] : ""
                 if (destinationPath !== "") {
-                    pushStatus(qsTr("Copy completed: %1").arg(destinationPath))
+                    const statusText = activeCopyOperation === "move"
+                        ? qsTr("Move completed: %1")
+                        : qsTr("Copy completed: %1")
+                    pushStatus(statusText.arg(destinationPath))
                 } else {
-                    pushStatus(qsTr("Copy completed"))
+                    pushStatus(activeCopyOperation === "move"
+                        ? qsTr("Move completed")
+                        : qsTr("Copy completed"))
                 }
             } else {
-                pushStatus(qsTr("Copy completed"))
+                pushStatus(activeCopyOperation === "move"
+                    ? qsTr("Move completed")
+                    : qsTr("Copy completed"))
             }
         }
-        if (copied > emptyItemCount && activeCopyTargetPane) {
+        if (transferred > emptyItemCount && activeCopyTargetPane) {
             if (activeCopyCompare) {
-                if (sourcePane === leftBrowser) {
+                if (activeCopyOperation === "move") {
+                    if (sourcePane === leftBrowser) {
+                        compareModel.refreshFiles(activeCopySourcePaths, targetPaths)
+                    } else {
+                        compareModel.refreshFiles(targetPaths, activeCopySourcePaths)
+                    }
+                } else if (sourcePane === leftBrowser) {
                     compareModel.refreshFiles([], targetPaths)
                 } else {
                     compareModel.refreshFiles(targetPaths, [])
                 }
             } else {
+                if (activeCopyOperation === "move" && activeCopySourcePane) {
+                    activeCopySourcePane.refreshPaths(activeCopySourcePaths)
+                }
                 activeCopyTargetPane.refreshPaths(targetPaths)
             }
         }
-        if (copied > emptyItemCount && !result.cancelled) {
+        if (transferred > emptyItemCount && !result.cancelled) {
             refreshDisplays()
         }
         activeCopySourcePane = null
         activeCopyTargetPane = null
         activeCopySourcePaths = []
         activeCopyCompare = false
+        activeCopyOperation = "copy"
     }
 
     function handleTrashFinished(sourcePane, result) {
@@ -664,6 +728,9 @@ ApplicationWindow {
                 }
                 onCopyLeftRequested: triggerCopyRightToLeft()
                 onCopyRightRequested: triggerCopyLeftToRight()
+                onMoveLeftRequested: triggerMoveRightToLeft()
+                onMoveRightRequested: triggerMoveLeftToRight()
+                onMoveOtherRequested: triggerMoveLeftToRight()
                 onViewSyncRequested: syncBrowserState(leftBrowser, rightBrowser)
                 onSortKeyChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onSortOrderChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
@@ -808,6 +875,9 @@ ApplicationWindow {
                 }
                 onCopyLeftRequested: triggerCopyRightToLeft()
                 onCopyRightRequested: triggerCopyLeftToRight()
+                onMoveLeftRequested: triggerMoveRightToLeft()
+                onMoveRightRequested: triggerMoveLeftToRight()
+                onMoveOtherRequested: triggerMoveRightToLeft()
                 onViewSyncRequested: syncBrowserState(rightBrowser, leftBrowser)
                 onSortKeyChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onSortOrderChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
@@ -976,6 +1046,13 @@ ApplicationWindow {
             if (sourcePane) {
                 startDeleteSelection(sourcePane)
             }
+        }
+        onMoveConfirmed: (sourcePane, targetPane) => {
+            if (!sourcePane || !targetPane) {
+                return
+            }
+            confirmDialog.close()
+            startMove(sourcePane, targetPane)
         }
         onCopyConfirmed: (sourcePane, targetPane) => {
             if (!sourcePane || !targetPane) {

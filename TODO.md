@@ -10,5 +10,4 @@
 
 # Features
 
-- Ability to move files (contextual menu and shift + arrows)
 - Ability to add folders as favorites.

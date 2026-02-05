@@ -1020,7 +1020,7 @@ QVariantMap FolderCompareSideModel::copySelectedTo(const QString &targetDir)
  * @brief Starts an asynchronous copy of selected items to a target folder.
  * @param targetDir Target folder path.
  */
-void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
+void FolderCompareSideModel::startTransferSelectedTo(const QString &targetDir, bool moveItems)
 {
     if (m_copyInProgress) {
         return;
@@ -1044,6 +1044,12 @@ void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
     m_copyExtraFailed = 0;
     m_copyExtraError.clear();
     const QDir dir(targetDir);
+    const CopyWorker::OperationMode mode = moveItems
+        ? CopyWorker::OperationMode::Move
+        : CopyWorker::OperationMode::Copy;
+    const QString ghostError = moveItems
+        ? tr("Cannot move ghost items")
+        : tr("Cannot copy ghost items");
 
     for (const QString &id : m_selectedIds) {
         auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
@@ -1060,7 +1066,7 @@ void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
         if (entry.isGhost) {
             m_copyExtraFailed += 1;
             if (m_copyExtraError.isEmpty()) {
-                m_copyExtraError = tr("Cannot copy ghost items");
+                m_copyExtraError = ghostError;
             }
             continue;
         }
@@ -1090,6 +1096,7 @@ void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
         QVariantMap result;
         result.insert("ok", false);
         result.insert("failed", m_copyExtraFailed);
+        result.insert(moveItems ? "moved" : "copied", 0);
         if (!m_copyExtraError.isEmpty()) {
             result.insert("error", m_copyExtraError);
         }
@@ -1100,7 +1107,7 @@ void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
     }
 
     auto *thread = new QThread(this);
-    auto *worker = new CopyWorker(items);
+    auto *worker = new CopyWorker(items, mode);
     worker->moveToThread(thread);
 
     m_copyThread = thread;
@@ -1132,6 +1139,16 @@ void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
     connect(thread, &QThread::finished, worker, &QObject::deleteLater);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     thread->start();
+}
+
+void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
+{
+    startTransferSelectedTo(targetDir, false);
+}
+
+void FolderCompareSideModel::startMoveSelectedTo(const QString &targetDir)
+{
+    startTransferSelectedTo(targetDir, true);
 }
 
 /**

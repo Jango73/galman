@@ -19,6 +19,9 @@ FocusScope {
     signal deleteConfirmationRequested(int itemCount)
     signal copyLeftRequested()
     signal copyRightRequested()
+    signal moveLeftRequested()
+    signal moveRightRequested()
+    signal moveOtherRequested()
     signal copyFinished(var result)
     signal sortKeyChangedByUser(int sortKey)
     signal sortOrderChangedByUser(int sortOrder)
@@ -107,6 +110,13 @@ FocusScope {
             return
         }
         browserModel.startCopySelectedTo(targetPath)
+    }
+
+    function startMoveSelectionTo(targetPath) {
+        if (!browserModel || !browserModel.startMoveSelectedTo) {
+            return
+        }
+        browserModel.startMoveSelectedTo(targetPath)
     }
 
     function cancelCopy() {
@@ -571,6 +581,9 @@ FocusScope {
                 onViewSyncRequested: root.viewSyncRequested()
                 onCopyLeftRequested: root.copyLeftRequested()
                 onCopyRightRequested: root.copyRightRequested()
+                onMoveLeftRequested: root.moveLeftRequested()
+                onMoveRightRequested: root.moveRightRequested()
+                onMoveOtherRequested: root.moveOtherRequested()
                 onRenameRequested: (path) => root.requestRenamePath(path)
                 onTrashRequested: root.confirmTrashSelected()
                 onDeleteRequested: root.confirmDeleteSelectedPermanently()

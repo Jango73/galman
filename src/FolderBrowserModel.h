@@ -135,6 +135,7 @@ public:
     Q_INVOKABLE QVariantMap selectionStats() const;
     Q_INVOKABLE QVariantMap copySelectedTo(const QString &targetDir);
     Q_INVOKABLE void startCopySelectedTo(const QString &targetDir);
+    Q_INVOKABLE void startMoveSelectedTo(const QString &targetDir);
     Q_INVOKABLE void cancelCopy();
     Q_INVOKABLE QVariantMap moveSelectedToTrash();
     Q_INVOKABLE void startMoveSelectedToTrash();
@@ -188,6 +189,7 @@ private:
     bool byteSizeFiltersActive() const;
     bool imageSizeFiltersActive() const;
     bool signatureSortActive() const;
+    void startTransferSelectedTo(const QString &targetDir, bool moveItems);
     QVariantMap requestRemoval(bool moveToTrash);
     void startRemoval(bool moveToTrash);
     void notifySelectionChanged();

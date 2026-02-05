@@ -18,7 +18,9 @@ Dialog {
         ? qsTr("Move to trash?")
         : action === "delete"
             ? qsTr("Permanently delete?")
-            : qsTr("Copy files?")
+            : action === "move"
+                ? qsTr("Move files?")
+                : qsTr("Copy files?")
     property var sourcePane: null
     property var targetPane: null
     property int itemCount: 0
@@ -28,6 +30,7 @@ Dialog {
     property string directionText: ""
     property string action: "copy"
     signal copyConfirmed(var sourcePane, var targetPane)
+    signal moveConfirmed(var sourcePane, var targetPane)
     signal trashConfirmed(var sourcePane)
     signal deleteConfirmed(var sourcePane)
     x: Math.round(((dialog.parent ? dialog.parent.width : 0) - width) / 2)
@@ -51,6 +54,10 @@ Dialog {
             dialog.deleteConfirmed(sourcePane)
             return
         }
+        if (action === "move") {
+            dialog.moveConfirmed(sourcePane, targetPane)
+            return
+        }
         dialog.copyConfirmed(sourcePane, targetPane)
     }
 
@@ -69,8 +76,10 @@ Dialog {
             anchors.fill: parent
             spacing: Theme.spaceSm
             Label {
-                visible: dialog.action === "copy"
-                text: qsTr("%1, %2 will be copied (%3).")
+                visible: dialog.action === "copy" || dialog.action === "move"
+                text: (dialog.action === "move"
+                    ? qsTr("%1, %2 will be moved (%3).")
+                    : qsTr("%1, %2 will be copied (%3)."))
                     .arg(qsTr("%n file", "", dialog.fileCount))
                     .arg(qsTr("%n folder", "", dialog.dirCount))
                     .arg(dialog.directionText)
@@ -78,14 +87,14 @@ Dialog {
                 Layout.fillWidth: true
             }
             Label {
-                visible: dialog.action === "copy" && dialog.nameConflictCount > 0
+                visible: (dialog.action === "copy" || dialog.action === "move") && dialog.nameConflictCount > 0
                 text: qsTr("Warning: %1 already exist in target.")
                     .arg(qsTr("%n item", "", dialog.nameConflictCount))
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
             Label {
-                visible: dialog.action === "copy"
+                visible: dialog.action === "copy" || dialog.action === "move"
                 text: qsTr("Target: %1").arg(dialog.targetPane ? dialog.targetPane.currentPath : "")
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true

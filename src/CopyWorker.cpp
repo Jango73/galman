@@ -32,11 +32,13 @@
 /**
  * @brief Creates a copy worker for a list of copy items.
  * @param items Items describing the copy workload.
+ * @param mode Operation mode (copy or move).
  * @param parent Parent QObject for ownership.
  */
-CopyWorker::CopyWorker(const QList<CopyItem> &items, QObject *parent)
+CopyWorker::CopyWorker(const QList<CopyItem> &items, OperationMode mode, QObject *parent)
     : QObject(parent)
     , m_items(items)
+    , m_mode(mode)
 {
 }
 
@@ -122,7 +124,7 @@ bool CopyWorker::copyDirRecursive(const QString &sourcePath,
 {
     if (isCancelled()) {
         if (firstError.isEmpty()) {
-            firstError = tr("Copy cancelled");
+            firstError = cancelledMessage();
         }
         return false;
     }
@@ -150,7 +152,7 @@ bool CopyWorker::copyDirRecursive(const QString &sourcePath,
     for (const QFileInfo &entry : entries) {
         if (isCancelled()) {
             if (firstError.isEmpty()) {
-                firstError = tr("Copy cancelled");
+                firstError = cancelledMessage();
             }
             return false;
         }
@@ -171,7 +173,7 @@ bool CopyWorker::copyDirRecursive(const QString &sourcePath,
         }
         if (!QFile::copy(entryPath, targetEntryPath)) {
             if (firstError.isEmpty()) {
-                firstError = tr("Copy failed");
+                firstError = failedMessage();
             }
             tick(completed, total);
             return false;
@@ -194,7 +196,7 @@ bool CopyWorker::copyItem(const CopyItem &item, int &completed, int total, QStri
 {
     if (isCancelled()) {
         if (firstError.isEmpty()) {
-            firstError = tr("Copy cancelled");
+            firstError = cancelledMessage();
         }
         return false;
     }
@@ -221,7 +223,7 @@ bool CopyWorker::copyItem(const CopyItem &item, int &completed, int total, QStri
     }
     if (!QFile::copy(item.sourcePath, item.targetPath)) {
         if (firstError.isEmpty()) {
-            firstError = tr("Copy failed");
+            firstError = failedMessage();
         }
         tick(completed, total);
         return false;
@@ -229,6 +231,41 @@ bool CopyWorker::copyItem(const CopyItem &item, int &completed, int total, QStri
     FileOperationUtils::applyFileTimes(info, item.targetPath);
     tick(completed, total);
     return true;
+}
+
+bool CopyWorker::removeSourcePath(const CopyItem &item, QString &firstError)
+{
+    QString error;
+    if (PlatformUtils::deletePermanently(item.sourcePath, &error)) {
+        return true;
+    }
+    if (firstError.isEmpty()) {
+        firstError = error.isEmpty() ? tr("Failed to delete source") : error;
+    }
+    return false;
+}
+
+bool CopyWorker::moveItem(const CopyItem &item, int &completed, int total, QString &firstError)
+{
+    if (!copyItem(item, completed, total, firstError)) {
+        return false;
+    }
+    return removeSourcePath(item, firstError);
+}
+
+QString CopyWorker::cancelledMessage() const
+{
+    return m_mode == OperationMode::Move ? tr("Move cancelled") : tr("Copy cancelled");
+}
+
+QString CopyWorker::failedMessage() const
+{
+    return m_mode == OperationMode::Move ? tr("Move failed") : tr("Copy failed");
+}
+
+QString CopyWorker::operationKey() const
+{
+    return m_mode == OperationMode::Move ? QStringLiteral("moved") : QStringLiteral("copied");
 }
 
 /**
@@ -249,7 +286,7 @@ void CopyWorker::start()
     }
 
     if (isCancelled()) {
-        result.insert("error", tr("Copy cancelled"));
+        result.insert("error", cancelledMessage());
         result.insert("cancelled", true);
         emit finished(result);
         return;
@@ -264,7 +301,10 @@ void CopyWorker::start()
         if (isCancelled()) {
             break;
         }
-        if (copyItem(item, completed, total, firstError)) {
+        const bool ok = (m_mode == OperationMode::Move)
+            ? moveItem(item, completed, total, firstError)
+            : copyItem(item, completed, total, firstError);
+        if (ok) {
             copied += 1;
         } else {
             failed += 1;
@@ -273,12 +313,12 @@ void CopyWorker::start()
 
     if (isCancelled()) {
         if (firstError.isEmpty()) {
-            firstError = tr("Copy cancelled");
+            firstError = cancelledMessage();
         }
         result.insert("cancelled", true);
     }
 
-    result.insert("copied", copied);
+    result.insert(operationKey(), copied);
     result.insert("failed", failed);
     if (!firstError.isEmpty()) {
         result.insert("error", firstError);

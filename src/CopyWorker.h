@@ -17,7 +17,14 @@ class CopyWorker : public QObject
     Q_OBJECT
 
 public:
-    explicit CopyWorker(const QList<CopyItem> &items, QObject *parent = nullptr);
+    enum class OperationMode {
+        Copy,
+        Move
+    };
+
+    explicit CopyWorker(const QList<CopyItem> &items,
+                        OperationMode mode = OperationMode::Copy,
+                        QObject *parent = nullptr);
 
 public slots:
     void start();
@@ -31,13 +38,19 @@ private:
     bool isCancelled() const;
     bool countEntries(const CopyItem &item, int &count, QString &firstError);
     bool copyItem(const CopyItem &item, int &completed, int total, QString &firstError);
+    bool moveItem(const CopyItem &item, int &completed, int total, QString &firstError);
+    bool removeSourcePath(const CopyItem &item, QString &firstError);
     bool copyDirRecursive(const QString &sourcePath,
                           const QString &targetPath,
                           int &completed,
                           int total,
                           QString &firstError);
     void tick(int &completed, int total);
+    QString cancelledMessage() const;
+    QString failedMessage() const;
+    QString operationKey() const;
 
     QList<CopyItem> m_items;
+    OperationMode m_mode = OperationMode::Copy;
     QAtomicInt m_cancelled = 0;
 };
