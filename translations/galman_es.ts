@@ -626,4 +626,28 @@
         <translation>Guardar las carpetas actuales como par favorito</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>Copiar al panel opuesto</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>Renombrar</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>Mover al panel opuesto</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>Mover a la papelera</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>Eliminar permanentemente</translation>
+    </message>
+</context>
 </TS>

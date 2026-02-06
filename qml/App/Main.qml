@@ -800,6 +800,7 @@ ApplicationWindow {
                 }
                 onCopyLeftRequested: triggerCopyRightToLeft()
                 onCopyRightRequested: triggerCopyLeftToRight()
+                onCopyOtherRequested: triggerCopyLeftToRight()
                 onMoveLeftRequested: triggerMoveRightToLeft()
                 onMoveRightRequested: triggerMoveLeftToRight()
                 onMoveOtherRequested: triggerMoveLeftToRight()
@@ -947,6 +948,7 @@ ApplicationWindow {
                 }
                 onCopyLeftRequested: triggerCopyRightToLeft()
                 onCopyRightRequested: triggerCopyLeftToRight()
+                onCopyOtherRequested: triggerCopyRightToLeft()
                 onMoveLeftRequested: triggerMoveRightToLeft()
                 onMoveRightRequested: triggerMoveLeftToRight()
                 onMoveOtherRequested: triggerMoveRightToLeft()

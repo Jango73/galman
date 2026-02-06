@@ -600,4 +600,28 @@
         <translation>Save current folders as favorite pair</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>Copy to other pane</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>Rename</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>Move to other pane</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>Move to trash</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>Delete permanently</translation>
+    </message>
+</context>
 </TS>

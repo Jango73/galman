@@ -626,4 +626,28 @@
         <translation>Salva le cartelle correnti come coppia preferita</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>Copia nell’altro pannello</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>Rinomina</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>Sposta nell’altro pannello</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>Sposta nel cestino</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>Elimina definitivamente</translation>
+    </message>
+</context>
 </TS>

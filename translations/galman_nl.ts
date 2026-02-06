@@ -788,4 +788,28 @@
         <translation>Sla huidige mappen op als favorietenpaar</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>Kopieren naar ander paneel</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>Hernoemen</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>Verplaatsen naar ander paneel</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>Verplaatsen naar prullenbak</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>Definitief verwijderen</translation>
+    </message>
+</context>
 </TS>

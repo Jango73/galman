@@ -785,4 +785,28 @@
         <translation>将当前文件夹保存为收藏夹对</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>复制到另一侧面板</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>重命名</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>移动到另一侧面板</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>移到回收站</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>永久删除</translation>
+    </message>
+</context>
 </TS>

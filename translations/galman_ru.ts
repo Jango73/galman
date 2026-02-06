@@ -791,4 +791,28 @@
         <translation>Сохранить текущие папки как избранную пару</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>Копировать в другую панель</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>Переименовать</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>Переместить в другую панель</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>Переместить в корзину</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>Удалить навсегда</translation>
+    </message>
+</context>
 </TS>

@@ -42,6 +42,7 @@ Item {
     signal moveLeftRequested()
     signal moveRightRequested()
     signal moveOtherRequested()
+    signal copyOtherRequested()
     signal contentYUpdated(real value)
     signal currentIndexUpdated(int value)
     signal renameRequested(string path)
@@ -344,6 +345,21 @@ Item {
         Menu {
             id: contextMenu
             parent: Window.window ? Window.window.contentItem : root
+            property real menuContentWidth: implicitWidth
+
+            function updateMenuWidth() {
+                let widest = implicitWidth
+                for (let i = 0; i < count; i += 1) {
+                    const item = itemAt(i)
+                    if (item) {
+                        widest = Math.max(widest, item.implicitWidth)
+                    }
+                }
+                menuContentWidth = widest
+            }
+
+            width: menuContentWidth
+            onAboutToShow: updateMenuWidth()
             Instantiator {
                 id: renameFactory
                 active: root.selectedCount === 1
@@ -359,8 +375,30 @@ Item {
                         }
                     }
                 }
-                onObjectAdded: (index, object) => contextMenu.insertItem(0, object)
-                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+            }
+            Instantiator {
+                id: copyOtherFactory
+                active: root.selectedCount > 0
+                delegate: MenuItem {
+                    text: qsTr("Copy to other pane")
+                    onTriggered: root.copyOtherRequested()
+                }
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
             }
             Instantiator {
                 id: moveOtherFactory
@@ -369,8 +407,14 @@ Item {
                     text: qsTr("Move to other pane")
                     onTriggered: root.moveOtherRequested()
                 }
-                onObjectAdded: (index, object) => contextMenu.insertItem(renameFactory.active ? 1 : 0, object)
-                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
             }
             Instantiator {
                 id: trashFactory
@@ -379,8 +423,14 @@ Item {
                     text: qsTr("Move to trash")
                     onTriggered: root.trashRequested()
                 }
-                onObjectAdded: (index, object) => contextMenu.addItem(object)
-                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
             }
             Instantiator {
                 id: deleteFactory
@@ -389,8 +439,14 @@ Item {
                     text: qsTr("Delete permanently")
                     onTriggered: root.deleteRequested()
                 }
-                onObjectAdded: (index, object) => contextMenu.addItem(object)
-                onObjectRemoved: (index, object) => contextMenu.removeItem(object)
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
             }
         }
 

@@ -624,4 +624,28 @@
         <translation>Enregistrer les dossiers courants comme favori</translation>
     </message>
 </context>
+<context>
+    <name>FolderViewGrid</name>
+    <message>
+        <source>Copy to other pane</source>
+        <translation>Copier vers l’autre panneau</translation>
+    </message>
+
+    <message>
+        <source>Rename</source>
+        <translation>Renommer</translation>
+    </message>
+    <message>
+        <source>Move to other pane</source>
+        <translation>Déplacer vers l’autre panneau</translation>
+    </message>
+    <message>
+        <source>Move to trash</source>
+        <translation>Déplacer vers la corbeille</translation>
+    </message>
+    <message>
+        <source>Delete permanently</source>
+        <translation>Supprimer définitivement</translation>
+    </message>
+</context>
 </TS>
