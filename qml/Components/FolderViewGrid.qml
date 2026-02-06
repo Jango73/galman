@@ -118,6 +118,7 @@ Item {
             anchors.margins: Theme.spaceMd
             clip: true
             model: root.browserModel
+            rightMargin: Theme.scrollBarThickness
             cellWidth: Math.floor(width / Math.max(1, Math.floor(width / root.minCellSize)))
             cellHeight: cellWidth
             keyNavigationWraps: true
@@ -129,6 +130,9 @@ Item {
             ScrollBar.vertical: ScrollBar {
                 id: verticalScrollBar
                 policy: ScrollBar.AsNeeded
+                width: Theme.scrollBarThickness
+                implicitWidth: Theme.scrollBarThickness
+                z: 10
                 onPressedChanged: {
                     if (pressed) {
                         root.unlockScroll()
@@ -452,11 +456,11 @@ Item {
 
         MouseArea {
             id: rubberBandArea
+            parent: grid.contentItem
             anchors.fill: parent
-            anchors.rightMargin: verticalScrollBar.implicitWidth
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
-            z: 4
+            z: 1
 
             property real startX: 0
             property real startY: 0

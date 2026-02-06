@@ -30,6 +30,7 @@ QtObject {
     readonly property int filterNumberFieldWidth: 120
     readonly property int filterUnsetValue: -1
     readonly property int typeAheadResetMilliseconds: 900
+    readonly property int scrollBarThickness: 12
     readonly property int byteUnitBase: 1024
     readonly property int byteUnitPrecision: 1
     readonly property real ghostPreviewOpacity: 0.5
