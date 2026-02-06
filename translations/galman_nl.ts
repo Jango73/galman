@@ -514,6 +514,31 @@
         <source>Stop</source>
         <translation>Stoppen</translation>
     </message>
+
+    <message>
+        <source>Favorites</source>
+        <translation>Favorieten</translation>
+    </message>
+    <message>
+        <source>No favorites saved</source>
+        <translation>Geen favorieten opgeslagen</translation>
+    </message>
+    <message>
+        <source>Cannot apply favorite pair with empty folder</source>
+        <translation>Kan favorietenpaar met lege map niet toepassen</translation>
+    </message>
+    <message>
+        <source>Cannot save empty favorite pair</source>
+        <translation>Kan leeg favorietenpaar niet opslaan</translation>
+    </message>
+    <message>
+        <source>Favorite pair saved</source>
+        <translation>Favorietenpaar opgeslagen</translation>
+    </message>
+    <message>
+        <source>Favorite pair already saved</source>
+        <translation>Favorietenpaar is al opgeslagen</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>
@@ -756,6 +781,11 @@
         <location filename="../qml/Components/ShortcutsDialog.qml" line="55" />
         <source>First / last image</source>
         <translation>Eerste / laatste afbeelding</translation>
+    </message>
+
+    <message>
+        <source>Save current folders as favorite pair</source>
+        <translation>Sla huidige mappen op als favorietenpaar</translation>
     </message>
 </context>
 </TS>

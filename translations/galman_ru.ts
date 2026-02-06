@@ -517,6 +517,31 @@
         <source>Stop</source>
         <translation>Остановить</translation>
     </message>
+
+    <message>
+        <source>Favorites</source>
+        <translation>Избранное</translation>
+    </message>
+    <message>
+        <source>No favorites saved</source>
+        <translation>Нет сохранённых избранных</translation>
+    </message>
+    <message>
+        <source>Cannot apply favorite pair with empty folder</source>
+        <translation>Нельзя применить избранную пару с пустой папкой</translation>
+    </message>
+    <message>
+        <source>Cannot save empty favorite pair</source>
+        <translation>Нельзя сохранить пустую избранную пару</translation>
+    </message>
+    <message>
+        <source>Favorite pair saved</source>
+        <translation>Избранная пара сохранена</translation>
+    </message>
+    <message>
+        <source>Favorite pair already saved</source>
+        <translation>Избранная пара уже сохранена</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>
@@ -759,6 +784,11 @@
         <location filename="../qml/Components/ShortcutsDialog.qml" line="55" />
         <source>First / last image</source>
         <translation>Первое / последнее изображение</translation>
+    </message>
+
+    <message>
+        <source>Save current folders as favorite pair</source>
+        <translation>Сохранить текущие папки как избранную пару</translation>
     </message>
 </context>
 </TS>

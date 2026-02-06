@@ -24,6 +24,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
+#include "FavoritePairsManager.h"
 #include "LanguageManager.h"
 #include "ScriptEngine.h"
 #include "ScriptManager.h"
@@ -37,9 +38,11 @@ int main(int argc, char *argv[])
     ScriptEngine scriptEngine;
     ScriptManager scriptManager;
     LanguageManager languageManager(&engine);
+    FavoritePairsManager favoritePairsManager;
     engine.rootContext()->setContextProperty("scriptEngine", &scriptEngine);
     engine.rootContext()->setContextProperty("scriptManager", &scriptManager);
     engine.rootContext()->setContextProperty("languageManager", &languageManager);
+    engine.rootContext()->setContextProperty("favoritesManager", &favoritePairsManager);
     const QUrl url(u"qrc:/Galman/qml/App/Main.qml"_qs);
     QObject::connect(
         &engine,

@@ -511,6 +511,31 @@
         <source>Stop</source>
         <translation>停止</translation>
     </message>
+
+    <message>
+        <source>Favorites</source>
+        <translation>收藏夹</translation>
+    </message>
+    <message>
+        <source>No favorites saved</source>
+        <translation>未保存任何收藏夹</translation>
+    </message>
+    <message>
+        <source>Cannot apply favorite pair with empty folder</source>
+        <translation>无法应用包含空文件夹的收藏夹对</translation>
+    </message>
+    <message>
+        <source>Cannot save empty favorite pair</source>
+        <translation>无法保存空的收藏夹对</translation>
+    </message>
+    <message>
+        <source>Favorite pair saved</source>
+        <translation>收藏夹对已保存</translation>
+    </message>
+    <message>
+        <source>Favorite pair already saved</source>
+        <translation>收藏夹对已存在</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>
@@ -753,6 +778,11 @@
         <location filename="../qml/Components/ShortcutsDialog.qml" line="55" />
         <source>First / last image</source>
         <translation>第一张 / 最后一张图像</translation>
+    </message>
+
+    <message>
+        <source>Save current folders as favorite pair</source>
+        <translation>将当前文件夹保存为收藏夹对</translation>
     </message>
 </context>
 </TS>

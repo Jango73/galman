@@ -450,6 +450,41 @@ ApplicationWindow {
         return idx >= 0 ? normalized.slice(idx + 1) : normalized
     }
 
+    function favoritePairLabel(leftPath, rightPath) {
+        const leftName = baseNameFromPath(leftPath)
+        const rightName = baseNameFromPath(rightPath)
+        const leftText = leftName !== "" ? leftName : String(leftPath || "")
+        const rightText = rightName !== "" ? rightName : String(rightPath || "")
+        return leftText + " <-> " + rightText
+    }
+
+    function applyFavoritePair(leftPath, rightPath) {
+        if (!leftPath || !rightPath) {
+            pushError(qsTr("Cannot apply favorite pair with empty folder"))
+            return
+        }
+        leftBrowser.browserModel.rootPath = leftPath
+        rightBrowser.browserModel.rootPath = rightPath
+    }
+
+    function saveCurrentFavoritePair() {
+        if (!favoritesManager) {
+            return
+        }
+        const leftPath = leftBrowser.currentPath
+        const rightPath = rightBrowser.currentPath
+        if (leftPath === "" || rightPath === "") {
+            pushError(qsTr("Cannot save empty favorite pair"))
+            return
+        }
+        const added = favoritesManager.addFavoritePair(leftPath, rightPath)
+        if (added) {
+            pushStatus(qsTr("Favorite pair saved"))
+        } else {
+            pushStatus(qsTr("Favorite pair already saved"))
+        }
+    }
+
     function syncEnterFolder(sourcePane, targetPane, path) {
         if (!compareModel.enabled || navigationSyncing || !sourcePane || !targetPane) {
             return
@@ -482,6 +517,33 @@ ApplicationWindow {
             MenuItem {
                 text: qsTr("Quit")
                 onTriggered: Qt.quit()
+            }
+        }
+
+        Menu {
+            id: favoritesMenu
+            title: qsTr("Favorites")
+
+            Instantiator {
+                model: (!favoritesManager || favoritesManager.favoritePairs.length === 0) ? [true] : []
+                delegate: MenuItem {
+                    text: qsTr("No favorites saved")
+                    enabled: false
+                }
+                onObjectAdded: (index, object) => favoritesMenu.addItem(object)
+                onObjectRemoved: (index, object) => favoritesMenu.removeItem(object)
+            }
+
+            Instantiator {
+                model: favoritesManager ? favoritesManager.favoritePairs : []
+                delegate: MenuItem {
+                    text: favoritePairLabel(modelData.leftPath, modelData.rightPath)
+                    onTriggered: {
+                        applyFavoritePair(modelData.leftPath, modelData.rightPath)
+                    }
+                }
+                onObjectAdded: (index, object) => favoritesMenu.addItem(object)
+                onObjectRemoved: (index, object) => favoritesMenu.removeItem(object)
             }
         }
 
@@ -564,6 +626,16 @@ ApplicationWindow {
             && !confirmDialog.visible
         onActivated: {
             leftPanel.syncEnabled = !leftPanel.syncEnabled
+        }
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+F"]
+        context: Qt.ApplicationShortcut
+        enabled: !(leftBrowser.textInputActive || rightBrowser.textInputActive)
+            && !confirmDialog.visible
+        onActivated: {
+            saveCurrentFavoritePair()
         }
     }
 

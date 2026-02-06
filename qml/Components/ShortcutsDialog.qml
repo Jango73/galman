@@ -28,6 +28,7 @@ Dialog {
                 items: [
                     { keys: "Backspace", action: qsTr("Go up folder (focused pane)") },
                     { keys: "Ctrl+S", action: qsTr("Toggle synchronize mode") },
+                    { keys: "Ctrl+F", action: qsTr("Save current folders as favorite pair") },
                     { keys: "Ctrl+H", action: qsTr("Toggle hide identical") },
                     { keys: "Ctrl+Enter / Ctrl+Return", action: qsTr("Open item externally") }
                 ]

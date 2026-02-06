@@ -386,6 +386,30 @@
         <source>Stop</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Favorites</source>
+        <translation>Favorites</translation>
+    </message>
+    <message>
+        <source>No favorites saved</source>
+        <translation>No favorites saved</translation>
+    </message>
+    <message>
+        <source>Cannot apply favorite pair with empty folder</source>
+        <translation>Cannot apply favorite pair with empty folder</translation>
+    </message>
+    <message>
+        <source>Cannot save empty favorite pair</source>
+        <translation>Cannot save empty favorite pair</translation>
+    </message>
+    <message>
+        <source>Favorite pair saved</source>
+        <translation>Favorite pair saved</translation>
+    </message>
+    <message>
+        <source>Favorite pair already saved</source>
+        <translation>Favorite pair already saved</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>
@@ -570,6 +594,10 @@
     <message>
         <source>First / last image</source>
         <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save current folders as favorite pair</source>
+        <translation>Save current folders as favorite pair</translation>
     </message>
 </context>
 </TS>

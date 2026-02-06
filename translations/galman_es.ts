@@ -402,6 +402,31 @@
         <source>Stop</source>
         <translation>Detener</translation>
     </message>
+
+    <message>
+        <source>Favorites</source>
+        <translation>Favoritos</translation>
+    </message>
+    <message>
+        <source>No favorites saved</source>
+        <translation>No hay favoritos guardados</translation>
+    </message>
+    <message>
+        <source>Cannot apply favorite pair with empty folder</source>
+        <translation>No se puede aplicar un par favorito con una carpeta vacía</translation>
+    </message>
+    <message>
+        <source>Cannot save empty favorite pair</source>
+        <translation>No se puede guardar un par favorito vacío</translation>
+    </message>
+    <message>
+        <source>Favorite pair saved</source>
+        <translation>Par favorito guardado</translation>
+    </message>
+    <message>
+        <source>Favorite pair already saved</source>
+        <translation>El par favorito ya está guardado</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>
@@ -594,6 +619,11 @@
     <message>
         <source>Open item internally</source>
         <translation>Abrir el elemento internamente</translation>
+    </message>
+
+    <message>
+        <source>Save current folders as favorite pair</source>
+        <translation>Guardar las carpetas actuales como par favorito</translation>
     </message>
 </context>
 </TS>

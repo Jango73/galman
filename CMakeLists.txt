@@ -13,6 +13,7 @@ qt_add_executable(galman
         src/ScriptEngine.cpp
         src/ScriptManager.cpp
         src/LanguageManager.cpp
+        src/FavoritePairsManager.cpp
         src/ComfyClient.cpp
         src/ComfyWorkflowParser.cpp
         src/PlatformUtils.cpp
@@ -51,6 +52,7 @@ qt_add_qml_module(galman
         src/ScriptEngine.h
         src/ScriptManager.h
         src/LanguageManager.h
+        src/FavoritePairsManager.h
         src/ComfyClient.h
         src/ComfyWorkflowParser.h
         src/PlatformUtils.h
