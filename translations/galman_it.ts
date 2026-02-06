@@ -263,8 +263,8 @@
         <translation>Cartelle prima</translation>
     </message>
     <message>
-        <source>Filter name...</source>
-        <translation>Filtra per nome...</translation>
+        <source>Name</source>
+        <translation>Nome</translation>
     </message>
     <message>
         <source>X</source>

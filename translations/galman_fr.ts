@@ -263,8 +263,8 @@
         <translation>Dossiers d’abord</translation>
     </message>
     <message>
-        <source>Filter name...</source>
-        <translation>Filtrer par nom...</translation>
+        <source>Name</source>
+        <translation>Nom</translation>
     </message>
     <message>
         <source>X</source>

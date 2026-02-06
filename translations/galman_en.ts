@@ -263,8 +263,8 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Filter name...</source>
-        <translation type="unfinished" />
+        <source>Name</source>
+        <translation>Name</translation>
     </message>
     <message>
         <source>X</source>

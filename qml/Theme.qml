@@ -26,8 +26,8 @@ QtObject {
     readonly property string fileNameEllipsis: "..."
     readonly property int volumeComboPreferredWidth: 220
     readonly property int volumeComboMinimumWidth: 160
-    readonly property int filterNameFieldWidth: 120
-    readonly property int filterNumberFieldWidth: 120
+    readonly property int filterNameFieldWidth: 90
+    readonly property int filterNumberFieldWidth: 90
     readonly property int filterUnsetValue: -1
     readonly property int typeAheadResetMilliseconds: 900
     readonly property int scrollBarThickness: 12

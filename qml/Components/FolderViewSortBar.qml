@@ -150,7 +150,7 @@ ColumnLayout {
 
             TextField {
             id: nameFilterField
-            placeholderText: qsTr("Filter name...")
+            placeholderText: qsTr("Name")
             Layout.preferredWidth: Theme.filterNameFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled
             KeyNavigation.backtab: dirsFirstBox
@@ -165,6 +165,7 @@ ColumnLayout {
 
             TextField {
             id: minimumByteSizeField
+            visible: false
             placeholderText: qsTr("Min. bytes")
             Layout.preferredWidth: Theme.filterNumberFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled
@@ -180,6 +181,7 @@ ColumnLayout {
 
             TextField {
             id: maximumByteSizeField
+            visible: false
             placeholderText: qsTr("Max. bytes")
             Layout.preferredWidth: Theme.filterNumberFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled

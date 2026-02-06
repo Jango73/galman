@@ -351,8 +351,8 @@
     </message>
     <message>
         <location filename="../qml/Components/FolderViewSortBar.qml" line="75" />
-        <source>Filter name...</source>
-        <translation>Фильтр по имени...</translation>
+        <source>Name</source>
+        <translation>Имя</translation>
     </message>
     <message>
         <location filename="../qml/Components/FolderViewSortBar.qml" line="86" />

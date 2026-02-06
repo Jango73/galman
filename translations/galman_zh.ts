@@ -345,8 +345,8 @@
     </message>
     <message>
         <location filename="../qml/Components/FolderViewSortBar.qml" line="75" />
-        <source>Filter name...</source>
-        <translation>按名称过滤...</translation>
+        <source>Name</source>
+        <translation>名称</translation>
     </message>
     <message>
         <location filename="../qml/Components/FolderViewSortBar.qml" line="86" />

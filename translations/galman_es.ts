@@ -263,8 +263,8 @@
         <translation>Carpetas primero</translation>
     </message>
     <message>
-        <source>Filter name...</source>
-        <translation>Filtrar por nombre...</translation>
+        <source>Name</source>
+        <translation>Nombre</translation>
     </message>
     <message>
         <source>X</source>
