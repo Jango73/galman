@@ -24,6 +24,7 @@ ApplicationWindow {
         : (rightBrowser.copyInProgress ? rightBrowser.copyProgress : 0)
     property bool singlePreviewEnabled: false
     property var singlePreviewBrowser: null
+    property var comparePreviewBrowser: null
     property var activeSelectionPane: null
     Material.theme: Material.Dark
     Material.primary: Material.Blue
@@ -184,6 +185,7 @@ ApplicationWindow {
             return
         }
         if (compareModel.enabled) {
+            comparePreviewBrowser = browser
             leftPanel.syncPreviewEnabled = true
             return
         }
@@ -734,6 +736,15 @@ ApplicationWindow {
                         compareModel.enabled = false
                     }
                 }
+                onSyncPreviewEnabledChanged: {
+                    if (syncPreviewEnabled) {
+                        comparePreviewBrowser = window.activeSelectionPane
+                            ? window.activeSelectionPane
+                            : leftBrowser
+                    } else {
+                        comparePreviewBrowser = null
+                    }
+                }
             }
 
             Item {
@@ -1020,9 +1031,13 @@ ApplicationWindow {
                 panelBackground: window.panelBackground
                 leftBrowser: leftBrowser
                 rightBrowser: rightBrowser
+                navigationBrowser: comparePreviewBrowser
                 onCopyLeftRequested: triggerCopyRightToLeft()
                 onCopyRightRequested: triggerCopyLeftToRight()
-                onCloseRequested: leftPanel.syncPreviewEnabled = false
+                onCloseRequested: {
+                    leftPanel.syncPreviewEnabled = false
+                    comparePreviewBrowser = null
+                }
             }
 
     ImagePreview {

@@ -9,6 +9,7 @@ FocusRememberingScope {
     id: root
     property var leftBrowser: null
     property var rightBrowser: null
+    property var navigationBrowser: null
     property color panelBackground: Theme.panelBackground
     property int reloadToken: 0
     property int reloadTokenIncrement: 1
@@ -36,29 +37,33 @@ FocusRememberingScope {
             return
         }
         if (event.key === Qt.Key_Left) {
-            if (leftBrowser) {
-                leftBrowser.selectAdjacentImage(-1)
+            const target = navigationBrowser ? navigationBrowser : leftBrowser
+            if (target) {
+                target.selectAdjacentImage(-1)
             }
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_Right) {
-            if (leftBrowser) {
-                leftBrowser.selectAdjacentImage(1)
+            const target = navigationBrowser ? navigationBrowser : leftBrowser
+            if (target) {
+                target.selectAdjacentImage(1)
             }
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_Home) {
-            if (leftBrowser) {
-                leftBrowser.selectBoundaryImage(true)
+            const target = navigationBrowser ? navigationBrowser : leftBrowser
+            if (target) {
+                target.selectBoundaryImage(true)
             }
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_End) {
-            if (leftBrowser) {
-                leftBrowser.selectBoundaryImage(false)
+            const target = navigationBrowser ? navigationBrowser : leftBrowser
+            if (target) {
+                target.selectBoundaryImage(false)
             }
             event.accepted = true
             return
