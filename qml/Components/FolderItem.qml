@@ -40,18 +40,21 @@ Item {
         Item {
             id: previewContainer
             Layout.alignment: Qt.AlignHCenter
-            width: 72
-            height: 72
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            readonly property real squareSize: Math.min(width, height)
             readonly property string previewPath: root.isGhost && root.otherSidePath !== ""
                 ? root.otherSidePath
                 : root.filePath
             readonly property bool hasPreviewSource: root.isImage && previewPath !== ""
 
             Image {
-                anchors.fill: parent
+                width: previewContainer.squareSize
+                height: previewContainer.squareSize
+                anchors.centerIn: parent
                 source: previewContainer.hasPreviewSource ? ("file://" + previewContainer.previewPath) : ""
-                sourceSize.width: 128
-                sourceSize.height: 128
+                sourceSize.width: Math.max(1, previewContainer.squareSize * 2)
+                sourceSize.height: Math.max(1, previewContainer.squareSize * 2)
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 opacity: root.isGhost ? Theme.ghostPreviewOpacity : 1.0
@@ -62,8 +65,8 @@ Item {
 
             Canvas {
                 anchors.centerIn: parent
-                width: 56
-                height: 56
+                width: Math.max(1, previewContainer.squareSize * 0.78)
+                height: Math.max(1, previewContainer.squareSize * 0.78)
                 visible: !previewContainer.hasPreviewSource || !root.thumbnailReady
                 onVisibleChanged: requestPaint()
                 onWidthChanged: requestPaint()
@@ -135,21 +138,27 @@ Item {
         }
 
         Label {
+            id: nameLabel
             text: Theme.elideFileName(root.fileName)
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
             Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight
+            Layout.minimumHeight: implicitHeight
             maximumLineCount: 2
             wrapMode: Text.WordWrap
         }
 
         Label {
+            id: modifiedLabel
             text: root.modifiedText
             visible: root.modifiedText !== ""
             opacity: 0.7
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
             Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight
+            Layout.minimumHeight: implicitHeight
         }
     }
 

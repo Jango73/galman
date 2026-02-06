@@ -19,6 +19,7 @@ Item {
     property bool applyingScrollLock: false
     property real lockedContentY: 0
     property int scrollRelockDelayMs: 150
+    property real baseCellRatio: 0.25
     property int statusPending: 1
     property int statusIdentical: 2
     property int statusDifferent: 3
@@ -119,7 +120,13 @@ Item {
             clip: true
             model: root.browserModel
             rightMargin: Theme.scrollBarThickness
-            cellWidth: Math.floor(width / Math.max(1, Math.floor(width / root.minCellSize)))
+            readonly property real availableWidth: Math.max(0, width - rightMargin)
+            readonly property real baseCellSize: Math.max(
+                root.minCellSize,
+                Math.min(width, height) * root.baseCellRatio
+            )
+            readonly property int columnCount: Math.max(1, Math.floor(availableWidth / baseCellSize))
+            cellWidth: Math.floor(availableWidth / columnCount)
             cellHeight: cellWidth
             keyNavigationWraps: true
             displayMarginBeginning: 120
