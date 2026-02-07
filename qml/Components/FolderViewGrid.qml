@@ -268,7 +268,7 @@ Item {
                 const hasMeta = (event.modifiers & Qt.MetaModifier) !== 0
                 const hasCtrl = (event.modifiers & Qt.ControlModifier) !== 0
 
-                if (hasShift && !hasAlt && !hasMeta && !hasCtrl) {
+                if (hasShift && hasCtrl && !hasAlt && !hasMeta) {
                     if (event.key === Qt.Key_Left) {
                         root.moveLeftRequested()
                         event.accepted = true
