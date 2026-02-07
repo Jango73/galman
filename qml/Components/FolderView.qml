@@ -586,6 +586,12 @@ FocusScope {
                 onMoveRightRequested: root.moveRightRequested()
                 onMoveOtherRequested: root.moveOtherRequested()
                 onCopyOtherRequested: root.copyOtherRequested()
+                onBackgroundClicked: {
+                    root.forceActiveFocus()
+                    if (browserGrid.focusItem) {
+                        browserGrid.focusItem.forceActiveFocus()
+                    }
+                }
                 onRenameRequested: (path) => root.requestRenamePath(path)
                 onTrashRequested: root.confirmTrashSelected()
                 onDeleteRequested: root.confirmDeleteSelectedPermanently()

@@ -187,6 +187,11 @@ ApplicationWindow {
         if (compareModel.enabled) {
             comparePreviewBrowser = browser
             leftPanel.syncPreviewEnabled = true
+            Qt.callLater(() => {
+                if (comparePreview && comparePreview.visible) {
+                    comparePreview.forceActiveFocus()
+                }
+            })
             return
         }
         singlePreviewBrowser = browser
@@ -703,6 +708,62 @@ ApplicationWindow {
         onActivated: focusOtherBrowser()
     }
 
+    Shortcut {
+        sequences: ["Left"]
+        context: Qt.ApplicationShortcut
+        enabled: compareModel.enabled
+            && leftPanel.syncPreviewEnabled
+            && !confirmDialog.visible
+        onActivated: {
+            const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
+            if (target) {
+                target.selectAdjacentImage(-1)
+            }
+        }
+    }
+
+    Shortcut {
+        sequences: ["Right"]
+        context: Qt.ApplicationShortcut
+        enabled: compareModel.enabled
+            && leftPanel.syncPreviewEnabled
+            && !confirmDialog.visible
+        onActivated: {
+            const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
+            if (target) {
+                target.selectAdjacentImage(1)
+            }
+        }
+    }
+
+    Shortcut {
+        sequences: ["Home"]
+        context: Qt.ApplicationShortcut
+        enabled: compareModel.enabled
+            && leftPanel.syncPreviewEnabled
+            && !confirmDialog.visible
+        onActivated: {
+            const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
+            if (target) {
+                target.selectBoundaryImage(true)
+            }
+        }
+    }
+
+    Shortcut {
+        sequences: ["End"]
+        context: Qt.ApplicationShortcut
+        enabled: compareModel.enabled
+            && leftPanel.syncPreviewEnabled
+            && !confirmDialog.visible
+        onActivated: {
+            const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
+            if (target) {
+                target.selectBoundaryImage(false)
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.windowMargin
@@ -738,9 +799,16 @@ ApplicationWindow {
                 }
                 onSyncPreviewEnabledChanged: {
                     if (syncPreviewEnabled) {
-                        comparePreviewBrowser = window.activeSelectionPane
-                            ? window.activeSelectionPane
-                            : leftBrowser
+                        if (!comparePreviewBrowser) {
+                            comparePreviewBrowser = window.activeSelectionPane
+                                ? window.activeSelectionPane
+                                : leftBrowser
+                        }
+                        Qt.callLater(() => {
+                            if (comparePreview && comparePreview.visible) {
+                                comparePreview.forceActiveFocus()
+                            }
+                        })
                     } else {
                         comparePreviewBrowser = null
                     }
@@ -785,7 +853,9 @@ ApplicationWindow {
                     openInternalPreviewForBrowser(leftBrowser)
                 }
                 onSelectionChanged: (paths) => {
-                    window.activeSelectionPane = leftBrowser
+                    if (leftBrowser.hasFocus) {
+                        window.activeSelectionPane = leftBrowser
+                    }
                     leftPanel.selectedPaths = paths
                     leftPanel.selectedIsImage = leftBrowser.selectedIsImage
                     leftPanel.selectedFileCount = leftBrowser.selectedFileCount
@@ -933,7 +1003,9 @@ ApplicationWindow {
                     openInternalPreviewForBrowser(rightBrowser)
                 }
                 onSelectionChanged: (paths) => {
-                    window.activeSelectionPane = rightBrowser
+                    if (rightBrowser.hasFocus) {
+                        window.activeSelectionPane = rightBrowser
+                    }
                     leftPanel.selectedPaths = paths
                     leftPanel.selectedIsImage = rightBrowser.selectedIsImage
                     leftPanel.selectedFileCount = rightBrowser.selectedFileCount

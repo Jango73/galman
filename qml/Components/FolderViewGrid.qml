@@ -49,6 +49,7 @@ Item {
     signal renameRequested(string path)
     signal trashRequested()
     signal deleteRequested()
+    signal backgroundClicked()
 
     Timer {
         id: scrollRelockTimer
@@ -104,6 +105,90 @@ Item {
         allowProgrammaticScroll()
         grid.contentY = value
         Qt.callLater(lockScroll)
+    }
+
+    function selectIndex(index, modifiers) {
+        if (!root.browserModel || index < 0) {
+            return
+        }
+        if ((modifiers & Qt.ShiftModifier) !== 0 && root.anchorIndex >= 0) {
+            const additive = (modifiers & Qt.ControlModifier) !== 0
+            root.browserModel.setSelectionRange(root.anchorIndex, index, additive)
+        } else if ((modifiers & Qt.ControlModifier) !== 0) {
+            root.browserModel.select(index, true)
+            root.anchorIndex = index
+        } else {
+            root.browserModel.select(index, false)
+            root.anchorIndex = index
+        }
+        root.allowProgrammaticScroll()
+        grid.currentIndex = index
+        grid.positionViewAtIndex(index, GridView.Visible)
+        Qt.callLater(root.lockScroll)
+        grid.forceActiveFocus()
+    }
+
+    function prepareDragSelection(index, modifiers) {
+        if (!root.browserModel || index < 0) {
+            return
+        }
+        const selected = root.browserModel.isSelected ? root.browserModel.isSelected(index) : false
+        if (selected) {
+            return
+        }
+        const hasShift = (modifiers & Qt.ShiftModifier) !== 0
+        const hasCtrl = (modifiers & Qt.ControlModifier) !== 0
+        if (hasShift && root.anchorIndex >= 0) {
+            root.browserModel.setSelectionRange(root.anchorIndex, index, hasCtrl)
+        } else if (hasCtrl) {
+            root.browserModel.select(index, true)
+            root.anchorIndex = index
+        } else {
+            root.browserModel.select(index, false)
+            root.anchorIndex = index
+        }
+        grid.currentIndex = index
+    }
+
+    function dragDataForIndex(index) {
+        if (!root.browserModel) {
+            return { urls: [], paths: [] }
+        }
+        let paths = root.browserModel.selectedPaths || []
+        if (paths.length === 0 && index >= 0 && root.browserModel.pathForRow) {
+            const path = root.browserModel.pathForRow(index)
+            if (path) {
+                paths = [path]
+            }
+        }
+        const urls = []
+        const pathList = []
+        for (let i = 0; i < paths.length; i += 1) {
+            const path = paths[i]
+            if (path) {
+                urls.push(Qt.resolvedUrl("file://" + path))
+                pathList.push(path)
+            }
+        }
+        return { urls: urls, paths: pathList }
+    }
+
+    function openContextMenuForIndex(index, parentItem, x, y) {
+        if (!root.browserModel || index < 0) {
+            return
+        }
+        contextMenuIndex = index
+        const selected = root.browserModel.isSelected ? root.browserModel.isSelected(index) : false
+        if (!selected) {
+            root.browserModel.select(index, false)
+            root.anchorIndex = index
+            grid.currentIndex = index
+        }
+        const container = contextMenu.parent ? contextMenu.parent : root
+        const point = parentItem.mapToItem(container, x, y)
+        contextMenu.x = point.x
+        contextMenu.y = point.y
+        contextMenu.open()
     }
 
     Frame {
@@ -326,6 +411,34 @@ Item {
                 event.accepted = true
             }
 
+            TapHandler {
+                acceptedButtons: Qt.LeftButton
+                onTapped: (eventPoint) => {
+                    const idx = grid.indexAt(
+                        eventPoint.position.x + grid.contentX,
+                        eventPoint.position.y + grid.contentY
+                    )
+                    if (idx < 0) {
+                        root.backgroundClicked()
+                        grid.forceActiveFocus()
+                    }
+                }
+            }
+
+            MouseArea {
+                id: emptyGridFocusArea
+                anchors.fill: parent
+                visible: grid.count === 0
+                enabled: visible
+                acceptedButtons: Qt.LeftButton
+                z: 2
+                onPressed: (mouse) => {
+                    root.backgroundClicked()
+                    grid.forceActiveFocus()
+                    mouse.accepted = true
+                }
+            }
+
             delegate: Item {
                 id: row
                 width: GridView.view ? GridView.view.cellWidth : 0
@@ -349,6 +462,98 @@ Item {
                     statusDifferent: root.statusDifferent
                     statusIdenticalColor: root.statusIdenticalColor
                     statusDifferentColor: root.statusDifferentColor
+                }
+
+                MouseArea {
+                    id: itemMouseArea
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    hoverEnabled: false
+                    propagateComposedEvents: true
+
+                    property real startX: 0
+                    property real startY: 0
+                    property bool didDrag: false
+                    property var dragMimeData: ({})
+
+                    Drag.dragType: Drag.Automatic
+                    Drag.mimeData: dragMimeData
+                    Drag.supportedActions: Qt.CopyAction
+                    Drag.proposedAction: Qt.CopyAction
+                    Drag.onDragFinished: {
+                        Drag.active = false
+                        dragMimeData = ({})
+                    }
+
+                    function startExternalDrag(modifiers) {
+                        root.prepareDragSelection(index, modifiers)
+                        const data = root.dragDataForIndex(index)
+                        if (data.urls.length === 0) {
+                            return
+                        }
+                        let uriList = data.urls.join("\r\n")
+                        if (uriList !== "") {
+                            uriList += "\r\n"
+                        }
+                        Drag.hotSpot.x = mouseX
+                        Drag.hotSpot.y = mouseY
+                        dragMimeData = {
+                            "text/uri-list": uriList,
+                            "text/plain": data.paths.join("\n")
+                        }
+                        Drag.active = true
+                        didDrag = true
+                    }
+
+                    onPressed: (mouse) => {
+                        grid.forceActiveFocus()
+                        startX = mouseX
+                        startY = mouseY
+                        didDrag = false
+                        if (mouse.button === Qt.RightButton) {
+                            root.openContextMenuForIndex(index, row, mouse.x, mouse.y)
+                            mouse.accepted = true
+                        }
+                    }
+
+                    onPositionChanged: (mouse) => {
+                        if (!pressed || Drag.active) {
+                            return
+                        }
+                        if ((mouse.buttons & Qt.RightButton) !== 0) {
+                            return
+                        }
+                        const dx = Math.abs(mouseX - startX)
+                        const dy = Math.abs(mouseY - startY)
+                        if (dx > 6 || dy > 6) {
+                            startExternalDrag(mouse.modifiers)
+                        }
+                    }
+
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            return
+                        }
+                        if (didDrag) {
+                            didDrag = false
+                            return
+                        }
+                        root.selectIndex(index, mouse.modifiers)
+                    }
+
+                    onDoubleClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            return
+                        }
+                        if (didDrag) {
+                            didDrag = false
+                            return
+                        }
+                        grid.forceActiveFocus()
+                        if (root.browserModel) {
+                            root.browserModel.activate(index)
+                        }
+                    }
                 }
             }
         }
@@ -461,210 +666,6 @@ Item {
             }
         }
 
-        MouseArea {
-            id: rubberBandArea
-            parent: grid
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            propagateComposedEvents: true
-            z: 1
-
-            property real startX: 0
-            property real startY: 0
-            property bool didDrag: false
-            property int pressIndex: -1
-            property var dragMimeData: ({})
-
-            Drag.dragType: Drag.Automatic
-            Drag.mimeData: dragMimeData
-            Drag.supportedActions: Qt.CopyAction
-            Drag.proposedAction: Qt.CopyAction
-            Drag.onDragFinished: {
-                const urls = dragMimeData["text/uri-list"] || []
-                const paths = dragMimeData["text/plain"] || ""
-                Drag.active = false
-                dragMimeData = ({})
-            }
-
-            function prepareDragSelection(modifiers) {
-                if (!root.browserModel || pressIndex < 0) {
-                    return
-                }
-                const selected = root.browserModel.isSelected
-                    ? root.browserModel.isSelected(pressIndex)
-                    : false
-                if (selected) {
-                    return
-                }
-                const hasShift = (modifiers & Qt.ShiftModifier) !== 0
-                const hasCtrl = (modifiers & Qt.ControlModifier) !== 0
-                if (hasShift && root.anchorIndex >= 0) {
-                    root.browserModel.setSelectionRange(root.anchorIndex, pressIndex, hasCtrl)
-                } else if (hasCtrl) {
-                    root.browserModel.select(pressIndex, true)
-                    root.anchorIndex = pressIndex
-                } else {
-                    root.browserModel.select(pressIndex, false)
-                    root.anchorIndex = pressIndex
-                }
-                grid.currentIndex = pressIndex
-            }
-
-            function dragData() {
-                if (!root.browserModel) {
-                    return { urls: [], paths: [] }
-                }
-                let paths = root.browserModel.selectedPaths || []
-                if (paths.length === 0 && pressIndex >= 0 && root.browserModel.pathForRow) {
-                    const path = root.browserModel.pathForRow(pressIndex)
-                    if (path) {
-                        paths = [path]
-                    }
-                }
-                const urls = []
-                const pathList = []
-                for (let i = 0; i < paths.length; i++) {
-                    const path = paths[i]
-                    if (path) {
-                        const url = Qt.resolvedUrl("file://" + path)
-                        urls.push(url)
-                        pathList.push(path)
-                    }
-                }
-                return { urls: urls, paths: pathList }
-            }
-
-            function startExternalDrag(modifiers) {
-                prepareDragSelection(modifiers)
-                const data = dragData()
-                if (data.urls.length === 0) {
-                    return
-                }
-                let uriList = data.urls.join("\r\n")
-                if (uriList !== "") {
-                    uriList += "\r\n"
-                }
-                Drag.hotSpot.x = mouseX
-                Drag.hotSpot.y = mouseY
-                dragMimeData = {
-                    "text/uri-list": uriList,
-                    "text/plain": data.paths.join("\n")
-                }
-                Drag.active = true
-                didDrag = true
-            }
-
-            function openContextMenu(mouse) {
-                if (!root.browserModel) {
-                    return
-                }
-                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
-                const idx = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
-                if (idx < 0) {
-                    return
-                }
-                contextMenuIndex = idx
-                const selected = root.browserModel.isSelected
-                    ? root.browserModel.isSelected(idx)
-                    : false
-                if (!selected) {
-                    root.browserModel.select(idx, false)
-                    root.anchorIndex = idx
-                    grid.currentIndex = idx
-                }
-                const container = contextMenu.parent ? contextMenu.parent : root
-                const point = mapToItem(container, mouse.x, mouse.y)
-                contextMenu.x = point.x
-                contextMenu.y = point.y
-                contextMenu.open()
-            }
-
-            onPressed: (mouse) => {
-                grid.forceActiveFocus()
-                startX = mouseX
-                startY = mouseY
-                didDrag = false
-                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
-                pressIndex = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
-                if (mouse.button === Qt.RightButton) {
-                    openContextMenu(mouse)
-                    mouse.accepted = true
-                    return
-                }
-            }
-
-            onPositionChanged: (mouse) => {
-                if (!pressed) {
-                    return
-                }
-                if ((mouse.buttons & Qt.RightButton) !== 0) {
-                    return
-                }
-                if (Drag.active) {
-                    return
-                }
-                const dx = Math.abs(mouseX - startX)
-                const dy = Math.abs(mouseY - startY)
-                if (pressIndex >= 0 && (dx > 6 || dy > 6)) {
-                    startExternalDrag(mouse.modifiers)
-                }
-            }
-
-            onReleased: (mouse) => {
-                if (Drag.active) {
-                    return
-                }
-            }
-
-            onClicked: (mouse) => {
-                if (mouse.button === Qt.RightButton) {
-                    return
-                }
-                grid.forceActiveFocus()
-                if (didDrag) {
-                    didDrag = false
-                    return
-                }
-                if (!root.browserModel) {
-                    return
-                }
-                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
-                const idx = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
-                if (idx >= 0) {
-                    if ((mouse.modifiers & Qt.ShiftModifier) !== 0 && root.anchorIndex >= 0) {
-                        const additive = (mouse.modifiers & Qt.ControlModifier) !== 0
-                        root.browserModel.setSelectionRange(root.anchorIndex, idx, additive)
-                    } else if ((mouse.modifiers & Qt.ControlModifier) !== 0) {
-                        root.browserModel.select(idx, true)
-                        root.anchorIndex = idx
-                    } else {
-                        root.browserModel.select(idx, false)
-                        root.anchorIndex = idx
-                    }
-                    root.allowProgrammaticScroll()
-                    grid.currentIndex = idx
-                    grid.positionViewAtIndex(idx, GridView.Visible)
-                    Qt.callLater(root.lockScroll)
-                    grid.forceActiveFocus()
-                }
-            }
-
-            onDoubleClicked: (mouse) => {
-                grid.forceActiveFocus()
-                if (didDrag) {
-                    didDrag = false
-                    return
-                }
-                if (!root.browserModel) {
-                    return
-                }
-                const local = grid.mapFromItem(rubberBandArea, mouse.x, mouse.y)
-                const idx = grid.indexAt(local.x + grid.contentX, local.y + grid.contentY)
-                if (idx >= 0) {
-                    root.browserModel.activate(idx)
-                }
-            }
-        }
     }
 
     Component.onCompleted: {
