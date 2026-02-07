@@ -23,6 +23,7 @@ ApplicationWindow {
         ? leftBrowser.copyProgress
         : (rightBrowser.copyInProgress ? rightBrowser.copyProgress : 0)
     property bool singlePreviewEnabled: false
+    property bool singlePreviewFullscreen: false
     property var singlePreviewBrowser: null
     property var comparePreviewBrowser: null
     property var activeSelectionPane: null
@@ -38,6 +39,7 @@ ApplicationWindow {
         onEnabledChanged: {
             if (enabled) {
                 window.singlePreviewEnabled = false
+                window.singlePreviewFullscreen = false
                 window.singlePreviewBrowser = null
             }
         }
@@ -196,6 +198,7 @@ ApplicationWindow {
         }
         singlePreviewBrowser = browser
         singlePreviewEnabled = true
+        singlePreviewFullscreen = false
     }
 
     function openExternalFileForBrowser(browser) {
@@ -657,6 +660,17 @@ ApplicationWindow {
     }
 
     Shortcut {
+        sequences: ["F11"]
+        context: Qt.ApplicationShortcut
+        enabled: singlePreviewEnabled
+            && !compareModel.enabled
+            && !confirmDialog.visible
+        onActivated: {
+            singlePreviewFullscreen = !singlePreviewFullscreen
+        }
+    }
+
+    Shortcut {
         sequences: ["Delete"]
         context: Qt.ApplicationShortcut
         enabled: (leftBrowser.hasFocus || rightBrowser.hasFocus)
@@ -766,17 +780,20 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Theme.windowMargin
-        spacing: Theme.spaceMd
+        anchors.margins: singlePreviewFullscreen ? 0 : Theme.windowMargin
+        spacing: singlePreviewFullscreen ? 0 : Theme.spaceMd
 
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: Theme.spaceLg
+            spacing: singlePreviewFullscreen ? 0 : Theme.spaceLg
 
             CommandPanel {
                 id: leftPanel
-                Layout.preferredWidth: (parent ? parent.width : window.width) * 0.15
+                visible: !singlePreviewFullscreen
+                Layout.preferredWidth: singlePreviewFullscreen
+                    ? 0
+                    : (parent ? parent.width : window.width) * 0.15
                 Layout.fillHeight: true
                 panelBackground: window.panelBackground
                 syncEnabled: compareModel.enabled
@@ -1120,7 +1137,10 @@ ApplicationWindow {
         browser: singlePreviewBrowser
         onCopyLeftRequested: triggerCopyRightToLeft()
         onCopyRightRequested: triggerCopyLeftToRight()
-        onCloseRequested: singlePreviewEnabled = false
+        onCloseRequested: {
+            singlePreviewEnabled = false
+            singlePreviewFullscreen = false
+        }
         onSaveSucceeded: (message) => pushStatus(message)
     }
 
@@ -1162,7 +1182,7 @@ ApplicationWindow {
             Layout.maximumHeight: 28
             color: Theme.statusBarBackground
             radius: 6
-            visible: true
+            visible: !singlePreviewFullscreen
 
             RowLayout {
                 anchors.fill: parent

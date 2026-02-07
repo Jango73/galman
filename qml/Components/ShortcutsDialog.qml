@@ -60,6 +60,7 @@ Dialog {
                 title: qsTr("Preview"),
                 items: [
                     { keys: "Esc", action: qsTr("Close preview") },
+                    { keys: "F11", action: qsTr("Toggle preview full space") },
                     { keys: "Left / Right", action: qsTr("Previous / next image") },
                     { keys: "Home / End", action: qsTr("First / last image") },
                     { keys: "Ctrl+Left", action: qsTr("Copy selection right to left") },
