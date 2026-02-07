@@ -11,9 +11,7 @@ ColumnLayout {
     property bool volumeUpdating: false
     property alias pathField: pathField
     property alias volumeCombo: volumeCombo
-    property alias goButton: goButton
     property alias upButton: upButton
-    property alias refreshButton: refreshButton
     property Item previousFocusItem: null
     property Item nextFocusItem: null
     property bool pathFieldActiveFocus: pathField.activeFocus
@@ -24,11 +22,6 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         spacing: Theme.spaceMd
-
-        Label {
-            text: qsTr("Volume")
-            opacity: 0.7
-        }
 
         ComboBox {
             id: volumeCombo
@@ -49,17 +42,12 @@ ColumnLayout {
             }
         }
 
-        Label {
-            text: qsTr("Path")
-            opacity: 0.7
-        }
-
         TextField {
             id: pathField
             text: root.browserModel ? root.browserModel.rootPath : ""
             Layout.fillWidth: true
             KeyNavigation.backtab: volumeCombo
-            KeyNavigation.tab: goButton
+            KeyNavigation.tab: upButton
             onAccepted: {
                 if (root.browserModel) {
                     root.browserModel.rootPath = text
@@ -68,36 +56,12 @@ ColumnLayout {
         }
 
         Button {
-            id: goButton
-            text: qsTr("Go")
-            KeyNavigation.backtab: pathField
-            KeyNavigation.tab: upButton
-            onClicked: {
-                if (root.browserModel) {
-                    root.browserModel.rootPath = pathField.text
-                }
-            }
-        }
-
-        Button {
             id: upButton
-            text: qsTr("Up")
-            KeyNavigation.backtab: goButton
-            KeyNavigation.tab: refreshButton
-            onClicked: {
-                root.goUpRequested()
-            }
-        }
-
-        Button {
-            id: refreshButton
-            text: qsTr("Refresh")
-            KeyNavigation.backtab: upButton
+            text: "\u2190"
+            KeyNavigation.backtab: pathField
             KeyNavigation.tab: root.nextFocusItem
             onClicked: {
-                if (root.browserModel) {
-                    root.browserModel.refresh()
-                }
+                root.goUpRequested()
             }
         }
 

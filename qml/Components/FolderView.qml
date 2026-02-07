@@ -539,7 +539,7 @@ FocusScope {
                 volumeModel: volumeModel
                 volumeUpdating: root.volumeUpdating
                 previousFocusItem: root.previousPanelFocusItem
-                nextFocusItem: sortBar.sortCombo
+                nextFocusItem: sortBar.refreshButton
                 onGoUpRequested: {
                     if (browserModel) {
                         browserModel.goUp()
@@ -552,7 +552,7 @@ FocusScope {
                 id: sortBar
                 Layout.fillWidth: true
                 browserModel: root.browserModel
-                previousFocusItem: toolbar.refreshButton
+                previousFocusItem: toolbar.upButton
                 nextFocusItem: browserGrid.focusItem
                 onSortKeyChangedByUser: (sortKey) => root.sortKeyChangedByUser(sortKey)
                 onSortOrderChangedByUser: (sortOrder) => root.sortOrderChangedByUser(sortOrder)

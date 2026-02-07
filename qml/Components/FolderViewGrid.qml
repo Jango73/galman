@@ -203,6 +203,8 @@ Item {
             anchors.fill: parent
             anchors.margins: Theme.spaceMd
             clip: true
+            boundsMovement: Flickable.StopAtBounds
+            boundsBehavior: Flickable.StopAtBounds
             model: root.browserModel
             rightMargin: Theme.scrollBarThickness
             readonly property real availableWidth: Math.max(0, width - rightMargin)

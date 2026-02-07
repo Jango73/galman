@@ -8,6 +8,7 @@ ColumnLayout {
     id: root
     property var browserModel: null
     property alias sortCombo: sortCombo
+    property alias refreshButton: refreshButton
     property alias sortOrderBox: sortOrderBox
     property alias dirsFirstBox: dirsFirstBox
     property alias nameFilterField: nameFilterField
@@ -85,6 +86,22 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.spaceMd
 
+        Button {
+            id: refreshButton
+            text: qsTr("Refresh")
+            KeyNavigation.backtab: root.previousFocusItem
+            KeyNavigation.tab: sortCombo
+            onClicked: {
+                if (root.browserModel) {
+                    root.browserModel.refresh()
+                }
+            }
+        }
+
+        Item {
+            Layout.preferredWidth: Theme.spaceMd
+        }
+
         Label {
             text: qsTr("Sort by")
         }
@@ -92,7 +109,7 @@ ColumnLayout {
         ComboBox {
             id: sortCombo
             model: root.sortOptions
-            KeyNavigation.backtab: root.previousFocusItem
+            KeyNavigation.backtab: refreshButton
             KeyNavigation.tab: sortOrderBox
             onCurrentIndexChanged: {
                 if (root.browserModel) {
