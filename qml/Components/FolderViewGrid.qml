@@ -463,7 +463,7 @@ Item {
 
         MouseArea {
             id: rubberBandArea
-            parent: grid.contentItem
+            parent: grid
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
