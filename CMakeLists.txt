@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(Galman LANGUAGES CXX)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" GALMAN_APPLICATION_VERSION LIMIT_COUNT 1)
+string(STRIP "${GALMAN_APPLICATION_VERSION}" GALMAN_APPLICATION_VERSION)
+
+if(NOT GALMAN_APPLICATION_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+([.-][0-9A-Za-z.-]+)?$")
+    message(FATAL_ERROR "Invalid VERSION value: '${GALMAN_APPLICATION_VERSION}'")
+endif()
+
+project(Galman VERSION ${GALMAN_APPLICATION_VERSION} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +25,12 @@ qt_add_executable(galman
         src/ComfyClient.cpp
         src/ComfyWorkflowParser.cpp
         src/PlatformUtils.cpp
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ApplicationVersion.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ApplicationVersion.h"
+    @ONLY
 )
 
 set_source_files_properties(qml/Theme.qml PROPERTIES
@@ -79,6 +92,7 @@ qt_add_qml_module(galman
         qml/Components/Placeholder.qml
         qml/Components/ConfirmDialog.qml
         qml/Components/RenameDialog.qml
+        qml/Components/AboutDialog.qml
         qml/Components/ShortcutsDialog.qml
         qml/Components/StatusBadge.qml
     RESOURCES
@@ -98,7 +112,7 @@ target_link_libraries(galman
     PRIVATE Qt6::Quick Qt6::Concurrent Qt6::Network
 )
 
-target_include_directories(galman PRIVATE src)
+target_include_directories(galman PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}")
 
 install(TARGETS galman
     BUNDLE DESTINATION .
@@ -173,12 +187,10 @@ if(COMMAND qt_generate_deploy_app_script)
     install(SCRIPT "${galman_deploy_script}")
 endif()
 
-set(GALMAN_PACKAGE_VERSION "0.1.0" CACHE STRING "Package version")
-
 set(CPACK_PACKAGE_NAME "galman")
 set(CPACK_PACKAGE_VENDOR "Galman")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Image gallery manager")
-set(CPACK_PACKAGE_VERSION "${GALMAN_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_VERSION "${GALMAN_APPLICATION_VERSION}")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 
 if(UNIX AND NOT APPLE)

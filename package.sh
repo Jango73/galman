@@ -5,24 +5,26 @@ ROOT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_TYPE="Release"
 BUILD_FOLDER="${ROOT_FOLDER}/build-package-${BUILD_TYPE,,}"
 OUTPUT_FOLDER="${ROOT_FOLDER}/dist"
-PACKAGE_VERSION="${1:-0.1.0}"
+VERSION="$(tr -d '[:space:]' < "${ROOT_FOLDER}/VERSION")"
 
 cmake -S "${ROOT_FOLDER}" \
   -B "${BUILD_FOLDER}" \
   -G Ninja \
-  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-  -DGALMAN_PACKAGE_VERSION="${PACKAGE_VERSION}"
+  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
 
 cmake --build "${BUILD_FOLDER}"
 
 mkdir -p "${OUTPUT_FOLDER}"
+rm -f "${BUILD_FOLDER}/galman_"*.deb "${BUILD_FOLDER}/galman-"*.tar.gz "${BUILD_FOLDER}/galman-"*.sh "${BUILD_FOLDER}/galman-"*.rpm 2>/dev/null || true
 (
   cd "${BUILD_FOLDER}"
   cpack
 )
 
+rm -f "${OUTPUT_FOLDER}/galman_"*.deb "${OUTPUT_FOLDER}/galman-"*.tar.gz "${OUTPUT_FOLDER}/galman-"*.sh "${OUTPUT_FOLDER}/galman-"*.rpm 2>/dev/null || true
+
 find "${BUILD_FOLDER}" -maxdepth 1 -type f \
-  \( -name "*.deb" -o -name "*.tar.gz" -o -name "*.sh" -o -name "*.rpm" \) \
+  \( -name "galman_${VERSION}_*.deb" -o -name "galman-${VERSION}-*.tar.gz" -o -name "galman-${VERSION}-*.sh" -o -name "galman-${VERSION}-*.rpm" \) \
   -exec cp -f {} "${OUTPUT_FOLDER}/" \;
 
 echo

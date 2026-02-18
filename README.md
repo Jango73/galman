@@ -48,12 +48,12 @@ run.bat
 ./package.sh
 ```
 
-Optional version:
+Version source (single source of truth):
 ```bash
-./package.sh 1.2.3
+./set-version.sh 1.2.3
 ```
 
-Generated packages are copied to `dist/`.
+`package.sh` uses the version from `VERSION`. Generated packages are copied to `dist/`.
 
 ## Architecture
 - **User interface (QML)**: `qml/App/Main.qml` drives the main screen. Reusable components live in `qml/Components`. Visual theme is defined in `qml/Theme.qml`.

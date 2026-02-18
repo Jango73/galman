@@ -613,6 +613,10 @@ ApplicationWindow {
         Menu {
             title: qsTr("Help")
             MenuItem {
+                text: qsTr("About")
+                onTriggered: aboutDialog.open()
+            }
+            MenuItem {
                 text: qsTr("Shortcuts")
                 onTriggered: shortcutsDialog.open()
             }
@@ -1245,6 +1249,14 @@ ApplicationWindow {
             const sourcePaths = sourcePane.selectedPaths()
             startCopy(sourcePane, targetPane)
         }
+    }
+
+    AboutDialog {
+        id: aboutDialog
+        parent: window.contentItem
+        applicationName: qsTr("Galman")
+        applicationVersion: Qt.application.version
+        applicationDescription: qsTr("Image gallery manager for fast browsing, comparison, and file operations.")
     }
 
     ShortcutsDialog {

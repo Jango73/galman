@@ -24,6 +24,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
+#include "ApplicationVersion.h"
 #include "FavoritePairsManager.h"
 #include "LanguageManager.h"
 #include "ScriptEngine.h"
@@ -32,6 +33,7 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    app.setApplicationVersion(QStringLiteral(GALMAN_APPLICATION_VERSION));
     app.setWindowIcon(QIcon(":/Galman/qml/Assets/Galman.png"));
 
     QQmlApplicationEngine engine;
