@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Galman
+Comment=Image gallery manager
+Exec=galman
+Icon=galman
+Terminal=false
+Categories=Graphics;Photography;Qt;

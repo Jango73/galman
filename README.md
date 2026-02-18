@@ -43,6 +43,18 @@ run.bat
 
 `run.bat` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
 
+### Package (Debian)
+```bash
+./package.sh
+```
+
+Optional version:
+```bash
+./package.sh 1.2.3
+```
+
+Generated packages are copied to `dist/`.
+
 ## Architecture
 - **User interface (QML)**: `qml/App/Main.qml` drives the main screen. Reusable components live in `qml/Components`. Visual theme is defined in `qml/Theme.qml`.
 - **Models and logic (C++)**: `src` contains the QML-exposed models (`FolderBrowserModel`, `FolderCompareModel`, `VolumeModel`) and copy operations through `CopyWorker`. `ScriptEngine` and `ScriptManager` handle script execution and discovery.

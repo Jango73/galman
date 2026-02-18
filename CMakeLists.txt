@@ -5,6 +5,7 @@ project(Galman LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
+include(GNUInstallDirs)
 
 find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network ShaderTools)
 
@@ -99,6 +100,31 @@ target_link_libraries(galman
 
 target_include_directories(galman PRIVATE src)
 
+install(TARGETS galman
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+)
+
+install(DIRECTORY scripts/
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/galman/scripts"
+    FILES_MATCHING
+    PATTERN "*.js"
+    PATTERN "*.json"
+)
+
+install(FILES qml/Assets/Galman.png
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
+    RENAME galman.png
+)
+
+install(FILES packaging/linux/galman.desktop
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+)
+
+install(FILES LICENSE
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/galman"
+)
+
 set(translation_files
     translations/galman_en.ts
     translations/galman_fr.ts
@@ -137,3 +163,31 @@ if (LRELEASE_EXECUTABLE)
 else()
     message(WARNING "lrelease not found; translations will be skipped.")
 endif()
+
+if(COMMAND qt_generate_deploy_app_script)
+    qt_generate_deploy_app_script(
+        TARGET galman
+        OUTPUT_SCRIPT galman_deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
+    )
+    install(SCRIPT "${galman_deploy_script}")
+endif()
+
+set(GALMAN_PACKAGE_VERSION "0.1.0" CACHE STRING "Package version")
+
+set(CPACK_PACKAGE_NAME "galman")
+set(CPACK_PACKAGE_VENDOR "Galman")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Image gallery manager")
+set(CPACK_PACKAGE_VERSION "${GALMAN_PACKAGE_VERSION}")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+if(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB;TGZ")
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Galman Maintainers")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
+    set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+endif()
+
+include(CPack)

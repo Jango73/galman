@@ -46,6 +46,7 @@ CMakeLists.txt.user*
 .directory
 *.bak
 /temp
+/dist
 
 # Visual studio
 *.suo

@@ -123,6 +123,11 @@ QString ScriptManager::resolveScriptsDir() const
         return QDir(appSibling).absolutePath();
     }
 
+    const QString appShareScripts = QDir(appDir).filePath("../share/galman/scripts");
+    if (QFileInfo::exists(appShareScripts) && QFileInfo(appShareScripts).isDir()) {
+        return QDir(appShareScripts).absolutePath();
+    }
+
     const QString appLocal = QDir(appDir).filePath("scripts");
     if (QFileInfo::exists(appLocal) && QFileInfo(appLocal).isDir()) {
         return appLocal;
