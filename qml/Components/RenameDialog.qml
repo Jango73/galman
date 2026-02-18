@@ -17,16 +17,12 @@ Dialog {
     title: qsTr("Rename")
     property string sourcePath: ""
     property string currentName: ""
-    property string proposedName: ""
-    property string errorText: ""
     signal renameConfirmed(string path, string newName)
     x: Math.round(((dialog.parent ? dialog.parent.width : 0) - width) / 2)
     y: Math.round(((dialog.parent ? dialog.parent.height : 0) - height) / 2)
     focus: true
     onOpened: {
-        const nextName = proposedName !== "" ? proposedName : currentName
-        nameField.text = nextName
-        proposedName = ""
+        nameField.text = currentName
         nameField.forceActiveFocus()
         nameField.selectAll()
     }
@@ -67,14 +63,6 @@ Dialog {
                 id: nameField
                 text: ""
                 placeholderText: qsTr("New name")
-                Layout.fillWidth: true
-            }
-
-            Label {
-                text: dialog.errorText
-                visible: dialog.errorText !== ""
-                color: Theme.statusDifferent
-                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
         }

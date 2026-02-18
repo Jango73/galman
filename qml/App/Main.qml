@@ -915,6 +915,7 @@ ApplicationWindow {
                 onMaximumImageHeightChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onGoUpRequested: syncGoUp(leftBrowser, rightBrowser)
                 onRenameSucceeded: (message) => pushStatus(message)
+                onErrorRaised: (message) => pushError(message)
             }
 
             Item {
@@ -1065,6 +1066,7 @@ ApplicationWindow {
                 onMaximumImageHeightChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onGoUpRequested: syncGoUp(rightBrowser, leftBrowser)
                 onRenameSucceeded: (message) => pushStatus(message)
+                onErrorRaised: (message) => pushError(message)
             }
 
             }

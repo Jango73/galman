@@ -36,6 +36,7 @@ FocusScope {
     signal maximumImageHeightChangedByUser(int value)
     signal goUpRequested()
     signal renameSucceeded(string message)
+    signal errorRaised(string message)
     property string settingsKey: ""
     property bool useExternalModel: false
     property var externalModel: null
@@ -500,8 +501,6 @@ FocusScope {
         }
         renameDialog.sourcePath = path
         renameDialog.currentName = baseNameFromPath(path)
-        renameDialog.errorText = ""
-        renameDialog.proposedName = ""
         renameDialog.open()
     }
 
@@ -611,13 +610,14 @@ FocusScope {
         parent: root.Window.window ? root.Window.window.contentItem : null
         onRenameConfirmed: (path, newName) => {
             if (!browserModel || !browserModel.renamePath) {
+                const fallbackError = qsTr("Rename failed")
+                root.errorRaised(fallbackError)
                 return
             }
             const result = browserModel.renamePath(path, newName)
             if (!result || !result.ok) {
-                renameDialog.errorText = result && result.error ? result.error : qsTr("Rename failed")
-                renameDialog.proposedName = newName
-                renameDialog.open()
+                const renameError = result && result.error ? result.error : qsTr("Rename failed")
+                root.errorRaised(renameError)
                 return
             }
             const targetName = result.newPath ? baseNameFromPath(result.newPath) : newName
