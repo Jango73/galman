@@ -36,6 +36,7 @@ public:
     struct CachedEntry {
         QFileInfo info;
         bool isImage = false;
+        bool isVideo = false;
         QImage signature;
         bool signatureValid = false;
         bool signatureAttempted = false;

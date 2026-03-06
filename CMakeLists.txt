@@ -73,6 +73,8 @@ qt_add_qml_module(galman
         src/PlatformUtils.h
         src/ImageMetadataUtils.h
         src/ImageMetadataUtils.cpp
+        src/VideoThumbnailUtils.h
+        src/VideoThumbnailUtils.cpp
     QML_FILES
         qml/App/Main.qml
         qml/Theme.qml

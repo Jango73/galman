@@ -8,10 +8,12 @@ Item {
     id: root
     property bool selected: false
     property bool isImage: false
+    property bool isVideo: false
     property bool isDir: false
     property bool isGhost: false
     property string filePath: ""
     property string otherSidePath: ""
+    property string thumbnailPath: ""
     property string fileName: ""
     property string modifiedText: ""
     property bool thumbnailReady: false
@@ -43,16 +45,19 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             readonly property real squareSize: Math.min(width, height)
-            readonly property string previewPath: root.isGhost && root.otherSidePath !== ""
+            readonly property string fallbackImagePath: root.isGhost && root.otherSidePath !== ""
                 ? root.otherSidePath
                 : root.filePath
-            readonly property bool hasPreviewSource: root.isImage && previewPath !== ""
+            readonly property string effectiveThumbnailPath: root.thumbnailPath !== ""
+                ? root.thumbnailPath
+                : (root.isImage ? fallbackImagePath : "")
+            readonly property bool hasPreviewSource: effectiveThumbnailPath !== ""
 
             Image {
                 width: previewContainer.squareSize
                 height: previewContainer.squareSize
                 anchors.centerIn: parent
-                source: previewContainer.hasPreviewSource ? ("file://" + previewContainer.previewPath) : ""
+                source: previewContainer.hasPreviewSource ? ("file://" + previewContainer.effectiveThumbnailPath) : ""
                 sourceSize.width: Math.max(1, previewContainer.squareSize * 2)
                 sourceSize.height: Math.max(1, previewContainer.squareSize * 2)
                 fillMode: Image.PreserveAspectFit

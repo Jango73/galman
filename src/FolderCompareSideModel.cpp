@@ -43,6 +43,7 @@
 #include "RowMatchUtils.h"
 #include "SelectionStatisticsUtils.h"
 #include "TrashWorker.h"
+#include "VideoThumbnailUtils.h"
 
 namespace {
 
@@ -56,6 +57,11 @@ struct FolderCompareFilterConstants {
     static constexpr qint64 unsetByteSize = -1;
     static constexpr int unsetDimension = -1;
     static constexpr int signatureDimension = 32;
+};
+
+struct VideoThumbnailBatchResult {
+    QHash<QString, QString> thumbnails;
+    QStringList attempted;
 };
 
 /**
@@ -75,8 +81,16 @@ bool compareEntryEquivalent(const FolderCompareSideModel::CompareEntry &left,
         && left.modified == right.modified
         && left.isDir == right.isDir
         && left.isImage == right.isImage
+        && left.isVideo == right.isVideo
         && left.isGhost == right.isGhost
         && left.status == right.status;
+}
+
+QString previewPathForEntry(const FolderCompareSideModel::CompareEntry &entry)
+{
+    return entry.isGhost && !entry.otherSidePath.isEmpty()
+        ? entry.otherSidePath
+        : entry.filePath;
 }
 
 } // namespace
@@ -529,6 +543,21 @@ QVariant FolderCompareSideModel::data(const QModelIndex &index, int role) const
         return entry.isDir;
     case IsImageRole:
         return entry.isImage;
+    case IsVideoRole:
+        return entry.isVideo;
+    case ThumbnailPathRole: {
+        const QString previewPath = previewPathForEntry(entry);
+        if (previewPath.isEmpty()) {
+            return QString();
+        }
+        if (entry.isImage) {
+            return previewPath;
+        }
+        if (entry.isVideo) {
+            return m_videoThumbnailCache.value(previewPath);
+        }
+        return QString();
+    }
     case SuffixRole: {
         const int dot = entry.fileName.lastIndexOf('.');
         return dot >= 0 ? entry.fileName.mid(dot + 1) : QString();
@@ -560,6 +589,8 @@ QHash<int, QByteArray> FolderCompareSideModel::roleNames() const
         {OtherSidePathRole, "otherSidePath"},
         {IsDirRole, "isDir"},
         {IsImageRole, "isImage"},
+        {IsVideoRole, "isVideo"},
+        {ThumbnailPathRole, "thumbnailPath"},
         {SuffixRole, "suffix"},
         {CreatedRole, "created"},
         {ModifiedRole, "modified"},
@@ -1502,6 +1533,7 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
     QVector<CompareEntry> filtered = m_baseEntries;
     applyFilterAndSort(filtered);
     applyEntriesIncremental(filtered);
+    requestVideoThumbnailRefresh();
 }
 
 /**
@@ -1515,6 +1547,7 @@ void FolderCompareSideModel::rebuildEntries()
     if (signatureSortActive()) {
         requestSignatureHashRefresh();
     }
+    requestVideoThumbnailRefresh();
 
     QVector<CompareEntry> filtered = m_baseEntries;
     applyFilterAndSort(filtered);
@@ -1534,6 +1567,8 @@ void FolderCompareSideModel::applyEntriesIncremental(const QVector<CompareEntry>
         OtherSidePathRole,
         IsDirRole,
         IsImageRole,
+        IsVideoRole,
+        ThumbnailPathRole,
         SuffixRole,
         CreatedRole,
         ModifiedRole,
@@ -1649,6 +1684,9 @@ void FolderCompareSideModel::pruneCaches(const QVector<CompareEntry> &entries)
         if (!entry.filePath.isEmpty()) {
             currentPaths.insert(entry.filePath);
         }
+        if (!entry.otherSidePath.isEmpty()) {
+            currentPaths.insert(entry.otherSidePath);
+        }
     }
 
     for (auto it = m_imageSizeCache.begin(); it != m_imageSizeCache.end();) {
@@ -1675,6 +1713,20 @@ void FolderCompareSideModel::pruneCaches(const QVector<CompareEntry> &entries)
     for (auto it = m_signatureHashAttempted.begin(); it != m_signatureHashAttempted.end();) {
         if (!currentPaths.contains(*it)) {
             it = m_signatureHashAttempted.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    for (auto it = m_videoThumbnailCache.begin(); it != m_videoThumbnailCache.end();) {
+        if (!currentPaths.contains(it.key())) {
+            it = m_videoThumbnailCache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    for (auto it = m_videoThumbnailAttempted.begin(); it != m_videoThumbnailAttempted.end();) {
+        if (!currentPaths.contains(*it)) {
+            it = m_videoThumbnailAttempted.erase(it);
         } else {
             ++it;
         }
@@ -1790,6 +1842,80 @@ void FolderCompareSideModel::requestSignatureHashRefresh()
         }
         m_signatureHashLoading = false;
         rebuildEntries();
+    });
+
+    watcher->setFuture(future);
+}
+
+/**
+ * @brief Starts asynchronous video thumbnail generation when needed.
+ */
+void FolderCompareSideModel::requestVideoThumbnailRefresh()
+{
+    if (m_videoThumbnailLoading) {
+        return;
+    }
+
+    QStringList pending;
+    pending.reserve(m_baseEntries.size());
+    for (const CompareEntry &entry : m_baseEntries) {
+        if (entry.isDir || !entry.isVideo) {
+            continue;
+        }
+        const QString path = previewPathForEntry(entry);
+        if (path.isEmpty()) {
+            continue;
+        }
+        if (m_videoThumbnailCache.contains(path) && QFileInfo::exists(m_videoThumbnailCache.value(path))) {
+            continue;
+        }
+        if (m_videoThumbnailAttempted.contains(path)) {
+            continue;
+        }
+        pending.append(path);
+    }
+
+    if (pending.isEmpty()) {
+        return;
+    }
+
+    m_videoThumbnailLoading = true;
+    const int token = ++m_videoThumbnailGeneration;
+
+    auto future = QtConcurrent::run([pending]() {
+        VideoThumbnailBatchResult result;
+        for (const QString &path : pending) {
+            result.attempted.append(path);
+            QString thumbnailPath;
+            if (VideoThumbnailUtils::generateThumbnail(path, &thumbnailPath)) {
+                result.thumbnails.insert(path, thumbnailPath);
+            }
+        }
+        return result;
+    });
+
+    auto *watcher = new QFutureWatcher<VideoThumbnailBatchResult>(this);
+    connect(watcher, &QFutureWatcher<VideoThumbnailBatchResult>::finished, this, [this, watcher, token]() {
+        const VideoThumbnailBatchResult result = watcher->result();
+        watcher->deleteLater();
+
+        if (token != m_videoThumbnailGeneration) {
+            return;
+        }
+
+        for (auto it = result.thumbnails.constBegin(); it != result.thumbnails.constEnd(); ++it) {
+            m_videoThumbnailCache.insert(it.key(), it.value());
+        }
+        for (const QString &path : result.attempted) {
+            m_videoThumbnailAttempted.insert(path);
+        }
+
+        m_videoThumbnailLoading = false;
+        if (!m_entries.isEmpty()) {
+            const QModelIndex first = index(0, 0);
+            const QModelIndex last = index(m_entries.size() - 1, 0);
+            emit dataChanged(first, last, {ThumbnailPathRole});
+        }
     });
 
     watcher->setFuture(future);

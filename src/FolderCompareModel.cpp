@@ -36,6 +36,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "VideoThumbnailUtils.h"
+
 namespace {
 
 struct ImageSignature {
@@ -186,6 +188,7 @@ FolderCompareModel::CachedEntry buildCachedEntry(const QFileInfo &info, bool ena
     FolderCompareModel::CachedEntry entry;
     entry.info = info;
     entry.isImage = isImageFile(info);
+    entry.isVideo = VideoThumbnailUtils::isVideoFile(info);
     entry.signatureValid = false;
     entry.signatureAttempted = false;
     if (enabled && computeSignatures && entry.isImage && !info.isDir()) {
@@ -305,6 +308,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
             entry.modified = info.lastModified();
             entry.isDir = info.isDir();
             entry.isImage = cached.isImage;
+            entry.isVideo = cached.isVideo;
             entry.isGhost = false;
             entry.status = FolderCompareSideModel::StatusNone;
             entry.id = entry.filePath;
@@ -445,6 +449,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         ghost.modified = leftEntry.modified;
         ghost.isDir = false;
         ghost.isImage = true;
+        ghost.isVideo = false;
         ghost.isGhost = true;
         ghost.status = FolderCompareSideModel::StatusMissing;
         ghost.id = ghostId(ghost.fileName, ghost.modified.toSecsSinceEpoch(), "right", ghostIndex);
@@ -467,6 +472,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         ghost.modified = rightEntry.modified;
         ghost.isDir = false;
         ghost.isImage = true;
+        ghost.isVideo = false;
         ghost.isGhost = true;
         ghost.status = FolderCompareSideModel::StatusMissing;
         ghost.id = ghostId(ghost.fileName, ghost.modified.toSecsSinceEpoch(), "left", ghostIndex);
@@ -489,6 +495,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         ghost.modified = leftEntry.modified;
         ghost.isDir = leftEntry.isDir;
         ghost.isImage = false;
+        ghost.isVideo = leftEntry.isVideo;
         ghost.isGhost = true;
         ghost.status = FolderCompareSideModel::StatusMissing;
         ghost.id = ghostId(ghost.fileName, ghost.modified.toSecsSinceEpoch(), "right", ghostIndex);
@@ -511,6 +518,7 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
         ghost.modified = rightEntry.modified;
         ghost.isDir = rightEntry.isDir;
         ghost.isImage = false;
+        ghost.isVideo = rightEntry.isVideo;
         ghost.isGhost = true;
         ghost.status = FolderCompareSideModel::StatusMissing;
         ghost.id = ghostId(ghost.fileName, ghost.modified.toSecsSinceEpoch(), "left", ghostIndex);
@@ -1157,3 +1165,4 @@ void FolderCompareModel::startSignatureRefresh(const QString &leftPath,
     });
     watcher->setFuture(future);
 }
+#include "VideoThumbnailUtils.h"

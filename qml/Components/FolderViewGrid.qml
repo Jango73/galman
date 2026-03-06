@@ -450,10 +450,12 @@ Item {
                     anchors.fill: parent
                     selected: model.selected
                     isImage: model.isImage
+                    isVideo: model.isVideo
                     isDir: model.isDir
                     isGhost: model.isGhost
                     filePath: model.filePath
                     otherSidePath: model.otherSidePath ? model.otherSidePath : ""
+                    thumbnailPath: model.thumbnailPath ? model.thumbnailPath : ""
                     fileName: model.fileName
                     modifiedText: model.isGhost
                         ? ""

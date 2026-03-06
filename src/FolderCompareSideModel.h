@@ -66,6 +66,8 @@ public:
         OtherSidePathRole,
         IsDirRole,
         IsImageRole,
+        IsVideoRole,
+        ThumbnailPathRole,
         SuffixRole,
         CreatedRole,
         ModifiedRole,
@@ -83,6 +85,7 @@ public:
         QDateTime modified;
         bool isDir = false;
         bool isImage = false;
+        bool isVideo = false;
         bool isGhost = false;
         CompareStatus status = StatusNone;
     };
@@ -210,6 +213,7 @@ private:
     void applyFilterAndSort(QVector<CompareEntry> &entries) const;
     void requestImageSizeRefresh();
     void requestSignatureHashRefresh();
+    void requestVideoThumbnailRefresh();
     void pruneCaches(const QVector<CompareEntry> &entries);
     bool byteSizeFiltersActive() const;
     bool imageSizeFiltersActive() const;
@@ -271,4 +275,8 @@ private:
     QSet<QString> m_signatureHashAttempted;
     bool m_signatureHashLoading = false;
     int m_signatureHashGeneration = 0;
+    QHash<QString, QString> m_videoThumbnailCache;
+    QSet<QString> m_videoThumbnailAttempted;
+    bool m_videoThumbnailLoading = false;
+    int m_videoThumbnailGeneration = 0;
 };

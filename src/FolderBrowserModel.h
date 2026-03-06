@@ -59,6 +59,8 @@ public:
         FilePathRole,
         IsDirRole,
         IsImageRole,
+        IsVideoRole,
+        ThumbnailPathRole,
         SuffixRole,
         CreatedRole,
         ModifiedRole,
@@ -186,6 +188,7 @@ private:
     void pruneCaches(const QVector<QFileInfo> &entries);
     void requestImageSizeRefresh();
     void requestSignatureHashRefresh();
+    void requestVideoThumbnailRefresh();
     bool byteSizeFiltersActive() const;
     bool imageSizeFiltersActive() const;
     bool signatureSortActive() const;
@@ -237,6 +240,10 @@ private:
     QSet<QString> m_signatureHashAttempted;
     bool m_signatureHashLoading = false;
     int m_signatureHashGeneration = 0;
+    QHash<QString, QString> m_videoThumbnailCache;
+    QSet<QString> m_videoThumbnailAttempted;
+    bool m_videoThumbnailLoading = false;
+    int m_videoThumbnailGeneration = 0;
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;
     int m_generation = 0;
