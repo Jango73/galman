@@ -25,6 +25,8 @@
 #include "ComfyWorkflowParser.h"
 #include "PlatformUtils.h"
 
+#include <QCoreApplication>
+#include <QEventLoop>
 #include <QFileInfo>
 #include <QFile>
 #include <QDir>
@@ -32,8 +34,38 @@
 #include <QImageWriter>
 #include <QJsonObject>
 #include <QMetaType>
+#include <QProcess>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QVariantMap>
+#include <algorithm>
+
+namespace {
+
+struct ProcessProgressConstants {
+    static constexpr int shortWaitMilliseconds = 50;
+    static constexpr qreal zeroProgress = 0.0;
+    static constexpr qreal fullProgress = 1.0;
+};
+
+qreal parsePercentProgress(const QString &line)
+{
+    static const QRegularExpression percentRegex(R"((\d{1,3}(?:[.,]\d+)?)\s*%)");
+    const QRegularExpressionMatch match = percentRegex.match(line);
+    if (!match.hasMatch()) {
+        return ProcessProgressConstants::zeroProgress;
+    }
+    QString text = match.captured(1);
+    text.replace(',', '.');
+    bool ok = false;
+    const qreal value = text.toDouble(&ok);
+    if (!ok) {
+        return ProcessProgressConstants::zeroProgress;
+    }
+    return std::clamp(value / 100.0, ProcessProgressConstants::zeroProgress, ProcessProgressConstants::fullProgress);
+}
+
+} // namespace
 
 /**
  * @brief Constructs the script engine and exposes it to the JS runtime.
@@ -54,6 +86,33 @@ ScriptEngine::ScriptEngine(QObject *parent)
 QVariantList ScriptEngine::selection() const
 {
     return m_selection;
+}
+
+/**
+ * @brief Returns whether an external process launched by a script is running.
+ * @return True when a process is running, false otherwise.
+ */
+bool ScriptEngine::processRunning() const
+{
+    return m_processRunning;
+}
+
+/**
+ * @brief Returns the current process progress ratio.
+ * @return Progress value in [0.0, 1.0].
+ */
+qreal ScriptEngine::processProgress() const
+{
+    return m_processProgress;
+}
+
+/**
+ * @brief Returns the latest process status message.
+ * @return Human-readable status message.
+ */
+QString ScriptEngine::processStatusMessage() const
+{
+    return m_processStatusMessage;
 }
 
 /**
@@ -545,6 +604,134 @@ QVariantMap ScriptEngine::runComfyWorkflow(const QString &workflowPath,
 }
 
 /**
+ * @brief Runs an external process and returns execution details.
+ * @param program Program executable name or absolute path.
+ * @param arguments Program arguments.
+ * @param workingFolder Optional working folder.
+ * @return Result map with ok, exitCode, stdout, stderr, and error fields.
+ */
+QVariantMap ScriptEngine::runProcess(const QString &program,
+                                     const QStringList &arguments,
+                                     const QString &workingFolder)
+{
+    QVariantMap result;
+    result.insert("ok", false);
+    result.insert("exitCode", -1);
+    result.insert("stdout", QString());
+    result.insert("stderr", QString());
+
+    if (program.trimmed().isEmpty()) {
+        result.insert("error", tr("Program is empty"));
+        return result;
+    }
+
+    if (m_processRunning) {
+        result.insert("error", tr("Another process is already running"));
+        return result;
+    }
+
+    if (!workingFolder.trimmed().isEmpty()) {
+        const QFileInfo workingFolderInfo(workingFolder);
+        if (!workingFolderInfo.exists() || !workingFolderInfo.isDir()) {
+            result.insert("error", tr("Working folder not found"));
+            return result;
+        }
+    }
+
+    QProcess process;
+    m_runningProcess = &process;
+    setProcessProgress(ProcessProgressConstants::zeroProgress);
+    setProcessStatusMessage(tr("Starting: %1").arg(program));
+    setProcessRunning(true);
+
+    process.setProgram(program);
+    process.setArguments(arguments);
+    if (!workingFolder.trimmed().isEmpty()) {
+        process.setWorkingDirectory(workingFolder);
+    }
+
+    process.start();
+    if (!process.waitForStarted()) {
+        m_runningProcess = nullptr;
+        setProcessRunning(false);
+        setProcessStatusMessage(QString());
+        result.insert("error", process.errorString().isEmpty()
+                                  ? tr("Failed to start process")
+                                  : process.errorString());
+        return result;
+    }
+
+    QString standardOutput;
+    QString standardError;
+
+    while (process.state() != QProcess::NotRunning) {
+        process.waitForReadyRead(ProcessProgressConstants::shortWaitMilliseconds);
+
+        const QString chunkOutput = QString::fromUtf8(process.readAllStandardOutput());
+        const QString chunkError = QString::fromUtf8(process.readAllStandardError());
+        if (!chunkOutput.isEmpty()) {
+            standardOutput += chunkOutput;
+            const qreal percentProgress = parsePercentProgress(chunkOutput);
+            if (percentProgress > ProcessProgressConstants::zeroProgress) {
+                setProcessProgress(percentProgress);
+            }
+            setProcessStatusMessage(chunkOutput.trimmed());
+        }
+        if (!chunkError.isEmpty()) {
+            standardError += chunkError;
+            const qreal percentProgress = parsePercentProgress(chunkError);
+            if (percentProgress > ProcessProgressConstants::zeroProgress) {
+                setProcessProgress(percentProgress);
+            }
+            setProcessStatusMessage(chunkError.trimmed());
+        }
+
+        QCoreApplication::processEvents(QEventLoop::AllEvents, ProcessProgressConstants::shortWaitMilliseconds);
+    }
+
+    standardOutput += QString::fromUtf8(process.readAllStandardOutput());
+    standardError += QString::fromUtf8(process.readAllStandardError());
+    result.insert("stdout", standardOutput);
+    result.insert("stderr", standardError);
+
+    m_runningProcess = nullptr;
+    setProcessRunning(false);
+
+    if (process.exitStatus() != QProcess::NormalExit) {
+        setProcessStatusMessage(tr("Process crashed"));
+        result.insert("error", tr("Process crashed"));
+        return result;
+    }
+
+    const int exitCode = process.exitCode();
+    result.insert("exitCode", exitCode);
+    if (exitCode != 0) {
+        setProcessStatusMessage(tr("Process exited with code %1").arg(exitCode));
+        result.insert("error", tr("Process exited with code %1").arg(exitCode));
+        return result;
+    }
+
+    setProcessProgress(ProcessProgressConstants::fullProgress);
+    setProcessStatusMessage(tr("Completed: %1").arg(program));
+    result.insert("ok", true);
+    return result;
+}
+
+/**
+ * @brief Cancels the currently running process launched by scripts.
+ */
+void ScriptEngine::cancelRunningProcess()
+{
+    if (!m_runningProcess) {
+        return;
+    }
+    m_runningProcess->terminate();
+    if (!m_runningProcess->waitForFinished(500)) {
+        m_runningProcess->kill();
+    }
+}
+
+/**
  * @brief Returns the default ComfyUI output folder for the platform.
  * @return Default output folder path.
  */
@@ -605,6 +792,46 @@ void ScriptEngine::saveScriptParams(const QString &scriptPath, const QVariantMap
     settings.endGroup();
     settings.endGroup();
     settings.sync();
+}
+
+/**
+ * @brief Updates process running state and emits notifications when changed.
+ * @param running True when a process is running.
+ */
+void ScriptEngine::setProcessRunning(bool running)
+{
+    if (m_processRunning == running) {
+        return;
+    }
+    m_processRunning = running;
+    emit processRunningChanged();
+}
+
+/**
+ * @brief Updates process progress and emits notifications when changed.
+ * @param value Progress value in [0.0, 1.0].
+ */
+void ScriptEngine::setProcessProgress(qreal value)
+{
+    const qreal normalized = std::clamp(value, ProcessProgressConstants::zeroProgress, ProcessProgressConstants::fullProgress);
+    if (qFuzzyCompare(m_processProgress, normalized)) {
+        return;
+    }
+    m_processProgress = normalized;
+    emit processProgressChanged();
+}
+
+/**
+ * @brief Updates process status message and emits notifications when changed.
+ * @param message Status text.
+ */
+void ScriptEngine::setProcessStatusMessage(const QString &message)
+{
+    if (m_processStatusMessage == message) {
+        return;
+    }
+    m_processStatusMessage = message;
+    emit processStatusMessageChanged();
 }
 
 /**

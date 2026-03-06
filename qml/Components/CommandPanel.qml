@@ -12,6 +12,7 @@ Item {
     property bool selectedIsImage: false
     property int selectedFileCount: 0
     property real selectedTotalBytes: 0
+    property string selectedFormat: ""
     property int imageWidth: 0
     property int imageHeight: 0
     property bool imageReady: false
@@ -37,6 +38,7 @@ Item {
     property string scriptResult: ""
     property color panelBackground: Material.background
     readonly property bool multiSelection: selectedPaths && selectedPaths.length > 1
+    readonly property bool singleSelection: selectedPath !== "" && !multiSelection
 
     function sanitizeTextValue(value, fallback) {
         if (value === null || value === undefined) {
@@ -55,6 +57,15 @@ Item {
         const filename = lastSlash >= 0 ? normalized.slice(lastSlash + 1) : normalized
         const dot = filename.lastIndexOf(".")
         return dot > 0 ? filename.slice(0, dot) : filename
+    }
+
+    function fileFormatFromName(name) {
+        const normalizedName = String(name || "")
+        const dot = normalizedName.lastIndexOf(".")
+        if (dot <= 0 || dot >= normalizedName.length - 1) {
+            return ""
+        }
+        return normalizedName.slice(dot + 1).toUpperCase()
     }
 
     function globalKey(scriptPath, controlId) {
@@ -128,9 +139,11 @@ Item {
             selectedPath = selectedPaths[0]
             const parts = selectedPath.split("/")
             selectedName = parts.length > 0 ? parts[parts.length - 1] : selectedPath
+            selectedFormat = fileFormatFromName(selectedName)
         } else {
             selectedPath = ""
             selectedName = ""
+            selectedFormat = ""
             selectedIsImage = false
         }
     }
@@ -343,9 +356,9 @@ Item {
 
                         Button {
                             id: runScriptButton
-                            text: qsTr("Run script")
+                            text: scriptEngine.processRunning ? qsTr("Running...") : qsTr("Run script")
                             Layout.fillWidth: true
-                            enabled: scriptPath !== "" && !root.syncEnabled
+                            enabled: scriptPath !== "" && !root.syncEnabled && !scriptEngine.processRunning
                             KeyNavigation.tab: root.nextPanelFocusItem
                             onClicked: {
                                 if (scriptPath === "") {
@@ -374,7 +387,7 @@ Item {
                                 if (Array.isArray(output)) {
                                     const okCount = output.filter(entry => entry && entry.ok).length
                                     if (output.length === 0) {
-                                        scriptResult = qsTr("No images selected")
+                                        scriptResult = qsTr("No files selected")
                                     } else if (okCount === output.length) {
                                         scriptResult = qsTr("Done: %1 / %2").arg(okCount).arg(output.length)
                                     } else {
@@ -439,6 +452,18 @@ Item {
                     }
 
                     Label {
+                        text: qsTr("Format: %1").arg(selectedFormat === "" ? qsTr("-") : selectedFormat)
+                        visible: root.singleSelection
+                        opacity: 0.8
+                    }
+
+                    Label {
+                        text: qsTr("Size: %1").arg(Theme.formatByteSize(selectedTotalBytes))
+                        visible: root.singleSelection
+                        opacity: 0.8
+                    }
+
+                    Label {
                         text: qsTr("Files: %1").arg(selectedFileCount)
                         visible: root.multiSelection
                         opacity: 0.9
@@ -452,13 +477,13 @@ Item {
 
                     Label {
                         text: qsTr("Width: %1").arg(imageReady ? imageWidth : qsTr("-"))
-                        visible: !root.multiSelection
+                        visible: root.singleSelection
                         opacity: selectedPath === "" ? 0.7 : 0.8
                     }
 
                     Label {
                         text: qsTr("Height: %1").arg(imageReady ? imageHeight : qsTr("-"))
-                        visible: !root.multiSelection
+                        visible: root.singleSelection
                         opacity: 0.8
                     }
                 }

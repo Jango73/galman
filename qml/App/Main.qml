@@ -22,6 +22,8 @@ ApplicationWindow {
     property real copyProgress: leftBrowser.copyInProgress
         ? leftBrowser.copyProgress
         : (rightBrowser.copyInProgress ? rightBrowser.copyProgress : 0)
+    property bool scriptInProgress: scriptEngine ? scriptEngine.processRunning : false
+    property real scriptProgress: scriptEngine ? scriptEngine.processProgress : 0
     property bool singlePreviewEnabled: false
     property bool singlePreviewFullscreen: false
     property var singlePreviewBrowser: null
@@ -249,6 +251,15 @@ ApplicationWindow {
             leftBrowser.cancelCopy()
         } else if (rightBrowser.copyInProgress) {
             rightBrowser.cancelCopy()
+        }
+    }
+
+    function stopActiveOperations() {
+        if (copyInProgress) {
+            stopCopy()
+        }
+        if (scriptEngine && scriptEngine.processRunning) {
+            scriptEngine.cancelRunningProcess()
         }
     }
 
@@ -1197,7 +1208,9 @@ ApplicationWindow {
 
                 Label {
                     Layout.fillWidth: true
-                    text: currentError !== "" ? currentError : "Ready"
+                    text: scriptInProgress
+                        ? (scriptEngine.processStatusMessage !== "" ? scriptEngine.processStatusMessage : qsTr("Running script..."))
+                        : (currentError !== "" ? currentError : "Ready")
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -1206,16 +1219,17 @@ ApplicationWindow {
                     Layout.preferredWidth: statusBar.width / 3
                     Layout.minimumWidth: 120
                     Layout.fillHeight: true
-                    value: copyProgress
-                    opacity: copyInProgress ? 1.0 : 0.35
+                    indeterminate: scriptInProgress && !copyInProgress && scriptProgress <= 0
+                    value: copyInProgress ? copyProgress : scriptProgress
+                    opacity: (copyInProgress || scriptInProgress) ? 1.0 : 0.35
                     visible: true
                 }
 
                 ToolButton {
                     text: qsTr("Stop")
-                    enabled: copyInProgress
-                    visible: copyInProgress
-                    onClicked: stopCopy()
+                    enabled: copyInProgress || scriptInProgress
+                    visible: copyInProgress || scriptInProgress
+                    onClicked: stopActiveOperations()
                 }
             }
         }
