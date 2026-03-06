@@ -23,8 +23,10 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QDebug>
 
 #include "ApplicationVersion.h"
+#include "AppLogger.h"
 #include "FavoritePairsManager.h"
 #include "LanguageManager.h"
 #include "ScriptEngine.h"
@@ -33,8 +35,12 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    qInfo() << "Galman startup";
     app.setApplicationVersion(QStringLiteral(GALMAN_APPLICATION_VERSION));
     app.setWindowIcon(QIcon(":/Galman/qml/Assets/Galman.png"));
+    AppLogger &appLogger = AppLogger::instance();
+    appLogger.initialize();
+    qInfo() << "Qt app initialized";
 
     QQmlApplicationEngine engine;
     ScriptEngine scriptEngine;
@@ -46,6 +52,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("languageManager", &languageManager);
     engine.rootContext()->setContextProperty("favoritesManager", &favoritePairsManager);
     const QUrl url(u"qrc:/Galman/qml/App/Main.qml"_qs);
+    qInfo() << "Loading QML root:" << url;
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreated,
@@ -58,6 +65,7 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
 
     engine.load(url);
+    qInfo() << "QML load complete. Root objects:" << engine.rootObjects().size();
 
     return app.exec();
 }

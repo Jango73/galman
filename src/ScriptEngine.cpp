@@ -27,6 +27,7 @@
 
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QDebug>
 #include <QFileInfo>
 #include <QFile>
 #include <QDir>
@@ -621,11 +622,13 @@ QVariantMap ScriptEngine::runProcess(const QString &program,
     result.insert("stderr", QString());
 
     if (program.trimmed().isEmpty()) {
+        qWarning() << "runProcess rejected: empty program";
         result.insert("error", tr("Program is empty"));
         return result;
     }
 
     if (m_processRunning) {
+        qWarning() << "runProcess rejected: another process already running";
         result.insert("error", tr("Another process is already running"));
         return result;
     }
@@ -633,10 +636,13 @@ QVariantMap ScriptEngine::runProcess(const QString &program,
     if (!workingFolder.trimmed().isEmpty()) {
         const QFileInfo workingFolderInfo(workingFolder);
         if (!workingFolderInfo.exists() || !workingFolderInfo.isDir()) {
+            qWarning() << "runProcess rejected: invalid working folder" << workingFolder;
             result.insert("error", tr("Working folder not found"));
             return result;
         }
     }
+
+    qInfo() << "runProcess start:" << program << arguments << "cwd=" << (workingFolder.trimmed().isEmpty() ? QString("<default>") : workingFolder);
 
     QProcess process;
     m_runningProcess = &process;
@@ -655,6 +661,7 @@ QVariantMap ScriptEngine::runProcess(const QString &program,
         m_runningProcess = nullptr;
         setProcessRunning(false);
         setProcessStatusMessage(QString());
+        qWarning() << "runProcess start failed:" << process.errorString();
         result.insert("error", process.errorString().isEmpty()
                                   ? tr("Failed to start process")
                                   : process.errorString());
@@ -699,6 +706,7 @@ QVariantMap ScriptEngine::runProcess(const QString &program,
 
     if (process.exitStatus() != QProcess::NormalExit) {
         setProcessStatusMessage(tr("Process crashed"));
+        qWarning() << "runProcess crashed:" << program;
         result.insert("error", tr("Process crashed"));
         return result;
     }
@@ -707,12 +715,14 @@ QVariantMap ScriptEngine::runProcess(const QString &program,
     result.insert("exitCode", exitCode);
     if (exitCode != 0) {
         setProcessStatusMessage(tr("Process exited with code %1").arg(exitCode));
+        qWarning() << "runProcess non-zero exit:" << program << "exitCode=" << exitCode;
         result.insert("error", tr("Process exited with code %1").arg(exitCode));
         return result;
     }
 
     setProcessProgress(ProcessProgressConstants::fullProgress);
     setProcessStatusMessage(tr("Completed: %1").arg(program));
+    qInfo() << "runProcess done:" << program << "exitCode=0";
     result.insert("ok", true);
     return result;
 }

@@ -18,6 +18,7 @@ find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network ShaderTools)
 
 qt_add_executable(galman
     src/main.cpp
+        src/AppLogger.cpp
         src/ScriptEngine.cpp
         src/ScriptManager.cpp
         src/LanguageManager.cpp

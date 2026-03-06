@@ -356,9 +356,9 @@ Item {
 
                         Button {
                             id: runScriptButton
-                            text: scriptEngine.processRunning ? qsTr("Running...") : qsTr("Run script")
+                            text: (scriptEngine && scriptEngine.processRunning) ? qsTr("Running...") : qsTr("Run script")
                             Layout.fillWidth: true
-                            enabled: scriptPath !== "" && !root.syncEnabled && !scriptEngine.processRunning
+                            enabled: scriptPath !== "" && !root.syncEnabled && !(scriptEngine && scriptEngine.processRunning)
                             KeyNavigation.tab: root.nextPanelFocusItem
                             onClicked: {
                                 if (scriptPath === "") {
