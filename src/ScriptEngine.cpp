@@ -270,6 +270,45 @@ QVariantMap ScriptEngine::moveToTrash(const QString &path)
 }
 
 /**
+ * @brief Writes a UTF-8 text file, replacing any existing file.
+ * @param path Target file path.
+ * @param content Text content to write.
+ * @return Result map including ok and error fields.
+ */
+QVariantMap ScriptEngine::writeTextFile(const QString &path, const QString &content)
+{
+    QVariantMap result;
+    result.insert("ok", false);
+
+    if (path.isEmpty()) {
+        result.insert("error", tr("Target path is empty"));
+        return result;
+    }
+
+    const QFileInfo targetInfo(path);
+    const QDir targetDir = targetInfo.dir();
+    if (!targetDir.exists()) {
+        result.insert("error", tr("Target folder not found"));
+        return result;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        result.insert("error", tr("Cannot open target file"));
+        return result;
+    }
+
+    const QByteArray data = content.toUtf8();
+    if (file.write(data) != data.size()) {
+        result.insert("error", tr("Failed to write target file"));
+        return result;
+    }
+
+    result.insert("ok", true);
+    return result;
+}
+
+/**
  * @brief Loads a script file and returns its scriptDefinition metadata.
  * @param path File path to the script.
  * @return Result map including ok and error fields plus metadata.

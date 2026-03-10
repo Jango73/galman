@@ -29,6 +29,7 @@ public:
     Q_INVOKABLE QVariant runFile(const QString &path);
     Q_INVOKABLE QVariantMap renameFile(const QString &from, const QString &to);
     Q_INVOKABLE QVariantMap moveToTrash(const QString &path);
+    Q_INVOKABLE QVariantMap writeTextFile(const QString &path, const QString &content);
     Q_INVOKABLE QVariantMap loadScript(const QString &path);
     Q_INVOKABLE QVariant runScript(const QString &path, const QVariantMap &params);
     Q_INVOKABLE QStringList supportedImageFormats() const;
