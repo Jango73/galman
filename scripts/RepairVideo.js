@@ -57,11 +57,43 @@ function isVideoFilePath(path) {
     return supportedVideoExtensions.indexOf(extension) >= 0
 }
 
+function videoRotationOptions() {
+    return [
+        "None",
+        "Rotate right 90",
+        "Rotate left 90"
+    ]
+}
+
+function videoFilterFromRotation(rotation) {
+    const filterParts = []
+
+    if (rotation === "Rotate right 90") {
+        filterParts.push("transpose=1")
+    } else if (rotation === "Rotate left 90") {
+        filterParts.push("transpose=2")
+    }
+
+    filterParts.push("scale=ceil(iw/2)*2:ceil(ih/2)*2")
+    return filterParts.join(",")
+}
+
 function scriptDefinition() {
     return {
         name: "Repair video",
         description: "Repair selected videos with ffmpeg (libx264 + AAC audio).",
+        controls: [
+            {
+                id: "rotation",
+                type: "combo",
+                label: "Rotation",
+                options: videoRotationOptions(),
+                default: "None"
+            }
+        ],
         run: function(params, selection) {
+            const rotation = String(params.rotation || "None")
+            const videoFilter = videoFilterFromRotation(rotation)
             const items = Array.isArray(selection) ? selection : []
             const files = items.filter(item => item && item.path && !item.isDir && isVideoFilePath(item.path))
             const results = []
@@ -77,7 +109,7 @@ function scriptDefinition() {
                     "-map", "0:v:0",
                     "-map", "0:a?",
                     "-c:v", "libx264",
-                    "-vf", "scale=ceil(iw/2)*2:ceil(ih/2)*2",
+                    "-vf", videoFilter,
                     "-preset", "fast",
                     "-crf", "18",
                     "-c:a", "aac",
