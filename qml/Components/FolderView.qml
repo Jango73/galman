@@ -44,6 +44,7 @@ FocusScope {
     property string currentPath: browserModel ? browserModel.rootPath : ""
     property int selectionCount: browserModel ? browserModel.selectedPaths.length : 0
     property bool selectedIsImage: browserModel ? browserModel.selectedIsImage : false
+    property bool selectedIsVideo: browserModel ? browserModel.selectedIsVideo : false
     property int selectedFileCount: browserModel ? browserModel.selectedFileCount : 0
     property real selectedTotalBytes: browserModel ? browserModel.selectedTotalBytes : 0
     property bool copyInProgress: browserModel ? browserModel.copyInProgress : false
@@ -66,7 +67,7 @@ FocusScope {
     readonly property Item firstFocusItem: toolbar.volumeCombo
     readonly property Item lastFocusItem: browserGrid.focusItem
     property bool volumeUpdating: false
-    property string selectedImagePath: ""
+    property string selectedMediaPath: ""
     property int selectedCompareStatus: 0
     property bool selectedGhost: false
     readonly property bool pendingTrue: true
@@ -91,7 +92,7 @@ FocusScope {
         if (browserModel) {
             browserModel.settingsKey = settingsKey
         }
-        updateSelectedImagePath()
+        updateSelectedMediaPath()
     }
 
     onSettingsKeyChanged: {
@@ -153,15 +154,15 @@ FocusScope {
         return { "dirs": 0, "files": 0 }
     }
 
-    function updateSelectedImagePath() {
-        if (!browserModel || !browserModel.selectedIsImage) {
-            selectedImagePath = ""
+    function updateSelectedMediaPath() {
+        if (!browserModel || (!browserModel.selectedIsImage && !browserModel.selectedIsVideo)) {
+            selectedMediaPath = ""
             selectedCompareStatus = 0
             selectedGhost = false
             return
         }
         const paths = browserModel.selectedPaths || []
-        selectedImagePath = paths.length > 0 ? paths[0] : ""
+        selectedMediaPath = paths.length > 0 ? paths[0] : ""
         selectedCompareStatus = browserModel.selectedCompareStatus ? browserModel.selectedCompareStatus() : 0
         selectedGhost = browserModel.selectedIsGhost ? browserModel.selectedIsGhost() : false
     }
@@ -210,7 +211,7 @@ FocusScope {
         return ""
     }
 
-    function selectAdjacentImage(step) {
+    function selectAdjacentMedia(step) {
         if (!browserModel || !browserGrid || browserGrid.count === 0) {
             return
         }
@@ -234,7 +235,9 @@ FocusScope {
             if (index < 0 || index >= count) {
                 return
             }
-            if (browserModel.isImage && !browserModel.isImage(index)) {
+            const itemIsImage = browserModel.isImage ? browserModel.isImage(index) : false
+            const itemIsVideo = browserModel.isVideo ? browserModel.isVideo(index) : false
+            if (!itemIsImage && !itemIsVideo) {
                 continue
             }
             if (browserModel.isGhost && browserModel.isGhost(index)) {
@@ -248,14 +251,16 @@ FocusScope {
         }
     }
 
-    function selectBoundaryImage(first) {
+    function selectBoundaryMedia(first) {
         if (!browserModel || !browserGrid || browserGrid.count === 0) {
             return
         }
         const count = browserGrid.count
         if (first) {
             for (let i = 0; i < count; i += 1) {
-                if (browserModel.isImage && !browserModel.isImage(i)) {
+                const itemIsImage = browserModel.isImage ? browserModel.isImage(i) : false
+                const itemIsVideo = browserModel.isVideo ? browserModel.isVideo(i) : false
+                if (!itemIsImage && !itemIsVideo) {
                     continue
                 }
                 if (browserModel.isGhost && browserModel.isGhost(i)) {
@@ -269,7 +274,9 @@ FocusScope {
             }
         } else {
             for (let i = count - 1; i >= 0; i -= 1) {
-                if (browserModel.isImage && !browserModel.isImage(i)) {
+                const itemIsImage = browserModel.isImage ? browserModel.isImage(i) : false
+                const itemIsVideo = browserModel.isVideo ? browserModel.isVideo(i) : false
+                if (!itemIsImage && !itemIsVideo) {
                     continue
                 }
                 if (browserModel.isGhost && browserModel.isGhost(i)) {
@@ -751,11 +758,14 @@ FocusScope {
             root.selectionChanged(browserModel.selectedPaths)
             if (!root.restoringIndex) {
                 root.rememberCurrentPath()
-                root.updateSelectedImagePath()
+                root.updateSelectedMediaPath()
             }
         }
         function onSelectedIsImageChanged() {
-            root.updateSelectedImagePath()
+            root.updateSelectedMediaPath()
+        }
+        function onSelectedIsVideoChanged() {
+            root.updateSelectedMediaPath()
         }
         function onModelAboutToBeReset() {
             root.restoringIndex = true
@@ -791,7 +801,7 @@ FocusScope {
             toolbar.volumeCombo.currentIndex = volumeIndex
             volumeUpdating = false
         }
-        updateSelectedImagePath()
+        updateSelectedMediaPath()
     }
 
     function syncRootPath(sourceModel, targetModel) {

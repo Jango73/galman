@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network ShaderTools)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network Multimedia ShaderTools)
 
 qt_add_executable(galman
     src/main.cpp
@@ -85,7 +85,7 @@ qt_add_qml_module(galman
         qml/Components/FolderViewSortBar.qml
         qml/Components/FolderViewToolBar.qml
         qml/Components/FocusFrame.qml
-        qml/Components/ImageDisplay.qml
+        qml/Components/MediaDisplay.qml
         qml/Components/ImageCompare.qml
         qml/Components/ImagePreview.qml
         qml/Components/ImageAdjustmentsPanel.qml
@@ -112,7 +112,7 @@ qt_add_shaders(galman "galman_shaders"
 )
 
 target_link_libraries(galman
-    PRIVATE Qt6::Quick Qt6::Concurrent Qt6::Network
+    PRIVATE Qt6::Quick Qt6::Concurrent Qt6::Network Qt6::Multimedia
 )
 
 target_include_directories(galman PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}")

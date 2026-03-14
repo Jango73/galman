@@ -501,6 +501,15 @@ bool FolderBrowserModel::selectedIsImage() const
 }
 
 /**
+ * @brief Returns whether the selection is a single video.
+ * @return True if the selection is one video file, false otherwise.
+ */
+bool FolderBrowserModel::selectedIsVideo() const
+{
+    return m_selectedIsVideo;
+}
+
+/**
  * @brief Returns the number of selected files (recursive).
  * @return File count for the current selection.
  */
@@ -1018,6 +1027,19 @@ bool FolderBrowserModel::isImage(int row) const
         return false;
     }
     return isImagePath(m_entries.at(row).absoluteFilePath());
+}
+
+/**
+ * @brief Checks whether the entry at the given row is a video file.
+ * @param row Row index to inspect.
+ * @return True if the row is a video file, false otherwise.
+ */
+bool FolderBrowserModel::isVideo(int row) const
+{
+    if (row < 0 || row >= m_entries.size()) {
+        return false;
+    }
+    return VideoThumbnailUtils::isVideoFile(m_entries.at(row));
 }
 
 /**
@@ -2006,9 +2028,15 @@ void FolderBrowserModel::notifySelectionChanged()
 {
     emit selectedPathsChanged();
     const bool nextIsImage = m_selectedPaths.size() == 1 && isImagePath(m_selectedPaths.first());
+    const bool nextIsVideo = m_selectedPaths.size() == 1
+        && VideoThumbnailUtils::isVideoFile(QFileInfo(m_selectedPaths.first()));
     if (nextIsImage != m_selectedIsImage) {
         m_selectedIsImage = nextIsImage;
         emit selectedIsImageChanged();
+    }
+    if (nextIsVideo != m_selectedIsVideo) {
+        m_selectedIsVideo = nextIsVideo;
+        emit selectedIsVideoChanged();
     }
     updateSelectionTotalsAsync();
 

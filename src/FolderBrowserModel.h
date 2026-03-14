@@ -37,6 +37,7 @@ class FolderBrowserModel : public QAbstractListModel
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QStringList selectedPaths READ selectedPaths NOTIFY selectedPathsChanged)
     Q_PROPERTY(bool selectedIsImage READ selectedIsImage NOTIFY selectedIsImageChanged)
+    Q_PROPERTY(bool selectedIsVideo READ selectedIsVideo NOTIFY selectedIsVideoChanged)
     Q_PROPERTY(int selectedFileCount READ selectedFileCount NOTIFY selectedFileCountChanged)
     Q_PROPERTY(qint64 selectedTotalBytes READ selectedTotalBytes NOTIFY selectedTotalBytesChanged)
     Q_PROPERTY(bool copyInProgress READ copyInProgress NOTIFY copyInProgressChanged)
@@ -104,6 +105,7 @@ public:
     bool loading() const;
     QStringList selectedPaths() const;
     bool selectedIsImage() const;
+    bool selectedIsVideo() const;
     int selectedFileCount() const;
     qint64 selectedTotalBytes() const;
     bool copyInProgress() const;
@@ -132,6 +134,7 @@ public:
     Q_INVOKABLE bool allSelected() const;
     Q_INVOKABLE QVariantList selectedRows() const;
     Q_INVOKABLE bool isImage(int row) const;
+    Q_INVOKABLE bool isVideo(int row) const;
     Q_INVOKABLE int selectedCompareStatus() const;
     Q_INVOKABLE bool selectedIsGhost() const;
     Q_INVOKABLE QVariantMap selectionStats() const;
@@ -162,6 +165,7 @@ signals:
     void loadingChanged();
     void selectedPathsChanged();
     void selectedIsImageChanged();
+    void selectedIsVideoChanged();
     void selectedFileCountChanged();
     void selectedTotalBytesChanged();
     void copyInProgressChanged();
@@ -214,6 +218,7 @@ private:
     bool m_loading = false;
     QStringList m_selectedPaths;
     bool m_selectedIsImage = false;
+    bool m_selectedIsVideo = false;
     int m_selectedFileCount = 0;
     qint64 m_selectedTotalBytes = 0;
     int m_selectionTotalsGeneration = 0;

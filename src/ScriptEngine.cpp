@@ -309,6 +309,42 @@ QVariantMap ScriptEngine::writeTextFile(const QString &path, const QString &cont
 }
 
 /**
+ * @brief Deletes a file from disk.
+ * @param path File path to delete.
+ * @return Result map including ok and error fields.
+ */
+QVariantMap ScriptEngine::deleteFile(const QString &path)
+{
+    QVariantMap result;
+    result.insert("ok", false);
+
+    if (path.isEmpty()) {
+        result.insert("error", tr("Source not found"));
+        return result;
+    }
+
+    const QFileInfo sourceInfo(path);
+    if (!sourceInfo.exists()) {
+        result.insert("error", tr("Source not found"));
+        return result;
+    }
+
+    if (!sourceInfo.isFile()) {
+        result.insert("error", tr("Source is not a file"));
+        return result;
+    }
+
+    QFile file(path);
+    if (!file.remove()) {
+        result.insert("error", tr("Delete failed"));
+        return result;
+    }
+
+    result.insert("ok", true);
+    return result;
+}
+
+/**
  * @brief Loads a script file and returns its scriptDefinition metadata.
  * @param path File path to the script.
  * @return Result map including ok and error fields plus metadata.

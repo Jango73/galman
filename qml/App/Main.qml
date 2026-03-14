@@ -746,7 +746,7 @@ ApplicationWindow {
         onActivated: {
             const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
             if (target) {
-                target.selectAdjacentImage(-1)
+                target.selectAdjacentMedia(-1)
             }
         }
     }
@@ -760,7 +760,7 @@ ApplicationWindow {
         onActivated: {
             const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
             if (target) {
-                target.selectAdjacentImage(1)
+                target.selectAdjacentMedia(1)
             }
         }
     }
@@ -774,7 +774,7 @@ ApplicationWindow {
         onActivated: {
             const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
             if (target) {
-                target.selectBoundaryImage(true)
+                target.selectBoundaryMedia(true)
             }
         }
     }
@@ -788,7 +788,7 @@ ApplicationWindow {
         onActivated: {
             const target = comparePreviewBrowser ? comparePreviewBrowser : leftBrowser
             if (target) {
-                target.selectBoundaryImage(false)
+                target.selectBoundaryMedia(false)
             }
         }
     }

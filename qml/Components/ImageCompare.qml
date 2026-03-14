@@ -39,7 +39,7 @@ FocusRememberingScope {
         if (event.key === Qt.Key_Left) {
             const target = navigationBrowser ? navigationBrowser : leftBrowser
             if (target) {
-                target.selectAdjacentImage(-1)
+                target.selectAdjacentMedia(-1)
             }
             event.accepted = true
             return
@@ -47,7 +47,7 @@ FocusRememberingScope {
         if (event.key === Qt.Key_Right) {
             const target = navigationBrowser ? navigationBrowser : leftBrowser
             if (target) {
-                target.selectAdjacentImage(1)
+                target.selectAdjacentMedia(1)
             }
             event.accepted = true
             return
@@ -55,7 +55,7 @@ FocusRememberingScope {
         if (event.key === Qt.Key_Home) {
             const target = navigationBrowser ? navigationBrowser : leftBrowser
             if (target) {
-                target.selectBoundaryImage(true)
+                target.selectBoundaryMedia(true)
             }
             event.accepted = true
             return
@@ -63,7 +63,7 @@ FocusRememberingScope {
         if (event.key === Qt.Key_End) {
             const target = navigationBrowser ? navigationBrowser : leftBrowser
             if (target) {
-                target.selectBoundaryImage(false)
+                target.selectBoundaryMedia(false)
             }
             event.accepted = true
             return
@@ -85,14 +85,15 @@ FocusRememberingScope {
             anchors.margins: 0
             spacing: Theme.spaceLg
 
-            ImageDisplay {
+            MediaDisplay {
                 id: leftImageDisplay
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 panelBackground: root.panelBackground
-                imagePath: leftBrowser && leftBrowser.selectedImagePath !== ""
-                    ? ("file://" + leftBrowser.selectedImagePath)
+                mediaPath: leftBrowser && leftBrowser.selectedMediaPath !== ""
+                    ? ("file://" + leftBrowser.selectedMediaPath)
                     : ""
+                mediaIsVideo: leftBrowser ? leftBrowser.selectedIsVideo : false
                 reloadToken: root.reloadToken
                 compareStatus: leftBrowser ? leftBrowser.selectedCompareStatus : 0
                 ghost: leftBrowser ? leftBrowser.selectedGhost : false
@@ -103,14 +104,15 @@ FocusRememberingScope {
                 statusDifferentColor: leftBrowser ? leftBrowser.statusDifferentColor : Theme.statusDifferent
             }
 
-            ImageDisplay {
+            MediaDisplay {
                 id: rightImageDisplay
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 panelBackground: root.panelBackground
-                imagePath: rightBrowser && rightBrowser.selectedImagePath !== ""
-                    ? ("file://" + rightBrowser.selectedImagePath)
+                mediaPath: rightBrowser && rightBrowser.selectedMediaPath !== ""
+                    ? ("file://" + rightBrowser.selectedMediaPath)
                     : ""
+                mediaIsVideo: rightBrowser ? rightBrowser.selectedIsVideo : false
                 reloadToken: root.reloadToken
                 compareStatus: rightBrowser ? rightBrowser.selectedCompareStatus : 0
                 ghost: rightBrowser ? rightBrowser.selectedGhost : false

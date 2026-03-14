@@ -115,11 +115,13 @@ function scriptDefinition() {
             ]
 
             const processResult = scriptEngine.runProcess("ffmpeg", arguments, workingFolder)
+            const deleteResult = scriptEngine.deleteFile(listPath)
+            const cleanupError = deleteResult.ok ? "" : (deleteResult.error || "Cannot delete list.txt")
             return [{
                 from: listPath,
                 to: outputPath,
-                ok: !!processResult.ok,
-                error: processResult.error || "",
+                ok: !!processResult.ok && !!deleteResult.ok,
+                error: processResult.error || cleanupError,
                 exitCode: processResult.exitCode !== undefined ? processResult.exitCode : -1,
                 stderr: processResult.stderr || ""
             }]

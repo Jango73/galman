@@ -13,11 +13,28 @@ FocusRememberingScope {
     property bool adjustmentsVisible: false
     property int reloadToken: 0
     property int reloadTokenIncrement: 1
+    readonly property bool adjustmentsAvailable: browser ? browser.selectedIsImage : false
+    readonly property bool adjustmentsActive: root.adjustmentsVisible && root.adjustmentsAvailable
     signal copyLeftRequested()
     signal copyRightRequested()
     signal closeRequested()
     signal saveSucceeded(string message)
     clip: true
+
+    onBrowserChanged: {
+        if (!root.adjustmentsAvailable) {
+            root.adjustmentsVisible = false
+        }
+    }
+
+    Connections {
+        target: browser
+        function onSelectedIsImageChanged() {
+            if (!root.adjustmentsAvailable) {
+                root.adjustmentsVisible = false
+            }
+        }
+    }
 
     Keys.onPressed: (event) => {
         if ((event.modifiers & Qt.ControlModifier) !== 0) {
@@ -39,28 +56,28 @@ FocusRememberingScope {
         }
         if (event.key === Qt.Key_Left) {
             if (browser) {
-                browser.selectAdjacentImage(-1)
+                browser.selectAdjacentMedia(-1)
             }
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_Right) {
             if (browser) {
-                browser.selectAdjacentImage(1)
+                browser.selectAdjacentMedia(1)
             }
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_Home) {
             if (browser) {
-                browser.selectBoundaryImage(true)
+                browser.selectBoundaryMedia(true)
             }
             event.accepted = true
             return
         }
         if (event.key === Qt.Key_End) {
             if (browser) {
-                browser.selectBoundaryImage(false)
+                browser.selectBoundaryMedia(false)
             }
             event.accepted = true
             return
@@ -85,13 +102,14 @@ FocusRememberingScope {
                     z: 4
                 }
 
-                ImageDisplay {
-                    id: mainImageDisplay
+                MediaDisplay {
+                    id: mainMediaDisplay
                     anchors.fill: parent
                     panelBackground: root.panelBackground
-                    imagePath: browser && browser.selectedImagePath !== ""
-                        ? ("file://" + browser.selectedImagePath)
+                    mediaPath: browser && browser.selectedMediaPath !== ""
+                        ? ("file://" + browser.selectedMediaPath)
                         : ""
+                    mediaIsVideo: browser ? browser.selectedIsVideo : false
                     reloadToken: root.reloadToken
                     compareStatus: browser ? browser.selectedCompareStatus : 0
                     ghost: browser ? browser.selectedGhost : false
@@ -100,7 +118,7 @@ FocusRememberingScope {
                     statusDifferent: browser ? browser.statusDifferent : 3
                     statusIdenticalColor: browser ? browser.statusIdenticalColor : Theme.statusIdentical
                     statusDifferentColor: browser ? browser.statusDifferentColor : Theme.statusDifferent
-                    useAdjustments: root.adjustmentsVisible
+                    useAdjustments: root.adjustmentsActive
                     bloomValue: adjustmentsPanel.bloomValue
                     bloomRadiusPercent: adjustmentsPanel.bloomRadiusValue
                     brightnessValue: adjustmentsPanel.brightnessValue
@@ -113,9 +131,10 @@ FocusRememberingScope {
                     anchors.right: parent.right
                     anchors.margins: Theme.spaceSm
                     text: qsTr("Adjustments")
+                    visible: root.adjustmentsAvailable
                     checkable: true
                     checked: root.adjustmentsVisible
-                    onToggled: root.adjustmentsVisible = checked
+                    onToggled: root.adjustmentsVisible = checked && root.adjustmentsAvailable
                 }
 
                 Rectangle {
@@ -135,7 +154,7 @@ FocusRememberingScope {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.margins: Theme.spaceSm
-                    text: browser ? browser.selectedImagePath : ""
+                    text: browser ? browser.selectedMediaPath : ""
                     color: "white"
                     wrapMode: Text.WrapAnywhere
                     elide: Text.ElideNone
@@ -154,10 +173,10 @@ FocusRememberingScope {
 
             ImageAdjustmentsPanel {
                 id: adjustmentsPanel
-                visible: root.adjustmentsVisible
-                Layout.preferredWidth: root.adjustmentsVisible ? 260 : 0
-                Layout.minimumWidth: root.adjustmentsVisible ? 220 : 0
-                Layout.fillHeight: root.adjustmentsVisible
+                visible: root.adjustmentsActive
+                Layout.preferredWidth: root.adjustmentsActive ? 260 : 0
+                Layout.minimumWidth: root.adjustmentsActive ? 220 : 0
+                Layout.fillHeight: root.adjustmentsActive
                 panelBackground: root.panelBackground
                 onSaveRequested: root.saveAdjustedImage()
             }
@@ -165,7 +184,7 @@ FocusRememberingScope {
 
         ImageAutoAdjuster {
             id: autoAdjuster
-            imagePath: browser ? browser.selectedImagePath : ""
+            imagePath: browser && browser.selectedIsImage ? browser.selectedMediaPath : ""
             autoEnabled: adjustmentsPanel.autoEnabled
         }
 
@@ -185,7 +204,7 @@ FocusRememberingScope {
 
         Item {
             id: offscreenHost
-            visible: true
+            visible: root.adjustmentsAvailable
             opacity: 0.0
             width: offscreenImage.status === Image.Ready ? offscreenImage.implicitWidth : 1
             height: offscreenImage.status === Image.Ready ? offscreenImage.implicitHeight : 1
@@ -196,7 +215,7 @@ FocusRememberingScope {
             Image {
                 id: offscreenImage
                 anchors.fill: parent
-                source: mainImageDisplay.resolvedImageSource
+                source: mainMediaDisplay.resolvedImageSource
                 cache: false
                 asynchronous: false
                 fillMode: Image.PreserveAspectFit
@@ -205,7 +224,7 @@ FocusRememberingScope {
             ImageAdjustmentsEffect {
                 anchors.fill: parent
                 sourceItem: offscreenImage
-                active: true
+                active: root.adjustmentsActive
                 bloomValue: adjustmentsPanel.bloomValue
                 bloomRadiusPercent: adjustmentsPanel.bloomRadiusValue
                 brightnessValue: adjustmentsPanel.brightnessValue
@@ -215,7 +234,7 @@ FocusRememberingScope {
     }
 
     function saveAdjustedImage() {
-        if (!browser || !browser.selectedImagePath) {
+        if (!browser || !browser.selectedIsImage || !browser.selectedMediaPath) {
             return
         }
         if (offscreenImage.status !== Image.Ready) {
@@ -225,7 +244,7 @@ FocusRememberingScope {
             if (!result || !result.image) {
                 return
             }
-            const saveResult = scriptEngine.saveAdjustedImage(result.image, browser.selectedImagePath)
+            const saveResult = scriptEngine.saveAdjustedImage(result.image, browser.selectedMediaPath)
             if (saveResult && saveResult.error) {
                 console.warn(saveResult.error)
                 return

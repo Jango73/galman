@@ -1,3 +1,4 @@
+import QtMultimedia
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
@@ -9,8 +10,9 @@ import "."
 Pane {
     id: root
     property color panelBackground: Theme.panelBackground
-    property string imagePath: ""
-    property string emptyText: "No image selected"
+    property string mediaPath: ""
+    property bool mediaIsVideo: false
+    property string emptyText: "No media selected"
     property int compareStatus: 0
     property bool ghost: false
     property int statusPending: 1
@@ -32,14 +34,17 @@ Pane {
     property string querySeparator: "?"
     property string queryJoiner: "&"
     readonly property string resolvedImageSource: {
-        if (root.imagePath === "") {
+        if (root.mediaPath === "" || root.mediaIsVideo) {
             return ""
         }
-        const separator = root.imagePath.indexOf(root.querySeparator) === root.invalidIndex
+        const separator = root.mediaPath.indexOf(root.querySeparator) === root.invalidIndex
             ? root.querySeparator
             : root.queryJoiner
-        return root.imagePath + separator + root.reloadQueryKey + "=" + root.reloadToken
+        return root.mediaPath + separator + root.reloadQueryKey + "=" + root.reloadToken
     }
+    readonly property bool showingImage: root.mediaPath !== "" && !root.mediaIsVideo
+    readonly property bool showingVideo: root.mediaPath !== "" && root.mediaIsVideo
+    readonly property bool videoPlaybackActive: root.visible && root.showingVideo
     readonly property real paintedWidth: imageItem.paintedWidth
     readonly property real paintedHeight: imageItem.paintedHeight
     readonly property real paintedHorizontalOffset: (imageItem.width - paintedWidth) * centerFactor
@@ -47,6 +52,19 @@ Pane {
 
     padding: Theme.panelPadding
     Material.background: panelBackground
+
+    onMediaPathChanged: syncVideoPlayback()
+    onMediaIsVideoChanged: syncVideoPlayback()
+    onVisibleChanged: syncVideoPlayback()
+    onVideoPlaybackActiveChanged: syncVideoPlayback()
+
+    function syncVideoPlayback() {
+        if (root.videoPlaybackActive) {
+            mediaPlayer.play()
+            return
+        }
+        mediaPlayer.stop()
+    }
 
     Item {
         anchors.fill: parent
@@ -71,7 +89,26 @@ Pane {
             cache: false
             source: root.resolvedImageSource
             asynchronous: true
+            visible: root.showingImage
             opacity: root.useAdjustments ? root.opacityHidden : root.opacityVisible
+        }
+
+        VideoOutput {
+            id: videoOutput
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectFit
+            visible: root.showingVideo
+        }
+
+        MediaPlayer {
+            id: mediaPlayer
+            source: root.videoPlaybackActive ? root.mediaPath : ""
+            videoOutput: videoOutput
+            audioOutput: audioOutput
+        }
+
+        AudioOutput {
+            id: audioOutput
         }
 
         ImageAdjustmentsEffect {
@@ -80,7 +117,7 @@ Pane {
             width: root.paintedWidth
             height: root.paintedHeight
             sourceItem: imageItem
-            active: root.useAdjustments
+            active: root.useAdjustments && root.showingImage
             bloomValue: root.bloomValue
             bloomRadiusPercent: root.bloomRadiusPercent
             brightnessValue: root.brightnessValue
@@ -93,7 +130,7 @@ Pane {
 
         Label {
             anchors.centerIn: parent
-            text: root.imagePath === "" ? root.emptyText : ""
+            text: root.mediaPath === "" ? root.emptyText : ""
             opacity: 0.7
         }
     }

@@ -454,6 +454,15 @@ bool FolderCompareSideModel::selectedIsImage() const
 }
 
 /**
+ * @brief Returns whether the selection is a single video.
+ * @return True if the selection is one video file, false otherwise.
+ */
+bool FolderCompareSideModel::selectedIsVideo() const
+{
+    return m_selectedIsVideo;
+}
+
+/**
  * @brief Returns the number of selected files (recursive).
  * @return File count for the current selection.
  */
@@ -856,6 +865,20 @@ bool FolderCompareSideModel::isImage(int row) const
         return false;
     }
     return entry->isImage && !entry->isDir;
+}
+
+/**
+ * @brief Checks whether the entry at the given row is a video file.
+ * @param row Row index to inspect.
+ * @return True if the row is a video file, false otherwise.
+ */
+bool FolderCompareSideModel::isVideo(int row) const
+{
+    const CompareEntry *entry = entryForRow(row);
+    if (!entry) {
+        return false;
+    }
+    return entry->isVideo && !entry->isDir && !entry->isGhost;
 }
 
 /**
@@ -2067,9 +2090,14 @@ void FolderCompareSideModel::notifySelectionChanged()
         }
     }
     const bool nextIsImage = entry && entry->isImage && !entry->isGhost;
+    const bool nextIsVideo = entry && entry->isVideo && !entry->isGhost;
     if (nextIsImage != m_selectedIsImage) {
         m_selectedIsImage = nextIsImage;
         emit selectedIsImageChanged();
+    }
+    if (nextIsVideo != m_selectedIsVideo) {
+        m_selectedIsVideo = nextIsVideo;
+        emit selectedIsVideoChanged();
     }
     updateSelectionTotalsAsync();
 
