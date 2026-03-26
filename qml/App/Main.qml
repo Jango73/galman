@@ -569,39 +569,6 @@ ApplicationWindow {
         }
 
         Menu {
-            id: scriptsMenu
-            title: qsTr("Scripts")
-
-            Instantiator {
-                model: (!scriptManager || scriptManager.scripts.length === 0) ? [true] : []
-                delegate: MenuItem {
-                    text: qsTr("No scripts found")
-                    enabled: false
-                }
-                onObjectAdded: (index, object) => scriptsMenu.addItem(object)
-                onObjectRemoved: (index, object) => scriptsMenu.removeItem(object)
-            }
-
-            Instantiator {
-                model: scriptManager ? scriptManager.scripts : []
-                delegate: MenuItem {
-                    text: modelData.name
-                    onTriggered: {
-                        const meta = scriptEngine.loadScript(modelData.path)
-                        if (meta.ok) {
-                            leftPanel.scriptPath = modelData.path
-                            leftPanel.scriptControls = meta.controls || []
-                            leftPanel.scriptName = meta.name || modelData.name
-                            leftPanel.scriptDescription = meta.description || ""
-                        }
-                    }
-                }
-                onObjectAdded: (index, object) => scriptsMenu.addItem(object)
-                onObjectRemoved: (index, object) => scriptsMenu.removeItem(object)
-            }
-        }
-
-        Menu {
             id: languageMenu
             title: qsTr("Language")
             Instantiator {
@@ -806,6 +773,7 @@ ApplicationWindow {
             CommandPanel {
                 id: leftPanel
                 visible: !singlePreviewFullscreen
+                availableScripts: scriptManager ? scriptManager.scripts : []
                 Layout.preferredWidth: singlePreviewFullscreen
                     ? 0
                     : (parent ? parent.width : window.width) * 0.15

@@ -6,6 +6,7 @@ import Galman 1.0
 
 Item {
     id: root
+    property var availableScripts: []
     property var selectedPaths: []
     property string selectedPath: ""
     property string selectedName: ""
@@ -134,6 +135,49 @@ Item {
         scriptResult = ""
     }
 
+    function clearSelectedScript() {
+        scriptPath = ""
+        scriptName = ""
+        scriptDescription = ""
+        scriptControls = []
+    }
+
+    function loadSelectedScript(scriptEntry) {
+        if (!scriptEntry || !scriptEntry.path) {
+            clearSelectedScript()
+            return
+        }
+        const meta = scriptEngine.loadScript(scriptEntry.path)
+        if (!meta.ok) {
+            clearSelectedScript()
+            if (meta.error) {
+                root.errorRaised(String(meta.error))
+            }
+            return
+        }
+        scriptPath = scriptEntry.path
+        scriptControls = meta.controls || []
+        scriptName = meta.name || scriptEntry.name || ""
+        scriptDescription = meta.description || ""
+    }
+
+    function synchronizeSelectedScript() {
+        if (!availableScripts || availableScripts.length === 0) {
+            clearSelectedScript()
+            return
+        }
+        if (!scriptPath) {
+            return
+        }
+        for (let i = 0; i < availableScripts.length; i += 1) {
+            const scriptEntry = availableScripts[i]
+            if (scriptEntry && scriptEntry.path === scriptPath) {
+                return
+            }
+        }
+        clearSelectedScript()
+    }
+
     onSelectedPathsChanged: {
         if (selectedPaths && selectedPaths.length === 1) {
             selectedPath = selectedPaths[0]
@@ -150,6 +194,7 @@ Item {
 
     onScriptControlsChanged: rebuildScriptValues()
     onScriptPathChanged: rebuildScriptValues()
+    onAvailableScriptsChanged: synchronizeSelectedScript()
 
     Pane {
         anchors.fill: parent
@@ -226,12 +271,43 @@ Item {
                         Layout.fillWidth: true
                     }
 
+                    ComboBox {
+                        id: scriptSelector
+                        Layout.fillWidth: true
+                        model: root.availableScripts
+                        textRole: "name"
+                        enabled: model && model.length > 0
+                        currentIndex: {
+                            if (!model || model.length === 0) {
+                                return -1
+                            }
+                            if (!root.scriptPath) {
+                                return -1
+                            }
+                            for (let i = 0; i < model.length; i += 1) {
+                                const scriptEntry = model[i]
+                                if (scriptEntry && scriptEntry.path === root.scriptPath) {
+                                    return i
+                                }
+                            }
+                            return -1
+                        }
+                        onActivated: (index) => {
+                            if (!model || index < 0 || index >= model.length) {
+                                root.clearSelectedScript()
+                                return
+                            }
+                            root.loadSelectedScript(model[index])
+                        }
+                    }
+
                     Label {
                         text: scriptName === "" ? qsTr("No script selected") : scriptName
+                        visible: !scriptSelector.enabled
                         elide: Text.ElideRight
                         maximumLineCount: 1
                         wrapMode: Text.NoWrap
-                        opacity: scriptName === "" ? 0.7 : 1.0
+                        opacity: 0.7
                         Layout.fillWidth: true
                     }
 
