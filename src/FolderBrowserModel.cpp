@@ -98,6 +98,34 @@ QString previewPathForInfo(const QFileInfo &info)
     return info.absoluteFilePath();
 }
 
+QString findReplacementPathForSelection(const QString &originalPath, const QVector<QFileInfo> &entries)
+{
+    const QFileInfo originalInfo(originalPath);
+    if (originalPath.isEmpty() || originalInfo.isDir()) {
+        return QString();
+    }
+
+    const QString originalFolder = originalInfo.absolutePath();
+    const QString originalBaseName = originalInfo.completeBaseName();
+    if (originalFolder.isEmpty() || originalBaseName.isEmpty()) {
+        return QString();
+    }
+
+    for (const QFileInfo &entry : entries) {
+        if (entry.isDir()) {
+            continue;
+        }
+        if (entry.absolutePath() != originalFolder) {
+            continue;
+        }
+        if (entry.completeBaseName() == originalBaseName) {
+            return entry.absoluteFilePath();
+        }
+    }
+
+    return QString();
+}
+
 } // namespace
 
 namespace {
@@ -1696,6 +1724,12 @@ void FolderBrowserModel::rebuildEntries()
         const QFileInfo info(path);
         if (info.exists()) {
             nextSelection.append(path);
+            continue;
+        }
+
+        const QString replacementPath = findReplacementPathForSelection(path, m_entries);
+        if (!replacementPath.isEmpty() && !nextSelection.contains(replacementPath)) {
+            nextSelection.append(replacementPath);
         }
     }
     if (nextSelection != m_selectedPaths) {

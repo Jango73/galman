@@ -190,6 +190,43 @@ FocusScope {
         return idx >= 0 ? normalized.slice(idx + 1) : normalized
     }
 
+    function folderPathFromPath(path) {
+        const normalized = String(path || "").replace(/\\/g, "/")
+        const idx = normalized.lastIndexOf("/")
+        return idx >= 0 ? normalized.slice(0, idx) : ""
+    }
+
+    function baseNameWithoutExtensionFromPath(path) {
+        const filename = baseNameFromPath(path)
+        const idx = filename.lastIndexOf(".")
+        return idx > 0 ? filename.slice(0, idx) : filename
+    }
+
+    function findReplacementPath(targetPath) {
+        if (!browserGrid || !browserModel || !browserModel.pathForRow || !targetPath) {
+            return ""
+        }
+        const targetFolder = folderPathFromPath(targetPath)
+        const targetBaseName = baseNameWithoutExtensionFromPath(targetPath)
+        if (targetBaseName === "") {
+            return ""
+        }
+        const count = browserGrid.count
+        for (let i = 0; i < count; i += 1) {
+            const candidatePath = browserModel.pathForRow(i)
+            if (!candidatePath) {
+                continue
+            }
+            if (folderPathFromPath(candidatePath) !== targetFolder) {
+                continue
+            }
+            if (baseNameWithoutExtensionFromPath(candidatePath) === targetBaseName) {
+                return candidatePath
+            }
+        }
+        return ""
+    }
+
     function findDirectoryPathByName(name) {
         if (!browserGrid || !browserModel || !browserModel.isDir || !browserModel.pathForRow) {
             return ""
@@ -389,6 +426,17 @@ FocusScope {
                 if (path === targetPath) {
                     nextIndex = i
                     break
+                }
+            }
+            if (nextIndex < 0) {
+                const replacementPath = findReplacementPath(targetPath)
+                if (replacementPath !== "") {
+                    for (let i = 0; i < count; i += 1) {
+                        if (browserModel.pathForRow(i) === replacementPath) {
+                            nextIndex = i
+                            break
+                        }
+                    }
                 }
             }
         }
