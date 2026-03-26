@@ -184,6 +184,13 @@ ApplicationWindow {
         target.forceActiveFocus()
     }
 
+    function formatShortcutSequences(shortcutSequences) {
+        if (!shortcutSequences || shortcutSequences.length === 0) {
+            return ""
+        }
+        return shortcutSequences.join(" / ")
+    }
+
     function openInternalPreviewForBrowser(browser) {
         if (!browser) {
             return
@@ -642,6 +649,17 @@ ApplicationWindow {
     }
 
     Shortcut {
+        id: runScriptShortcut
+        sequences: ["Ctrl+R"]
+        context: Qt.ApplicationShortcut
+        enabled: !(leftBrowser.textInputActive || rightBrowser.textInputActive)
+            && !confirmDialog.visible
+        onActivated: {
+            leftPanel.executeCurrentScript()
+        }
+    }
+
+    Shortcut {
         sequences: ["F11"]
         context: Qt.ApplicationShortcut
         enabled: singlePreviewEnabled
@@ -774,6 +792,7 @@ ApplicationWindow {
                 id: leftPanel
                 visible: !singlePreviewFullscreen
                 availableScripts: scriptManager ? scriptManager.scripts : []
+                runScriptShortcutText: window.formatShortcutSequences(runScriptShortcut.sequences)
                 Layout.preferredWidth: singlePreviewFullscreen
                     ? 0
                     : (parent ? parent.width : window.width) * 0.15

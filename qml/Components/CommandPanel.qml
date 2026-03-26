@@ -20,6 +20,7 @@ Item {
     property bool syncEnabled: false
     property bool syncPreviewEnabled: false
     property bool hideIdentical: false
+    property string runScriptShortcutText: ""
     property Item previousPanelFocusItem: null
     property Item nextPanelFocusItem: null
     readonly property Item firstFocusItem: syncModeCheckBox
@@ -40,6 +41,9 @@ Item {
     property color panelBackground: Material.background
     readonly property bool multiSelection: selectedPaths && selectedPaths.length > 1
     readonly property bool singleSelection: selectedPath !== "" && !multiSelection
+    readonly property bool canRunScript: scriptPath !== ""
+        && !root.syncEnabled
+        && !(scriptEngine && scriptEngine.processRunning)
 
     function sanitizeTextValue(value, fallback) {
         if (value === null || value === undefined) {
@@ -176,6 +180,59 @@ Item {
             }
         }
         clearSelectedScript()
+    }
+
+    function executeCurrentScript() {
+        if (!canRunScript) {
+            return
+        }
+        const localParams = {}
+        const globalParams = {}
+        for (let i = 0; i < scriptControls.length; i += 1) {
+            const control = scriptControls[i]
+            if (!control || !control.id) {
+                continue
+            }
+            const value = root.scriptValues[control.id]
+            if (control.scope === "global") {
+                globalParams[globalKey(scriptPath, control.id)] = value
+            } else {
+                localParams[control.id] = value
+            }
+        }
+        scriptEngine.saveScriptParams(scriptPath, localParams)
+        if (Object.keys(globalParams).length > 0) {
+            scriptEngine.saveScriptParams("__global__", globalParams)
+        }
+        const params = Object.assign({}, root.scriptValues, { _scriptPath: scriptPath })
+        const output = scriptEngine.runScript(scriptPath, params)
+        if (Array.isArray(output)) {
+            const okCount = output.filter(entry => entry && entry.ok).length
+            if (output.length === 0) {
+                scriptResult = qsTr("No files selected")
+            } else if (okCount === output.length) {
+                scriptResult = qsTr("Done: %1 / %2").arg(okCount).arg(output.length)
+            } else {
+                let lastError = ""
+                for (let i = output.length - 1; i >= 0; i -= 1) {
+                    const entry = output[i]
+                    if (entry && entry.error) {
+                        lastError = entry.error
+                        break
+                    }
+                }
+                scriptResult = qsTr("Done: %1 / %2").arg(okCount).arg(output.length)
+                if (lastError) {
+                    scriptResult += qsTr(" (error: %1)").arg(lastError)
+                    root.errorRaised(lastError)
+                }
+            }
+        } else if (output && output.error) {
+            scriptResult = String(output.error)
+            root.errorRaised(String(output.error))
+        } else {
+            scriptResult = String(output)
+        }
     }
 
     onSelectedPathsChanged: {
@@ -432,62 +489,15 @@ Item {
 
                         Button {
                             id: runScriptButton
-                            text: (scriptEngine && scriptEngine.processRunning) ? qsTr("Running...") : qsTr("Run script")
+                            text: (scriptEngine && scriptEngine.processRunning)
+                                ? qsTr("Running...")
+                                : (root.runScriptShortcutText === ""
+                                    ? qsTr("Run")
+                                    : qsTr("Run (%1)").arg(root.runScriptShortcutText))
                             Layout.fillWidth: true
-                            enabled: scriptPath !== "" && !root.syncEnabled && !(scriptEngine && scriptEngine.processRunning)
+                            enabled: root.canRunScript
                             KeyNavigation.tab: root.nextPanelFocusItem
-                            onClicked: {
-                                if (scriptPath === "") {
-                                    return
-                                }
-                                const localParams = {}
-                                const globalParams = {}
-                                for (let i = 0; i < scriptControls.length; i += 1) {
-                                    const control = scriptControls[i]
-                                    if (!control || !control.id) {
-                                        continue
-                                    }
-                                const value = root.scriptValues[control.id]
-                                if (control.scope === "global") {
-                                    globalParams[globalKey(scriptPath, control.id)] = value
-                                } else {
-                                    localParams[control.id] = value
-                                }
-                                }
-                                scriptEngine.saveScriptParams(scriptPath, localParams)
-                                if (Object.keys(globalParams).length > 0) {
-                                    scriptEngine.saveScriptParams("__global__", globalParams)
-                                }
-                                const params = Object.assign({}, root.scriptValues, { _scriptPath: scriptPath })
-                                const output = scriptEngine.runScript(scriptPath, params)
-                                if (Array.isArray(output)) {
-                                    const okCount = output.filter(entry => entry && entry.ok).length
-                                    if (output.length === 0) {
-                                        scriptResult = qsTr("No files selected")
-                                    } else if (okCount === output.length) {
-                                        scriptResult = qsTr("Done: %1 / %2").arg(okCount).arg(output.length)
-                                    } else {
-                                        let lastError = ""
-                                        for (let i = output.length - 1; i >= 0; i -= 1) {
-                                            const entry = output[i]
-                                            if (entry && entry.error) {
-                                                lastError = entry.error
-                                                break
-                                            }
-                                        }
-                                        scriptResult = qsTr("Done: %1 / %2").arg(okCount).arg(output.length)
-                                        if (lastError) {
-                                            scriptResult += qsTr(" (error: %1)").arg(lastError)
-                                            root.errorRaised(lastError)
-                                        }
-                                    }
-                                } else if (output && output.error) {
-                                    scriptResult = String(output.error)
-                                    root.errorRaised(String(output.error))
-                                } else {
-                                    scriptResult = String(output)
-                                }
-                            }
+                            onClicked: root.executeCurrentScript()
                         }
 
                         Label {

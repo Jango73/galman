@@ -30,6 +30,7 @@ Dialog {
                     { keys: "Ctrl+S", action: qsTr("Toggle synchronize mode") },
                     { keys: "Ctrl+F", action: qsTr("Save current folders as favorite pair") },
                     { keys: "Ctrl+H", action: qsTr("Toggle hide identical") },
+                    { keys: "Ctrl+R", action: qsTr("Run selected script") },
                     { keys: "Ctrl+Enter / Ctrl+Return", action: qsTr("Open item externally") }
                 ]
             },
