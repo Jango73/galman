@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 
-find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network Multimedia ShaderTools)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network Multimedia ShaderTools LinguistTools)
 
 qt_add_executable(galman
     src/main.cpp
@@ -152,34 +152,29 @@ set(translation_files
     translations/galman_zh.ts
 )
 
-find_program(LRELEASE_EXECUTABLE NAMES lrelease-qt6 lrelease)
-if (LRELEASE_EXECUTABLE)
-    set(qm_files)
-    foreach(ts_file IN LISTS translation_files)
-        get_filename_component(ts_name "${ts_file}" NAME_WE)
-        set(qm_file "${CMAKE_CURRENT_BINARY_DIR}/translations/${ts_name}.qm")
-        add_custom_command(
-            OUTPUT "${qm_file}"
-            COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/translations"
-            COMMAND "${LRELEASE_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/${ts_file}" -qm "${qm_file}"
-            DEPENDS "${ts_file}"
-            COMMENT "Generating ${qm_file}"
-            VERBATIM
-        )
-        list(APPEND qm_files "${qm_file}")
-    endforeach()
-
-    add_custom_target(galman_translations ALL DEPENDS ${qm_files})
-    add_dependencies(galman galman_translations)
-
-    qt_add_resources(galman "translations"
-        PREFIX "/i18n"
-        BASE "${CMAKE_CURRENT_BINARY_DIR}/translations"
-        FILES ${qm_files}
+set(qm_files)
+foreach(ts_file IN LISTS translation_files)
+    get_filename_component(ts_name "${ts_file}" NAME_WE)
+    set(qm_file "${CMAKE_CURRENT_BINARY_DIR}/translations/${ts_name}.qm")
+    add_custom_command(
+        OUTPUT "${qm_file}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/translations"
+        COMMAND Qt6::lrelease "${CMAKE_CURRENT_SOURCE_DIR}/${ts_file}" -qm "${qm_file}"
+        DEPENDS Qt6::lrelease "${ts_file}"
+        COMMENT "Generating ${qm_file}"
+        VERBATIM
     )
-else()
-    message(WARNING "lrelease not found; translations will be skipped.")
-endif()
+    list(APPEND qm_files "${qm_file}")
+endforeach()
+
+add_custom_target(galman_translations ALL DEPENDS ${qm_files})
+add_dependencies(galman galman_translations)
+
+qt_add_resources(galman "translations"
+    PREFIX "/i18n"
+    BASE "${CMAKE_CURRENT_BINARY_DIR}/translations"
+    FILES ${qm_files}
+)
 
 if(COMMAND qt_generate_deploy_app_script)
     qt_generate_deploy_app_script(

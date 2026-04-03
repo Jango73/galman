@@ -45,6 +45,7 @@ CMakeLists.txt.user*
 
 # Project specific
 .directory
+.codex
 *.bak
 /temp
 /dist
