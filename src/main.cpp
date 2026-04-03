@@ -19,6 +19,8 @@
 
 \************************************************************************/
 
+#include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
@@ -32,11 +34,34 @@
 #include "ScriptEngine.h"
 #include "ScriptManager.h"
 
+namespace
+{
+
+void processCommandLineOptions(int argc, char *argv[])
+{
+    QCoreApplication application(argc, argv);
+    application.setApplicationName(QStringLiteral("galman"));
+    application.setApplicationVersion(QStringLiteral(GALMAN_APPLICATION_VERSION));
+
+    QCommandLineParser commandLineParser;
+    commandLineParser.setApplicationDescription(QStringLiteral("Image gallery manager"));
+    commandLineParser.addHelpOption();
+    commandLineParser.addVersionOption();
+    commandLineParser.process(application);
+}
+
+}
+
 int main(int argc, char *argv[])
 {
+    processCommandLineOptions(argc, argv);
+
     QGuiApplication app(argc, argv);
-    qInfo() << "Galman startup";
+    app.setApplicationName(QStringLiteral("galman"));
     app.setApplicationVersion(QStringLiteral(GALMAN_APPLICATION_VERSION));
+    app.setApplicationDisplayName(QStringLiteral("Galman"));
+
+    qInfo() << "Galman startup";
     app.setWindowIcon(QIcon(":/Galman/qml/Assets/Galman.png"));
     AppLogger &appLogger = AppLogger::instance();
     appLogger.initialize();
