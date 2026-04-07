@@ -1,7 +1,9 @@
 
 # Features
 
-- Add a packaging/install builder.
+- Add webp support
+- Add github actions build
+- Add a packaging/install builder
 
 # Bugs
 
