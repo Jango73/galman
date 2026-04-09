@@ -176,7 +176,12 @@ qt_add_resources(galman "translations"
     FILES ${qm_files}
 )
 
-if(COMMAND qt_generate_deploy_app_script)
+set(galman_is_ci_build OFF)
+if(DEFINED ENV{CI} AND NOT "$ENV{CI}" STREQUAL "")
+    set(galman_is_ci_build ON)
+endif()
+
+if(COMMAND qt_generate_deploy_app_script AND NOT galman_is_ci_build)
     qt_generate_deploy_app_script(
         TARGET galman
         OUTPUT_SCRIPT galman_deploy_script
