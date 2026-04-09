@@ -216,6 +216,7 @@ private:
     int m_minimumImageHeight = -1;
     int m_maximumImageHeight = -1;
     bool m_loading = false;
+    QString m_pendingSelectionPath;
     QStringList m_selectedPaths;
     bool m_selectedIsImage = false;
     bool m_selectedIsVideo = false;

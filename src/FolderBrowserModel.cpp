@@ -880,6 +880,7 @@ void FolderBrowserModel::goUp()
         return;
     }
 
+    m_pendingSelectionPath = m_rootPath;
     dir.cdUp();
     setRootPath(dir.absolutePath());
 }
@@ -1719,17 +1720,27 @@ void FolderBrowserModel::rebuildEntries()
     applyEntriesIncremental(filtered);
 
     QStringList nextSelection;
-    nextSelection.reserve(m_selectedPaths.size());
-    for (const QString &path : m_selectedPaths) {
-        const QFileInfo info(path);
-        if (info.exists()) {
-            nextSelection.append(path);
-            continue;
+    if (!m_pendingSelectionPath.isEmpty()) {
+        for (const QFileInfo &entry : m_entries) {
+            if (entry.absoluteFilePath() == m_pendingSelectionPath) {
+                nextSelection.append(m_pendingSelectionPath);
+                break;
+            }
         }
+        m_pendingSelectionPath.clear();
+    } else {
+        nextSelection.reserve(m_selectedPaths.size());
+        for (const QString &path : m_selectedPaths) {
+            const QFileInfo info(path);
+            if (info.exists()) {
+                nextSelection.append(path);
+                continue;
+            }
 
-        const QString replacementPath = findReplacementPathForSelection(path, m_entries);
-        if (!replacementPath.isEmpty() && !nextSelection.contains(replacementPath)) {
-            nextSelection.append(replacementPath);
+            const QString replacementPath = findReplacementPathForSelection(path, m_entries);
+            if (!replacementPath.isEmpty() && !nextSelection.contains(replacementPath)) {
+                nextSelection.append(replacementPath);
+            }
         }
     }
     if (nextSelection != m_selectedPaths) {

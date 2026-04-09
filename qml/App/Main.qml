@@ -458,17 +458,11 @@ ApplicationWindow {
 
     function goUpFocusedPane() {
         if (leftBrowser.hasFocus) {
-            leftBrowser.browserModel.goUp()
-            if (compareModel.enabled) {
-                rightBrowser.browserModel.goUp()
-            }
+            leftBrowser.goUp()
             return
         }
         if (rightBrowser.hasFocus) {
-            rightBrowser.browserModel.goUp()
-            if (compareModel.enabled) {
-                leftBrowser.browserModel.goUp()
-            }
+            rightBrowser.goUp()
         }
     }
 
@@ -535,7 +529,7 @@ ApplicationWindow {
             return
         }
         navigationSyncing = true
-        targetPane.browserModel.goUp()
+        targetPane.goUp()
         navigationSyncing = false
     }
 

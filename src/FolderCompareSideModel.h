@@ -249,6 +249,7 @@ private:
     int m_maximumImageWidth = -1;
     int m_minimumImageHeight = -1;
     int m_maximumImageHeight = -1;
+    QString m_pendingSelectionId;
     QStringList m_selectedIds;
     QStringList m_selectedPaths;
     bool m_selectedIsImage = false;

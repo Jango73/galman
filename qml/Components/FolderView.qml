@@ -341,6 +341,14 @@ FocusScope {
         }
     }
 
+    function goUp() {
+        if (!browserModel || !browserModel.goUp) {
+            return
+        }
+        browserModel.goUp()
+        root.goUpRequested()
+    }
+
     function setCurrentIndex(row) {
         if (!browserGrid || row < 0) {
             return
@@ -417,8 +425,8 @@ FocusScope {
             pendingDeletionIndex = -1
             return
         }
-        const targetPath = pendingDeletionIndex >= 0 ? "" : lastSelectedPath
         let nextIndex = -1
+        const targetPath = pendingDeletionIndex >= 0 ? "" : lastSelectedPath
         if (targetPath !== "" && browserModel && browserModel.pathForRow) {
             const count = browserGrid.count
             for (let i = 0; i < count; i += 1) {
@@ -445,13 +453,17 @@ FocusScope {
         }
         if (nextIndex >= 0) {
             browserGrid.setCurrentIndex(nextIndex)
+            if (browserModel && browserModel.select) {
+                browserModel.select(nextIndex, false)
+            }
+            browserGrid.positionViewAtIndex(nextIndex)
         } else {
             browserGrid.setCurrentIndex(-1)
         }
         restoringIndex = false
         lastCurrentIndex = browserGrid.currentIndex
         rememberCurrentPath()
-        updateSelectedImagePath()
+        updateSelectedMediaPath()
         pendingDeletionIndex = -1
     }
 
@@ -595,10 +607,7 @@ FocusScope {
                 previousFocusItem: root.previousPanelFocusItem
                 nextFocusItem: sortBar.refreshButton
                 onGoUpRequested: {
-                    if (browserModel) {
-                        browserModel.goUp()
-                    }
-                    root.goUpRequested()
+                    root.goUp()
                 }
             }
 
@@ -700,8 +709,21 @@ FocusScope {
             if (root.pendingIndexReset) {
                 root.pendingIndexReset = false
                 if (browserGrid.count > 0) {
-                    browserGrid.setCurrentIndex(0)
-                    browserGrid.positionViewAtIndex(0)
+                    let nextIndex = -1
+                    if (browserModel.selectedRows) {
+                        const rows = browserModel.selectedRows()
+                        if (rows && rows.length > 0) {
+                            nextIndex = rows[0]
+                        }
+                    }
+                    if (nextIndex < 0) {
+                        nextIndex = 0
+                    }
+                    browserGrid.setCurrentIndex(nextIndex)
+                    if (browserModel.select && nextIndex >= 0) {
+                        browserModel.select(nextIndex, false)
+                    }
+                    browserGrid.positionViewAtIndex(nextIndex)
                 } else {
                     browserGrid.setCurrentIndex(-1)
                 }

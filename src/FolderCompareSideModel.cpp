@@ -766,6 +766,7 @@ void FolderCompareSideModel::goUp()
     if (dir.isRoot()) {
         return;
     }
+    m_pendingSelectionId = m_rootPath;
     dir.cdUp();
     setRootPath(dir.absolutePath());
 }
@@ -1649,13 +1650,23 @@ void FolderCompareSideModel::applyEntriesIncremental(const QVector<CompareEntry>
     }
 
     QStringList nextSelection;
-    nextSelection.reserve(m_selectedIds.size());
-    for (const QString &id : m_selectedIds) {
+    if (!m_pendingSelectionId.isEmpty()) {
         auto it = std::find_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == id;
+            return entry.id == m_pendingSelectionId;
         });
         if (it != entries.end()) {
-            nextSelection.append(id);
+            nextSelection.append(m_pendingSelectionId);
+        }
+        m_pendingSelectionId.clear();
+    } else {
+        nextSelection.reserve(m_selectedIds.size());
+        for (const QString &id : m_selectedIds) {
+            auto it = std::find_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
+                return entry.id == id;
+            });
+            if (it != entries.end()) {
+                nextSelection.append(id);
+            }
         }
     }
     if (nextSelection != m_selectedIds) {
