@@ -1,7 +1,6 @@
 
 # Features
 
-- Add github actions build
 - Add a packaging/install builder
 
 # Bugs
