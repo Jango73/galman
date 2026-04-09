@@ -12,6 +12,7 @@ APT_PACKAGES=(
   qt6-declarative-dev
   qt6-declarative-dev-tools
   qt6-multimedia-dev
+  qt6-image-formats-plugins
   qt6-qmltooling-plugins
   qt6-tools-dev
   qt6-tools-dev-tools
@@ -39,6 +40,7 @@ DNF_PACKAGES=(
   qt6-qtbase-devel
   qt6-qtdeclarative-devel
   qt6-qtmultimedia-devel
+  qt6-qtimageformats
   qt6-qttools-devel
   qt6-qtshadertools-devel
   qt6-qtwayland-devel
@@ -53,6 +55,7 @@ PACMAN_PACKAGES=(
   qt6-base
   qt6-declarative
   qt6-multimedia
+  qt6-imageformats
   qt6-tools
   qt6-shadertools
   qt6-wayland

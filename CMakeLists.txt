@@ -198,6 +198,7 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
     set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-image-formats-plugins")
 endif()
 
 include(CPack)

@@ -8,11 +8,14 @@ The app also supports automation scripts, and you can add your own JavaScript sc
 
 ### Prerequisites
 - Qt 6 (Quick, Concurrent, Network)
+- Qt 6 image format plugins for extended formats such as WebP
 - CMake and Ninja
 - A C++17 compiler
 
 On Debian or Ubuntu, `./deps.sh` installs the required dependencies.
 On Windows, ensure Qt 6, CMake, and Ninja are in `PATH`.
+
+Galman detects supported image formats through `QImageReader`, so formats such as WebP are available when the matching Qt image format plugin is installed.
 
 ### Build
 ```bash
