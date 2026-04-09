@@ -1,5 +1,7 @@
 # Galman
 
+[![Build](https://github.com/Jango73/galman/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Jango73/galman/actions/workflows/build.yml)
+
 Galman is an image gallery manager. It lets you browse folders, compare sets of files, preview images, and sort or move selections. The interface focuses on fast navigation and visual comparison.
 
 The app also supports automation scripts, and you can add your own JavaScript scripts by dropping them into the `scripts/` folder.
