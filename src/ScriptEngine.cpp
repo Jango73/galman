@@ -38,6 +38,7 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
+#include <QTransform>
 #include <QVariantMap>
 #include <algorithm>
 
@@ -535,6 +536,63 @@ QVariantMap ScriptEngine::convertImage(const QString &path, const QString &forma
 
     result.insert("ok", true);
     result.insert("target", targetPath);
+    return result;
+}
+
+/**
+ * @brief Adjusts an image by rotating and/or flipping it, then replaces the original.
+ * @param path Source image file path.
+ * @param rotation Rotation angle in degrees (positive = clockwise, negative = counter-clockwise).
+ * @param flipH Whether to flip horizontally.
+ * @param flipV Whether to flip vertically.
+ * @return Result map including ok and error fields.
+ */
+QVariantMap ScriptEngine::adjustImage(const QString &path, int rotation, bool flipH, bool flipV)
+{
+    QVariantMap result;
+    result.insert("ok", false);
+
+    QFileInfo sourceInfo(path);
+    if (!sourceInfo.exists() || !sourceInfo.isFile()) {
+        result.insert("error", tr("Source not found"));
+        return result;
+    }
+
+    QImageReader reader(path);
+    QImage image = reader.read();
+    if (image.isNull()) {
+        result.insert("error", tr("Failed to read image"));
+        return result;
+    }
+
+    if (rotation != 0) {
+        QTransform transform;
+        transform.rotate(rotation);
+        image = image.transformed(transform);
+    }
+
+    if (flipH) {
+        image = image.mirrored(true, false);
+    }
+    if (flipV) {
+        image = image.mirrored(false, true);
+    }
+
+    QString error;
+    if (!PlatformUtils::moveToTrashOrDelete(path, &error)) {
+        result.insert("error", error.isEmpty() ? tr("Failed to move source to trash") : error);
+        return result;
+    }
+
+    QImageWriter writer(path);
+    if (!writer.write(image)) {
+        result.insert("error", writer.errorString().isEmpty()
+                          ? tr("Failed to write image")
+                          : writer.errorString());
+        return result;
+    }
+
+    result.insert("ok", true);
     return result;
 }
 

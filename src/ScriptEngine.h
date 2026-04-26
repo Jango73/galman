@@ -35,6 +35,7 @@ public:
     Q_INVOKABLE QVariant runScript(const QString &path, const QVariantMap &params);
     Q_INVOKABLE QStringList supportedImageFormats() const;
     Q_INVOKABLE QVariantMap saveAdjustedImage(const QImage &image, const QString &path);
+    Q_INVOKABLE QVariantMap adjustImage(const QString &path, int rotation, bool flipH, bool flipV);
     Q_INVOKABLE QVariantMap convertImage(const QString &path, const QString &format);
     Q_INVOKABLE QVariantMap runComfyWorkflow(const QString &workflowPath,
                                              const QString &imagePath,
