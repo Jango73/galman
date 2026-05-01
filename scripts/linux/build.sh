@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-ROOT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT_FOLDER="$(cd "${SCRIPT_FOLDER}/../.." && pwd)"
 
 EXIT_SUCCESS=0
 EXIT_FAILURE=1
@@ -13,7 +14,7 @@ VERBOSE_BUILD="${VERBOSE_DISABLED}"
 
 usage() {
   cat <<'USAGE'
-Usage: ./run.sh [--debug|--release] [-d|-r] [--verbose|-v] [-c Debug|Release]
+Usage: ./build.sh [--debug|--release] [-d|-r] [--verbose|-v] [-c Debug|Release]
   --debug,   -d  Build type Debug (default)
   --release, -r  Build type Release
   --verbose, -v  Verbose build output
@@ -61,17 +62,13 @@ if [[ "${BUILD_TYPE}" != "Debug" && "${BUILD_TYPE}" != "Release" ]]; then
   exit "${EXIT_FAILURE}"
 fi
 
-BUILD_FOLDER="${ROOT_FOLDER}/build-${BUILD_TYPE,,}"
-LOG_FILE="${ROOT_FOLDER}/temp/run.log"
+BUILD_DIR="${PROJECT_ROOT_FOLDER}/build-${BUILD_TYPE,,}"
 
-if [ ! -d "${BUILD_FOLDER}" ]; then
-  echo "[run] ${BUILD_FOLDER} not found, running build first..."
-  if [ "${VERBOSE_BUILD}" -eq "${VERBOSE_ENABLED}" ]; then
-    "${ROOT_FOLDER}/build.sh" -c "${BUILD_TYPE}" -v
-  else
-    "${ROOT_FOLDER}/build.sh" -c "${BUILD_TYPE}"
-  fi
+cmake -S "${PROJECT_ROOT_FOLDER}" -B "${BUILD_DIR}" -G Ninja -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
+if [ "${VERBOSE_BUILD}" -eq "${VERBOSE_ENABLED}" ]; then
+  cmake --build "${BUILD_DIR}" --verbose
+else
+  cmake --build "${BUILD_DIR}"
 fi
 
-echo "[run] Logging to ${LOG_FILE}"
-exec "${BUILD_FOLDER}/galman" 2>&1 | tee "${LOG_FILE}"
+printf '\nBuilt target in %s\n' "${BUILD_DIR}"

@@ -122,7 +122,7 @@ install(TARGETS galman
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 
-install(DIRECTORY scripts/
+install(DIRECTORY data/scripts/
     DESTINATION "${CMAKE_INSTALL_DATADIR}/galman/scripts"
     FILES_MATCHING
     PATTERN "*.js"

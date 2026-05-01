@@ -112,13 +112,13 @@ void ScriptManager::updateScripts()
  */
 QString ScriptManager::resolveScriptsDir() const
 {
-    const QString cwdDir = QDir::current().filePath("scripts");
+    const QString cwdDir = QDir::current().filePath("data/scripts");
     if (QFileInfo::exists(cwdDir) && QFileInfo(cwdDir).isDir()) {
         return cwdDir;
     }
 
     const QString appDir = QCoreApplication::applicationDirPath();
-    const QString appSibling = QDir(appDir).filePath("../scripts");
+    const QString appSibling = QDir(appDir).filePath("../data/scripts");
     if (QFileInfo::exists(appSibling) && QFileInfo(appSibling).isDir()) {
         return QDir(appSibling).absolutePath();
     }
@@ -128,7 +128,7 @@ QString ScriptManager::resolveScriptsDir() const
         return QDir(appShareScripts).absolutePath();
     }
 
-    const QString appLocal = QDir(appDir).filePath("scripts");
+    const QString appLocal = QDir(appDir).filePath("data/scripts");
     if (QFileInfo::exists(appLocal) && QFileInfo(appLocal).isDir()) {
         return appLocal;
     }

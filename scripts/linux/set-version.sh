@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-ROOT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSION_FILE="${ROOT_FOLDER}/VERSION"
+SCRIPT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT_FOLDER="$(cd "${SCRIPT_FOLDER}/../.." && pwd)"
+VERSION_FILE="${PROJECT_ROOT_FOLDER}/VERSION"
 
 usage() {
   cat <<'USAGE'

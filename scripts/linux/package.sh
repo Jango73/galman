@@ -1,13 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-ROOT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT_FOLDER="$(cd "${SCRIPT_FOLDER}/../.." && pwd)"
 BUILD_TYPE="Release"
-BUILD_FOLDER="${ROOT_FOLDER}/build-package-${BUILD_TYPE,,}"
-OUTPUT_FOLDER="${ROOT_FOLDER}/dist"
-VERSION="$(tr -d '[:space:]' < "${ROOT_FOLDER}/VERSION")"
+BUILD_FOLDER="${PROJECT_ROOT_FOLDER}/build-package-${BUILD_TYPE,,}"
+OUTPUT_FOLDER="${PROJECT_ROOT_FOLDER}/dist"
+VERSION="$(tr -d '[:space:]' < "${PROJECT_ROOT_FOLDER}/VERSION")"
 
-cmake -S "${ROOT_FOLDER}" \
+cmake -S "${PROJECT_ROOT_FOLDER}" \
   -B "${BUILD_FOLDER}" \
   -G Ninja \
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"

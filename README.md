@@ -4,7 +4,7 @@
 
 Galman is an image gallery manager. It lets you browse folders, compare sets of files, preview images, and sort or move selections. The interface focuses on fast navigation and visual comparison.
 
-The app also supports automation scripts, and you can add your own JavaScript scripts by dropping them into the `scripts/` folder.
+The app also supports automation scripts, and you can add your own JavaScript scripts by dropping them into the `data/scripts/` folder.
 
 ## Technical
 
@@ -14,14 +14,14 @@ The app also supports automation scripts, and you can add your own JavaScript sc
 - CMake and Ninja
 - A C++17 compiler
 
-On Debian or Ubuntu, `./deps.sh` installs the required dependencies.
+On Debian or Ubuntu, `./scripts/linux/deps.sh` installs the required dependencies.
 On Windows, ensure Qt 6, CMake, and Ninja are in `PATH`.
 
 Galman detects supported image formats through `QImageReader`, so formats such as WebP are available when the matching Qt image format plugin is installed.
 
 ### Build
 ```bash
-./build.sh
+./scripts/linux/build.sh
 ```
 
 Useful options:
@@ -36,10 +36,10 @@ build.bat
 
 ### Run
 ```bash
-./run.sh
+./scripts/linux/run.sh
 ```
 
-`run.sh` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
+`scripts/linux/run.sh` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
 
 Windows:
 ```bat
@@ -50,15 +50,15 @@ run.bat
 
 ### Package (Debian)
 ```bash
-./package.sh
+./scripts/linux/package.sh
 ```
 
 Version source (single source of truth):
 ```bash
-./set-version.sh 1.2.3
+./scripts/linux/set-version.sh 1.2.3
 ```
 
-`package.sh` uses the version from `VERSION`. Generated packages are copied to `dist/`.
+`scripts/linux/package.sh` uses the version from `VERSION`. Generated packages are copied to `dist/`.
 
 ## Architecture
 - **User interface (QML)**: `qml/App/Main.qml` drives the main screen. Reusable components live in `qml/Components`. Visual theme is defined in `qml/Theme.qml`.

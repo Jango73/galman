@@ -51,7 +51,7 @@ jobs:
             qml6-module-qtmultimedia
 
       - name: Build release
-        run: ./build.sh --release
+        run: ./scripts/linux/build.sh --release
 
       - name: Upload Linux binary
         uses: actions/upload-artifact@v6
