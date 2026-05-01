@@ -34,6 +34,13 @@ QtObject {
     readonly property int byteUnitBase: 1024
     readonly property int byteUnitPrecision: 1
     readonly property real ghostPreviewOpacity: 0.5
+    readonly property int rowIndexBadgeMargin: spaceSm
+    readonly property int rowIndexBadgePaddingHorizontal: spaceSm
+    readonly property int rowIndexBadgePaddingVertical: spaceXs
+    readonly property int rowIndexBadgeRadius: 4
+    readonly property int rowIndexBadgeFontPixelSize: 12
+    readonly property color rowIndexBadgeBackground: Qt.rgba(0, 0, 0, 0.65)
+    readonly property color rowIndexBadgeTextColor: "#f2f2f2"
 
     function elideFileName(name) {
         const raw = String(name || "")

@@ -24,6 +24,8 @@ Item {
     property int statusDifferent: 3
     property color statusIdenticalColor: Theme.statusIdenticalAlt
     property color statusDifferentColor: Theme.statusDifferentAlt
+    property bool showRowStartIndex: false
+    property string rowStartIndexText: ""
 
     Rectangle {
         anchors.fill: parent
@@ -182,5 +184,24 @@ Item {
         statusDifferent: root.statusDifferent
         statusIdenticalColor: root.statusIdenticalColor
         statusDifferentColor: root.statusDifferentColor
+    }
+
+    Rectangle {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.margins: Theme.rowIndexBadgeMargin
+        visible: root.showRowStartIndex && root.rowStartIndexText !== ""
+        color: Theme.rowIndexBadgeBackground
+        radius: Theme.rowIndexBadgeRadius
+        implicitWidth: rowStartIndexLabel.implicitWidth + (Theme.rowIndexBadgePaddingHorizontal * 2)
+        implicitHeight: rowStartIndexLabel.implicitHeight + (Theme.rowIndexBadgePaddingVertical * 2)
+
+        Label {
+            id: rowStartIndexLabel
+            anchors.centerIn: parent
+            text: root.rowStartIndexText
+            color: Theme.rowIndexBadgeTextColor
+            font.pixelSize: Theme.rowIndexBadgeFontPixelSize
+        }
     }
 }

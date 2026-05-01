@@ -458,6 +458,11 @@ Item {
                 id: row
                 width: GridView.view ? GridView.view.cellWidth : 0
                 height: GridView.view ? GridView.view.cellHeight : 0
+                readonly property int effectiveColumnCount: GridView.view
+                    ? Math.max(1, GridView.view.columnCount)
+                    : 1
+                readonly property bool firstItemOnRow: (index % effectiveColumnCount) === 0
+                readonly property int firstIndexOnRow: Math.floor(index / effectiveColumnCount) * effectiveColumnCount
 
                 FolderItem {
                     anchors.fill: parent
@@ -480,6 +485,8 @@ Item {
                     statusDifferent: root.statusDifferent
                     statusIdenticalColor: root.statusIdenticalColor
                     statusDifferentColor: root.statusDifferentColor
+                    showRowStartIndex: row.firstItemOnRow
+                    rowStartIndexText: String(row.firstIndexOnRow + 1)
                 }
 
                 MouseArea {
