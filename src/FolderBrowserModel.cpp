@@ -98,6 +98,17 @@ QString previewPathForInfo(const QFileInfo &info)
     return info.absoluteFilePath();
 }
 
+QString thumbnailRevisionForFileInfo(const QFileInfo &info)
+{
+    if (!info.exists() || info.isDir()) {
+        return QString();
+    }
+
+    return QStringLiteral("%1:%2")
+        .arg(QString::number(info.lastModified().toMSecsSinceEpoch()))
+        .arg(QString::number(info.size()));
+}
+
 QString findReplacementPathForSelection(const QString &originalPath, const QVector<QFileInfo> &entries)
 {
     const QFileInfo originalInfo(originalPath);
@@ -647,6 +658,8 @@ QVariant FolderBrowserModel::data(const QModelIndex &index, int role) const
         }
         return QString();
     }
+    case ThumbnailRevisionRole:
+        return thumbnailRevisionForFileInfo(info);
     case SuffixRole:
         return info.suffix();
     case CreatedRole: {
@@ -679,6 +692,7 @@ QHash<int, QByteArray> FolderBrowserModel::roleNames() const
         {IsImageRole, "isImage"},
         {IsVideoRole, "isVideo"},
         {ThumbnailPathRole, "thumbnailPath"},
+        {ThumbnailRevisionRole, "thumbnailRevision"},
         {SuffixRole, "suffix"},
         {CreatedRole, "created"},
         {ModifiedRole, "modified"},
@@ -1558,6 +1572,7 @@ void FolderBrowserModel::applyEntriesIncremental(const QVector<QFileInfo> &entri
         IsImageRole,
         IsVideoRole,
         ThumbnailPathRole,
+        ThumbnailRevisionRole,
         SuffixRole,
         CreatedRole,
         ModifiedRole,
@@ -1832,8 +1847,17 @@ void FolderBrowserModel::requestVideoThumbnailRefresh()
         if (path.isEmpty()) {
             continue;
         }
-        if (m_videoThumbnailCache.contains(path) && QFileInfo::exists(m_videoThumbnailCache.value(path))) {
-            continue;
+        const QString expectedThumbnailPath = VideoThumbnailUtils::thumbnailPathForSource(path);
+        if (m_videoThumbnailCache.contains(path)) {
+            const QString cachedThumbnailPath = m_videoThumbnailCache.value(path);
+            if (cachedThumbnailPath == expectedThumbnailPath && QFileInfo::exists(cachedThumbnailPath)) {
+                continue;
+            }
+            if (!cachedThumbnailPath.isEmpty()) {
+                QFile::remove(cachedThumbnailPath);
+            }
+            m_videoThumbnailCache.remove(path);
+            m_videoThumbnailAttempted.remove(path);
         }
         if (m_videoThumbnailAttempted.contains(path)) {
             continue;

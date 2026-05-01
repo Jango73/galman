@@ -77,12 +77,17 @@ bool isVideoFile(const QFileInfo &info)
     return mimeType.isValid() && mimeType.name().startsWith(QStringLiteral("video/"));
 }
 
+QString thumbnailPathForSource(const QString &videoPath)
+{
+    return videoThumbnailPathForSource(videoPath);
+}
+
 bool generateThumbnail(const QString &videoPath, QString *thumbnailPathOut)
 {
     if (!thumbnailPathOut) {
         return false;
     }
-    const QString thumbnailPath = videoThumbnailPathForSource(videoPath);
+    const QString thumbnailPath = thumbnailPathForSource(videoPath);
     if (thumbnailPath.isEmpty()) {
         return false;
     }

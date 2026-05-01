@@ -469,6 +469,7 @@ Item {
                     filePath: model.filePath
                     otherSidePath: model.otherSidePath ? model.otherSidePath : ""
                     thumbnailPath: model.thumbnailPath ? model.thumbnailPath : ""
+                    thumbnailRevision: model.thumbnailRevision ? model.thumbnailRevision : ""
                     fileName: model.fileName
                     modifiedText: model.isGhost
                         ? ""

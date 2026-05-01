@@ -69,6 +69,7 @@ public:
         IsImageRole,
         IsVideoRole,
         ThumbnailPathRole,
+        ThumbnailRevisionRole,
         SuffixRole,
         CreatedRole,
         ModifiedRole,

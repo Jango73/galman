@@ -14,6 +14,7 @@ Item {
     property string filePath: ""
     property string otherSidePath: ""
     property string thumbnailPath: ""
+    property string thumbnailRevision: ""
     property string fileName: ""
     property string modifiedText: ""
     property bool thumbnailReady: false
@@ -52,12 +53,15 @@ Item {
                 ? root.thumbnailPath
                 : (root.isImage ? fallbackImagePath : "")
             readonly property bool hasPreviewSource: effectiveThumbnailPath !== ""
+            readonly property string previewSource: hasPreviewSource
+                ? ("file://" + effectiveThumbnailPath + (root.thumbnailRevision !== "" ? ("?v=" + encodeURIComponent(root.thumbnailRevision)) : ""))
+                : ""
 
             Image {
                 width: previewContainer.squareSize
                 height: previewContainer.squareSize
                 anchors.centerIn: parent
-                source: previewContainer.hasPreviewSource ? ("file://" + previewContainer.effectiveThumbnailPath) : ""
+                source: previewContainer.previewSource
                 sourceSize.width: Math.max(1, previewContainer.squareSize * 2)
                 sourceSize.height: Math.max(1, previewContainer.squareSize * 2)
                 fillMode: Image.PreserveAspectFit
