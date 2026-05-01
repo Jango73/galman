@@ -6,6 +6,7 @@ APT_PACKAGES=(
   cmake
   ninja-build
   git
+  gh
   libgl-dev
   qt6-base-dev
   qt6-base-dev-tools
@@ -36,6 +37,7 @@ DNF_PACKAGES=(
   cmake
   ninja-build
   git
+  gh
   mesa-libGL-devel
   qt6-qtbase-devel
   qt6-qtdeclarative-devel
@@ -51,6 +53,7 @@ PACMAN_PACKAGES=(
   cmake
   ninja
   git
+  github-cli
   mesa
   qt6-base
   qt6-declarative

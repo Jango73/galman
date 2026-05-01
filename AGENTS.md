@@ -29,3 +29,38 @@ This is an image gallery manager.
 - **UI only**: No heavy business logic in QML, leave that to C++.
 - **QML signal handlers**: NEVER rely on implicit parameter injection (deprecated). Always declare formal parameters, e.g. `onPressed: (mouse) => { ... }`.
 - To mask menu items (when they should be inactive), donc just disable them, use Instantiator.
+
+## Release Procedure
+- Releases must follow Semantic Versioning (`major.minor.patch`).
+- Before creating a release, inspect the commits since the last tag:
+  ```bash
+  git describe --tags --abbrev=0
+  git log --oneline <last-tag>..HEAD
+  ```
+- Determine the next version number from the actual changes:
+  - increment `major` for breaking changes
+  - increment `minor` for backward-compatible new features
+  - increment `patch` for backward-compatible fixes only
+- Update `CHANGELOG.md` first. Add a new section for the new version at the top, with the release date, and make sure the content matches the commits since the last tag.
+- Update the project version only with the dedicated script:
+  ```bash
+  ./scripts/linux/set-version.sh x.y.z
+  ```
+- Commit the release changes before tagging them.
+- Create an annotated Git tag, not a lightweight tag:
+  ```bash
+  git tag -a "vx.y.z" -m "Version x.y.z"
+  ```
+- Build the package with:
+  ```bash
+  ./scripts/linux/package.sh
+  ```
+- `scripts/linux/package.sh` reads the version from `VERSION`, builds the package, and creates `dist/` automatically if it does not exist.
+- After packaging, verify that the expected artifacts for the current version are present in `dist/`.
+- Create the GitHub release with:
+  - name: `Version x.y.z`
+  - tag: `vx.y.z`
+  - description: the content of the latest `CHANGELOG.md` entry only
+  - binary asset: the package generated in `dist/`
+- If `gh` is available, it can be used to create the GitHub release. If not, create the release manually in the GitHub web interface.
+- Do not rely on `scripts/linux/release-version.sh` for the official release flow, because it updates tracked files broadly and creates a lightweight tag, while releases must use the explicit changelog update and the annotated tag format above.
