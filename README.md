@@ -58,6 +58,11 @@ Version source (single source of truth):
 ./scripts/linux/set-version.sh 1.2.3
 ```
 
+Interactive release helper:
+```bash
+./scripts/linux/release-version.sh
+```
+
 `scripts/linux/package.sh` uses the version from `VERSION`. Generated packages are copied to `dist/`.
 
 ## Architecture
