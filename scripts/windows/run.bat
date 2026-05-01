@@ -6,7 +6,8 @@ set "EXIT_FAILURE=1"
 set "VERBOSE_ENABLED=1"
 set "VERBOSE_DISABLED=0"
 
-set "ROOT_FOLDER=%~dp0"
+set "SCRIPT_FOLDER=%~dp0"
+for %%I in ("%SCRIPT_FOLDER%..\..") do set "ROOT_FOLDER=%%~fI\"
 set "BUILD_TYPE=Release"
 set "VERBOSE_BUILD=%VERBOSE_DISABLED%"
 
@@ -83,9 +84,9 @@ set "LOG_FILE=%ROOT_FOLDER%temp\run.log"
 if not exist "%BUILD_FOLDER%" (
   echo [run] %BUILD_FOLDER% not found, running build first...
   if %VERBOSE_BUILD%==%VERBOSE_ENABLED% (
-    call "%ROOT_FOLDER%build.bat" -c "%BUILD_TYPE%" -v
+    call "%SCRIPT_FOLDER%build.bat" -c "%BUILD_TYPE%" -v
   ) else (
-    call "%ROOT_FOLDER%build.bat" -c "%BUILD_TYPE%"
+    call "%SCRIPT_FOLDER%build.bat" -c "%BUILD_TYPE%"
   )
 )
 

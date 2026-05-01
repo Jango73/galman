@@ -31,7 +31,7 @@ Useful options:
 
 Windows:
 ```bat
-build.bat
+scripts\windows\build.bat
 ```
 
 ### Run
@@ -43,10 +43,10 @@ build.bat
 
 Windows:
 ```bat
-run.bat
+scripts\windows\run.bat
 ```
 
-`run.bat` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
+`scripts/windows/run.bat` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
 
 ### Package (Debian)
 ```bash
