@@ -150,6 +150,19 @@ Item {
         grid.currentIndex = index
     }
 
+    function effectiveCurrentIndex() {
+        if (!root.browserModel) {
+            return grid.currentIndex < 0 ? 0 : grid.currentIndex
+        }
+        if (root.browserModel.selectedRows) {
+            const rows = root.browserModel.selectedRows()
+            if (rows && rows.length > 0) {
+                return rows[0]
+            }
+        }
+        return grid.currentIndex < 0 ? 0 : grid.currentIndex
+    }
+
     function dragDataForIndex(index) {
         if (!root.browserModel) {
             return { urls: [], paths: [] }
@@ -215,7 +228,7 @@ Item {
             readonly property int columnCount: Math.max(1, Math.floor(availableWidth / baseCellSize))
             cellWidth: Math.floor(availableWidth / columnCount)
             cellHeight: cellWidth
-            keyNavigationWraps: true
+            keyNavigationWraps: false
             displayMarginBeginning: 120
             displayMarginEnd: 120
             activeFocusOnTab: true
@@ -339,7 +352,7 @@ Item {
                     }
                 }
 
-                const current = grid.currentIndex < 0 ? 0 : grid.currentIndex
+                const current = root.effectiveCurrentIndex()
                 let next = current
 
                 if (event.key === Qt.Key_Left) {

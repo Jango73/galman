@@ -55,7 +55,9 @@ FocusScope {
     property int pendingDeletionIndex: -1
     property bool pendingDeletionFocus: false
     property string lastSelectedPath: ""
+    property string restoreAdjacentPath: ""
     property bool restoringIndex: false
+    property bool selectionAlignmentPending: false
     property bool pendingIndexReset: false
     property real pendingScrollOffset: -1
     property bool syncEnabled: true
@@ -86,6 +88,13 @@ FocusScope {
 
     VolumeModel {
         id: volumeModel
+    }
+
+    Timer {
+        id: selectionAlignmentTimer
+        interval: 50
+        repeat: false
+        onTriggered: root.synchronizeCurrentIndexWithSelection()
     }
 
     onBrowserModelChanged: {
@@ -200,6 +209,38 @@ FocusScope {
         const filename = baseNameFromPath(path)
         const idx = filename.lastIndexOf(".")
         return idx > 0 ? filename.slice(0, idx) : filename
+    }
+
+    function rowForPath(path) {
+        if (!browserGrid || !browserModel || !browserModel.pathForRow || !path) {
+            return -1
+        }
+        const count = browserGrid.count
+        for (let i = 0; i < count; i += 1) {
+            if (browserModel.pathForRow(i) === path) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    function adjacentPathForRow(row) {
+        if (!browserGrid || !browserModel || !browserModel.pathForRow) {
+            return ""
+        }
+        const count = browserGrid.count
+        if (row < 0 || row >= count) {
+            return ""
+        }
+        const nextRow = row + 1
+        if (nextRow < count) {
+            return browserModel.pathForRow(nextRow)
+        }
+        const previousRow = row - 1
+        if (previousRow >= 0) {
+            return browserModel.pathForRow(previousRow)
+        }
+        return ""
     }
 
     function findReplacementPath(targetPath) {
@@ -423,30 +464,28 @@ FocusScope {
         if (browserGrid.count === 0) {
             restoringIndex = false
             pendingDeletionIndex = -1
+            restoreAdjacentPath = ""
             return
         }
         let nextIndex = -1
         const targetPath = pendingDeletionIndex >= 0 ? "" : lastSelectedPath
-        if (targetPath !== "" && browserModel && browserModel.pathForRow) {
-            const count = browserGrid.count
-            for (let i = 0; i < count; i += 1) {
-                const path = browserModel.pathForRow(i)
-                if (path === targetPath) {
-                    nextIndex = i
-                    break
-                }
-            }
+        if (targetPath !== "") {
+            nextIndex = rowForPath(targetPath)
             if (nextIndex < 0) {
                 const replacementPath = findReplacementPath(targetPath)
                 if (replacementPath !== "") {
-                    for (let i = 0; i < count; i += 1) {
-                        if (browserModel.pathForRow(i) === replacementPath) {
-                            nextIndex = i
-                            break
-                        }
-                    }
+                    nextIndex = rowForPath(replacementPath)
                 }
             }
+        }
+        if (nextIndex < 0 && browserModel && browserModel.selectedRows) {
+            const rows = browserModel.selectedRows()
+            if (rows && rows.length > 0) {
+                nextIndex = rows[0]
+            }
+        }
+        if (nextIndex < 0 && restoreAdjacentPath !== "") {
+            nextIndex = rowForPath(restoreAdjacentPath)
         }
         if (nextIndex < 0) {
             nextIndex = clampIndex(restoreCurrentIndex, browserGrid.count)
@@ -465,6 +504,49 @@ FocusScope {
         rememberCurrentPath()
         updateSelectedMediaPath()
         pendingDeletionIndex = -1
+        restoreAdjacentPath = ""
+    }
+
+    function alignCurrentIndexWithSelection() {
+        if (!browserGrid || !browserModel || !browserModel.selectedPaths) {
+            return
+        }
+        const paths = browserModel.selectedPaths
+        if (!paths || paths.length !== 1) {
+            return
+        }
+        const selectedPath = paths[0]
+        const selectedRow = rowForPath(selectedPath)
+        if (selectedRow < 0) {
+            return
+        }
+        if (browserGrid.currentIndex === selectedRow) {
+            return
+        }
+        browserGrid.setCurrentIndex(selectedRow)
+        browserGrid.positionViewAtIndex(selectedRow)
+        root.lastCurrentIndex = selectedRow
+    }
+
+    function scheduleSelectionAlignment() {
+        if (selectionAlignmentPending) {
+            return
+        }
+        selectionAlignmentPending = true
+        Qt.callLater(() => {
+            selectionAlignmentPending = false
+            synchronizeCurrentIndexWithSelection()
+        })
+        selectionAlignmentTimer.restart()
+    }
+
+    function synchronizeCurrentIndexWithSelection() {
+        if (restoringIndex) {
+            return
+        }
+        alignCurrentIndexWithSelection()
+        rememberCurrentPath()
+        updateSelectedMediaPath()
     }
 
     function confirmTrashSelected() {
@@ -663,6 +745,7 @@ FocusScope {
                         return
                     }
                     root.lastCurrentIndex = value
+                    root.synchronizeCurrentIndexWithSelection()
                     root.rememberCurrentPath()
                 }
             }
@@ -827,8 +910,8 @@ FocusScope {
         function onSelectedPathsChanged() {
             root.selectionChanged(browserModel.selectedPaths)
             if (!root.restoringIndex) {
-                root.rememberCurrentPath()
-                root.updateSelectedMediaPath()
+                root.synchronizeCurrentIndexWithSelection()
+                root.scheduleSelectionAlignment()
             }
         }
         function onSelectedIsImageChanged() {
@@ -842,8 +925,10 @@ FocusScope {
             root.restoreCurrentIndex = root.pendingDeletionIndex >= 0
                 ? root.pendingDeletionIndex
                 : root.lastCurrentIndex
+            root.restoreAdjacentPath = root.adjacentPathForRow(root.restoreCurrentIndex)
             if (root.restoreCurrentIndex < 0 && root.lastSelectedPath === "") {
                 root.restoringIndex = false
+                root.restoreAdjacentPath = ""
             }
         }
         function onModelReset() {
