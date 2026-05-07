@@ -19,6 +19,8 @@ FocusRememberingScope {
     signal copyRightRequested()
     signal closeRequested()
     signal saveSucceeded(string message)
+    signal trashConfirmationRequested(int itemCount)
+    signal deleteConfirmationRequested(int itemCount)
     clip: true
 
     onBrowserChanged: {
@@ -83,6 +85,42 @@ FocusRememberingScope {
             return
         }
         event.accepted = false
+    }
+
+    function confirmTrashSelected() {
+        const paths = selectedPaths()
+        if (paths.length === 0) {
+            return
+        }
+        root.trashConfirmationRequested(paths.length)
+    }
+
+    function confirmDeleteSelectedPermanently() {
+        const paths = selectedPaths()
+        if (paths.length === 0) {
+            return
+        }
+        root.deleteConfirmationRequested(paths.length)
+    }
+
+    function selectedPaths() {
+        return browser && browser.selectedPaths ? browser.selectedPaths() : []
+    }
+
+    function trashSelected() {
+        return browser && browser.trashSelected
+            ? browser.trashSelected()
+            : { "ok": false, "error": "Trash not supported" }
+    }
+
+    function deleteSelectedPermanently() {
+        return browser && browser.deleteSelectedPermanently
+            ? browser.deleteSelectedPermanently()
+            : { "ok": false, "error": "Delete not supported" }
+    }
+
+    function removalSourcePane() {
+        return browser
     }
 
     Item {

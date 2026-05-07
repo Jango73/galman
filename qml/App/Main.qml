@@ -274,7 +274,7 @@ ApplicationWindow {
         if (!sourcePane) {
             return
         }
-        activeTrashSourcePane = sourcePane
+        activeTrashSourcePane = sourcePane.removalSourcePane ? sourcePane.removalSourcePane() : sourcePane
         activeTrashSourcePaths = sourcePane.selectedPaths()
         const result = moveToTrash ? sourcePane.trashSelected() : sourcePane.deleteSelectedPermanently()
         if (result && result.error) {
@@ -667,7 +667,8 @@ ApplicationWindow {
     Shortcut {
         sequences: ["Delete"]
         context: Qt.ApplicationShortcut
-        enabled: (leftBrowser.hasFocus || rightBrowser.hasFocus)
+        enabled: (leftBrowser.hasFocus || rightBrowser.hasFocus
+                || singlePreview.activeFocus || comparePreview.activeFocus)
             && !(leftBrowser.textInputActive || rightBrowser.textInputActive)
             && !confirmDialog.visible
         onActivated: {
@@ -677,6 +678,14 @@ ApplicationWindow {
             }
             if (rightBrowser.hasFocus) {
                 rightBrowser.confirmTrashSelected()
+                return
+            }
+            if (singlePreview.visible && singlePreview.activeFocus) {
+                singlePreview.confirmTrashSelected()
+                return
+            }
+            if (comparePreview.visible && comparePreview.activeFocus) {
+                comparePreview.confirmTrashSelected()
             }
         }
     }
@@ -684,7 +693,8 @@ ApplicationWindow {
     Shortcut {
         sequences: ["Shift+Delete"]
         context: Qt.ApplicationShortcut
-        enabled: (leftBrowser.hasFocus || rightBrowser.hasFocus)
+        enabled: (leftBrowser.hasFocus || rightBrowser.hasFocus
+                || singlePreview.activeFocus || comparePreview.activeFocus)
             && !(leftBrowser.textInputActive || rightBrowser.textInputActive)
             && !confirmDialog.visible
         onActivated: {
@@ -694,6 +704,14 @@ ApplicationWindow {
             }
             if (rightBrowser.hasFocus) {
                 rightBrowser.confirmDeleteSelectedPermanently()
+                return
+            }
+            if (singlePreview.visible && singlePreview.activeFocus) {
+                singlePreview.confirmDeleteSelectedPermanently()
+                return
+            }
+            if (comparePreview.visible && comparePreview.activeFocus) {
+                comparePreview.confirmDeleteSelectedPermanently()
             }
         }
     }
@@ -1119,6 +1137,22 @@ ApplicationWindow {
                 leftBrowser: leftBrowser
                 rightBrowser: rightBrowser
                 navigationBrowser: comparePreviewBrowser
+                onTrashConfirmationRequested: (count) => {
+                    confirmDialog.action = "trash"
+                    confirmDialog.sourcePane = comparePreview
+                    confirmDialog.targetPane = null
+                    confirmDialog.itemCount = count
+                    confirmDialog.directionText = ""
+                    confirmDialog.open()
+                }
+                onDeleteConfirmationRequested: (count) => {
+                    confirmDialog.action = "delete"
+                    confirmDialog.sourcePane = comparePreview
+                    confirmDialog.targetPane = null
+                    confirmDialog.itemCount = count
+                    confirmDialog.directionText = ""
+                    confirmDialog.open()
+                }
                 onCopyLeftRequested: triggerCopyRightToLeft()
                 onCopyRightRequested: triggerCopyLeftToRight()
                 onCloseRequested: {
@@ -1133,6 +1167,22 @@ ApplicationWindow {
         visible: singlePreviewEnabled && !compareModel.enabled
         panelBackground: window.panelBackground
         browser: singlePreviewBrowser
+        onTrashConfirmationRequested: (count) => {
+            confirmDialog.action = "trash"
+            confirmDialog.sourcePane = singlePreview
+            confirmDialog.targetPane = null
+            confirmDialog.itemCount = count
+            confirmDialog.directionText = ""
+            confirmDialog.open()
+        }
+        onDeleteConfirmationRequested: (count) => {
+            confirmDialog.action = "delete"
+            confirmDialog.sourcePane = singlePreview
+            confirmDialog.targetPane = null
+            confirmDialog.itemCount = count
+            confirmDialog.directionText = ""
+            confirmDialog.open()
+        }
         onCopyLeftRequested: triggerCopyRightToLeft()
         onCopyRightRequested: triggerCopyLeftToRight()
         onCloseRequested: {

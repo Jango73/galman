@@ -16,7 +16,52 @@ FocusRememberingScope {
     signal copyLeftRequested()
     signal copyRightRequested()
     signal closeRequested()
+    signal trashConfirmationRequested(int itemCount)
+    signal deleteConfirmationRequested(int itemCount)
     clip: true
+
+    function activeBrowser() {
+        return navigationBrowser ? navigationBrowser : leftBrowser
+    }
+
+    function confirmTrashSelected() {
+        const paths = selectedPaths()
+        if (paths.length === 0) {
+            return
+        }
+        root.trashConfirmationRequested(paths.length)
+    }
+
+    function confirmDeleteSelectedPermanently() {
+        const paths = selectedPaths()
+        if (paths.length === 0) {
+            return
+        }
+        root.deleteConfirmationRequested(paths.length)
+    }
+
+    function selectedPaths() {
+        const browser = activeBrowser()
+        return browser && browser.selectedPaths ? browser.selectedPaths() : []
+    }
+
+    function trashSelected() {
+        const browser = activeBrowser()
+        return browser && browser.trashSelected
+            ? browser.trashSelected()
+            : { "ok": false, "error": "Trash not supported" }
+    }
+
+    function deleteSelectedPermanently() {
+        const browser = activeBrowser()
+        return browser && browser.deleteSelectedPermanently
+            ? browser.deleteSelectedPermanently()
+            : { "ok": false, "error": "Delete not supported" }
+    }
+
+    function removalSourcePane() {
+        return activeBrowser()
+    }
 
     Keys.onPressed: (event) => {
         if ((event.modifiers & Qt.ControlModifier) !== 0) {
