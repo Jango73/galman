@@ -26,6 +26,7 @@
 #include <QMutexLocker>
 #include <QStandardPaths>
 #include <QTextStream>
+#include <QCoreApplication>
 #include <QDebug>
 #include <cstdlib>
 #include <cstdio>
@@ -126,11 +127,9 @@ void AppLogger::writeMessage(QtMsgType type, const QMessageLogContext &context, 
 
 QString AppLogger::resolveLogFolderPath() const
 {
-    QString path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (path.isEmpty()) {
-        path = QDir::home().filePath(".cache/Galman");
-    }
-    return path;
+    QString path = QCoreApplication::applicationDirPath() + QStringLiteral("/../log");
+    QDir dir(path);
+    return dir.absolutePath();
 }
 
 QString AppLogger::logFilePath(const QString &folderPath, int archiveIndex) const

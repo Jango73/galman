@@ -29,6 +29,7 @@
 
 #include "ApplicationVersion.h"
 #include "AppLogger.h"
+#include "BackupSystem.h"
 #include "FavoritePairsManager.h"
 #include "LanguageManager.h"
 #include "ScriptEngine.h"
@@ -68,10 +69,12 @@ int main(int argc, char *argv[])
     qInfo() << "Qt app initialized";
 
     QQmlApplicationEngine engine;
+    BackupSystem backupSystem;
     ScriptEngine scriptEngine;
     ScriptManager scriptManager;
     LanguageManager languageManager(&engine);
     FavoritePairsManager favoritePairsManager;
+    engine.rootContext()->setContextProperty("backupSystem", &backupSystem);
     engine.rootContext()->setContextProperty("scriptEngine", &scriptEngine);
     engine.rootContext()->setContextProperty("scriptManager", &scriptManager);
     engine.rootContext()->setContextProperty("languageManager", &languageManager);

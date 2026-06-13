@@ -30,6 +30,17 @@ This is an image gallery manager.
 - **QML signal handlers**: NEVER rely on implicit parameter injection (deprecated). Always declare formal parameters, e.g. `onPressed: (mouse) => { ... }`.
 - To mask menu items (when they should be inactive), donc just disable them, use Instantiator.
 
+## Logging Conventions
+- All logs go to `log/galman.log` in the project root, with rotation (`log/galman.log.1` .. `log/galman.log.9`).
+- Use `qInfo()` for general information logging (user actions, state changes).
+- Use `qWarning()` for recoverable issues (validation failures, missing resources).
+- Use `qCritical()` for errors that degrade functionality but don't crash.
+- Use `qDebug()` for verbose debug output (only active in debug builds).
+- Use `qInfo()` calls in C++ business methods so that QML signal chains can be verified in the log.
+- The `AppLogger` class handles file output and rotation automatically; no manual file management is needed.
+- Logs are written synchronously to both the file and stderr for real-time visibility.
+- Do NOT use `std::cout`, `printf`, or other ad-hoc output mechanisms.
+
 ## Release Procedure
 - Releases must follow Semantic Versioning (`major.minor.patch`).
 - Before creating a release, inspect the commits since the last tag:

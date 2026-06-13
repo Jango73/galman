@@ -50,6 +50,8 @@ Item {
     signal trashRequested()
     signal deleteRequested()
     signal backgroundClicked()
+    signal backupOperationFinished(string message)
+    signal backupOperationError(string message)
 
     Timer {
         id: scrollRelockTimer
@@ -440,16 +442,43 @@ Item {
                 }
             }
 
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: (eventPoint) => {
+                    const idx = grid.indexAt(
+                        eventPoint.position.x + grid.contentX,
+                        eventPoint.position.y + grid.contentY
+                    )
+                    if (idx < 0) {
+                        const container = backgroundContextMenu.parent
+                            ? backgroundContextMenu.parent : root
+                        const point = mapToItem(container, eventPoint.position.x, eventPoint.position.y)
+                        backgroundContextMenu.x = point.x
+                        backgroundContextMenu.y = point.y
+                        backgroundContextMenu.open()
+                    }
+                }
+            }
+
             MouseArea {
                 id: emptyGridFocusArea
                 anchors.fill: parent
                 visible: grid.count === 0
                 enabled: visible
-                acceptedButtons: Qt.LeftButton
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 z: 2
                 onPressed: (mouse) => {
-                    root.backgroundClicked()
-                    grid.forceActiveFocus()
+                    if (mouse.button === Qt.RightButton) {
+                        const container = backgroundContextMenu.parent
+                            ? backgroundContextMenu.parent : root
+                        const point = mapToItem(container, mouse.x, mouse.y)
+                        backgroundContextMenu.x = point.x
+                        backgroundContextMenu.y = point.y
+                        backgroundContextMenu.open()
+                    } else {
+                        root.backgroundClicked()
+                        grid.forceActiveFocus()
+                    }
                     mouse.accepted = true
                 }
             }
@@ -584,6 +613,42 @@ Item {
         }
 
         Menu {
+            id: backgroundContextMenu
+            parent: Window.window ? Window.window.contentItem : root
+            property real menuContentWidth: implicitWidth
+
+            function updateMenuWidth() {
+                let widest = implicitWidth
+                for (let i = 0; i < count; i += 1) {
+                    const item = itemAt(i)
+                    if (item) {
+                        widest = Math.max(widest, item.implicitWidth)
+                    }
+                }
+                menuContentWidth = widest
+            }
+
+            width: menuContentWidth
+            onAboutToShow: updateMenuWidth()
+
+            MenuItem {
+                text: qsTr("Create backup folder")
+                onTriggered: {
+                    if (!root.browserModel) {
+                        root.backupOperationError(qsTr("No folder selected"))
+                        return
+                    }
+                    const created = backupSystem.createBackupFolder(root.browserModel.rootPath)
+                    if (created) {
+                        root.backupOperationFinished(qsTr("Backup folder created"))
+                    } else {
+                        root.backupOperationError(qsTr("Failed to create backup folder"))
+                    }
+                }
+            }
+        }
+
+        Menu {
             id: contextMenu
             parent: Window.window ? Window.window.contentItem : root
             property real menuContentWidth: implicitWidth
@@ -679,6 +744,76 @@ Item {
                 delegate: MenuItem {
                     text: qsTr("Delete permanently")
                     onTriggered: root.deleteRequested()
+                }
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+            }
+
+            Instantiator {
+                id: backupFileFactory
+                active: root.selectedCount === 1 && root.contextMenuIndex >= 0
+                    && root.browserModel && root.browserModel.isDir
+                    && !root.browserModel.isDir(root.contextMenuIndex)
+                delegate: MenuItem {
+                    text: qsTr("Backup file")
+                    onTriggered: {
+                        const path = root.browserModel
+                            ? root.browserModel.pathForRow(root.contextMenuIndex)
+                            : ""
+                        if (!path) {
+                            root.backupOperationError(qsTr("No file selected"))
+                            return
+                        }
+                        const destPath = backupSystem.backupFile(path)
+                        const fileName = path.split("/").pop()
+                        if (destPath) {
+                            const destName = destPath.split("/").pop()
+                            root.backupOperationFinished(qsTr("%1 backed up to %2").arg(fileName).arg(destName))
+                        } else {
+                            root.backupOperationError(qsTr("Failed to back up %1").arg(fileName))
+                        }
+                    }
+                }
+                onObjectAdded: (index, object) => {
+                    contextMenu.addItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+                onObjectRemoved: (index, object) => {
+                    contextMenu.removeItem(object)
+                    contextMenu.updateMenuWidth()
+                }
+            }
+
+            Instantiator {
+                id: restoreFileFactory
+                active: root.selectedCount === 1 && root.contextMenuIndex >= 0
+                    && root.browserModel && root.browserModel.isDir
+                    && !root.browserModel.isDir(root.contextMenuIndex)
+                delegate: MenuItem {
+                    text: qsTr("Restore file")
+                    onTriggered: {
+                        const path = root.browserModel
+                            ? root.browserModel.pathForRow(root.contextMenuIndex)
+                            : ""
+                        if (!path) {
+                            root.backupOperationError(qsTr("No file selected"))
+                            return
+                        }
+                        const backupPath = backupSystem.restoreFile(path)
+                        const fileName = path.split("/").pop()
+                        if (backupPath) {
+                            const backupName = backupPath.split("/").pop()
+                            root.backupOperationFinished(qsTr("%1 restored from %2").arg(fileName).arg(backupName))
+                        } else {
+                            root.backupOperationError(qsTr("No backup found for %1").arg(fileName))
+                        }
+                    }
                 }
                 onObjectAdded: (index, object) => {
                     contextMenu.addItem(object)

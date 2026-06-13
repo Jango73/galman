@@ -740,6 +740,8 @@ FocusScope {
                 onRenameRequested: (path) => root.requestRenamePath(path)
                 onTrashRequested: root.confirmTrashSelected()
                 onDeleteRequested: root.confirmDeleteSelectedPermanently()
+                onBackupOperationFinished: (message) => root.renameSucceeded(message)
+                onBackupOperationError: (message) => root.errorRaised(message)
                 onCurrentIndexUpdated: (value) => {
                     if (root.restoringIndex) {
                         return
