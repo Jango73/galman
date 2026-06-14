@@ -97,6 +97,7 @@ qt_add_qml_module(galman
         qml/Components/Placeholder.qml
         qml/Components/ConfirmDialog.qml
         qml/Components/RenameDialog.qml
+        qml/Components/CreateFolderDialog.qml
         qml/Components/AboutDialog.qml
         qml/Components/ShortcutsDialog.qml
         qml/Components/StatusBadge.qml

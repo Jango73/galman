@@ -1,0 +1,68 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Controls.Material 2.15
+import QtQuick.Layouts 1.15
+import Galman 1.0
+
+Dialog {
+    id: dialog
+    modal: true
+    Material.theme: Material.Dark
+    Material.primary: Material.Blue
+    Material.accent: Material.DeepOrange
+    Overlay.modal: Rectangle {
+        color: Theme.modalOverlayColor
+    }
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    title: qsTr("Create folder")
+    property string parentPath: ""
+    signal createFolderConfirmed(string parentPath, string folderName)
+    x: Math.round(((dialog.parent ? dialog.parent.width : 0) - width) / 2)
+    y: Math.round(((dialog.parent ? dialog.parent.height : 0) - height) / 2)
+    focus: true
+    onOpened: {
+        nameField.text = ""
+        nameField.forceActiveFocus()
+    }
+
+    Shortcut {
+        sequences: ["Return", "Enter"]
+        enabled: dialog.visible
+        context: Qt.WindowShortcut
+        onActivated: dialog.accept()
+    }
+
+    onAccepted: {
+        dialog.createFolderConfirmed(parentPath, nameField.text)
+    }
+
+    contentItem: Item {
+        id: contentRoot
+        focus: true
+
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape) {
+                dialog.reject()
+                event.accepted = true
+            }
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Theme.spaceSm
+
+            Label {
+                text: qsTr("Parent: %1").arg(dialog.parentPath)
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            TextField {
+                id: nameField
+                text: ""
+                placeholderText: qsTr("Folder name")
+                Layout.fillWidth: true
+            }
+        }
+    }
+}

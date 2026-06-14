@@ -653,6 +653,14 @@ FocusScope {
         renameDialog.open()
     }
 
+    function requestCreateFolder(path) {
+        if (!browserModel || !path) {
+            return
+        }
+        createFolderDialog.parentPath = path
+        createFolderDialog.open()
+    }
+
     Shortcut {
         sequences: ["F5"]
         context: Qt.ApplicationShortcut
@@ -738,6 +746,7 @@ FocusScope {
                     }
                 }
                 onRenameRequested: (path) => root.requestRenamePath(path)
+                onCreateFolderRequested: (path) => root.requestCreateFolder(path)
                 onTrashRequested: root.confirmTrashSelected()
                 onDeleteRequested: root.confirmDeleteSelectedPermanently()
                 onBackupOperationFinished: (message) => root.renameSucceeded(message)
@@ -771,6 +780,25 @@ FocusScope {
             }
             const targetName = result.newPath ? baseNameFromPath(result.newPath) : newName
             renameSucceeded(qsTr("Renamed to %1").arg(targetName))
+        }
+    }
+
+    CreateFolderDialog {
+        id: createFolderDialog
+        parent: root.Window.window ? root.Window.window.contentItem : null
+        onCreateFolderConfirmed: (parentPath, folderName) => {
+            if (!browserModel || !browserModel.createFolder) {
+                const fallbackError = qsTr("Create folder failed")
+                root.errorRaised(fallbackError)
+                return
+            }
+            const created = browserModel.createFolder(parentPath, folderName)
+            if (created) {
+                browserModel.refresh()
+                root.renameSucceeded(qsTr("Folder created"))
+            } else {
+                root.errorRaised(qsTr("Failed to create folder"))
+            }
         }
     }
 

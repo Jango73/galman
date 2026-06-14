@@ -23,6 +23,7 @@
 
 #include <QCollator>
 #include <QCoreApplication>
+#include <QDir>
 #include <QDateTime>
 #include <QDir>
 #include <QEventLoop>
@@ -1440,6 +1441,18 @@ QVariantMap FolderBrowserModel::renamePath(const QString &path, const QString &n
     result.insert("ok", true);
     result.insert("newPath", targetPath);
     return result;
+}
+
+bool FolderBrowserModel::createFolder(const QString &parentPath, const QString &folderName)
+{
+    if (parentPath.isEmpty() || folderName.isEmpty()) {
+        return false;
+    }
+    QDir dir(parentPath);
+    if (!dir.exists()) {
+        return false;
+    }
+    return dir.mkdir(folderName);
 }
 
 /**

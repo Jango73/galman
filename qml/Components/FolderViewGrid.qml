@@ -47,6 +47,7 @@ Item {
     signal contentYUpdated(real value)
     signal currentIndexUpdated(int value)
     signal renameRequested(string path)
+    signal createFolderRequested(string path)
     signal trashRequested()
     signal deleteRequested()
     signal backgroundClicked()
@@ -630,6 +631,17 @@ Item {
 
             width: menuContentWidth
             onAboutToShow: updateMenuWidth()
+
+            MenuItem {
+                text: qsTr("Create folder")
+                onTriggered: {
+                    if (!root.browserModel) {
+                        root.backupOperationError(qsTr("No folder selected"))
+                        return
+                    }
+                    root.createFolderRequested(root.browserModel.rootPath)
+                }
+            }
 
             MenuItem {
                 text: qsTr("Create backup folder")
