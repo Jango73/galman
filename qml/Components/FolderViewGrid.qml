@@ -785,8 +785,7 @@ Item {
                         const destPath = backupSystem.backupFile(path)
                         const fileName = path.split("/").pop()
                         if (destPath) {
-                            const destName = destPath.split("/").pop()
-                            root.backupOperationFinished(qsTr("%1 backed up to %2").arg(fileName).arg(destName))
+                            root.backupOperationFinished(qsTr("%1 backed up to %2").arg(fileName).arg(destPath))
                         } else {
                             root.backupOperationError(qsTr("Failed to back up %1").arg(fileName))
                         }
