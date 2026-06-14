@@ -649,7 +649,8 @@ FocusScope {
             return
         }
         renameDialog.sourcePath = path
-        renameDialog.currentName = baseNameFromPath(path)
+        renameDialog.currentText = baseNameFromPath(path)
+        renameDialog.description = qsTr("Current: %1").arg(baseNameFromPath(path))
         renameDialog.open()
     }
 
@@ -658,6 +659,8 @@ FocusScope {
             return
         }
         createFolderDialog.parentPath = path
+        createFolderDialog.currentText = ""
+        createFolderDialog.description = qsTr("Parent: %1").arg(path)
         createFolderDialog.open()
     }
 
@@ -763,10 +766,15 @@ FocusScope {
         }
     }
 
-    RenameDialog {
+    InputDialog {
         id: renameDialog
         parent: root.Window.window ? root.Window.window.contentItem : null
-        onRenameConfirmed: (path, newName) => {
+        property string sourcePath: ""
+        titleText: qsTr("Rename")
+        placeholderText: qsTr("New name")
+        selectAllOnOpen: true
+        onTextAccepted: (newName) => {
+            const path = renameDialog.sourcePath
             if (!browserModel || !browserModel.renamePath) {
                 const fallbackError = qsTr("Rename failed")
                 root.errorRaised(fallbackError)
@@ -783,16 +791,20 @@ FocusScope {
         }
     }
 
-    CreateFolderDialog {
+    InputDialog {
         id: createFolderDialog
         parent: root.Window.window ? root.Window.window.contentItem : null
-        onCreateFolderConfirmed: (parentPath, folderName) => {
+        property string parentPath: ""
+        titleText: qsTr("Create folder")
+        placeholderText: qsTr("Folder name")
+        onTextAccepted: (folderName) => {
+            const path = createFolderDialog.parentPath
             if (!browserModel || !browserModel.createFolder) {
                 const fallbackError = qsTr("Create folder failed")
                 root.errorRaised(fallbackError)
                 return
             }
-            const created = browserModel.createFolder(parentPath, folderName)
+            const created = browserModel.createFolder(path, folderName)
             if (created) {
                 browserModel.refresh()
                 root.renameSucceeded(qsTr("Folder created"))
