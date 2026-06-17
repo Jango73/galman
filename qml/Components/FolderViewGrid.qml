@@ -702,6 +702,7 @@ Item {
                 enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
                     && root.browserModel && root.browserModel.isDir
                     && !root.browserModel.isDir(root.contextMenuIndex)
+                    && backupSystem.hasBackupFolder(root.browserModel.rootPath)
                 onTriggered: {
                     const path = root.browserModel
                         ? root.browserModel.pathForRow(root.contextMenuIndex)

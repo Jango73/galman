@@ -116,6 +116,11 @@ bool BackupSystem::createBackupFolder(const QString &directoryPath)
     return ok;
 }
 
+bool BackupSystem::hasBackupFolder(const QString &directoryPath) const
+{
+    return !findBackupDirectory(directoryPath).isEmpty();
+}
+
 bool BackupSystem::hasBackup(const QString &filePath) const
 {
     qInfo() << "hasBackup:" << filePath;
