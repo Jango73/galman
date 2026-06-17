@@ -28,7 +28,7 @@ This is an image gallery manager.
 - All General Coding Conventions items apply
 - **UI only**: No heavy business logic in QML, leave that to C++.
 - **QML signal handlers**: NEVER rely on implicit parameter injection (deprecated). Always declare formal parameters, e.g. `onPressed: (mouse) => { ... }`.
-- To mask menu items (when they should be inactive), donc just disable them, use Instantiator.
+- To mask menu items when they should be inactive, do not use Instantiator. Use `enabled` to disable them.
 
 ## Logging Conventions
 - All logs go to `log/galman.log` in the project root, with rotation (`log/galman.log.1` .. `log/galman.log.9`).
@@ -40,6 +40,9 @@ This is an image gallery manager.
 - The `AppLogger` class handles file output and rotation automatically; no manual file management is needed.
 - Logs are written synchronously to both the file and stderr for real-time visibility.
 - Do NOT use `std::cout`, `printf`, or other ad-hoc output mechanisms.
+
+## Build
+- Use `scripts/linux/build.sh` to build, whether in debug or release mode.
 
 ## Release Procedure
 - Releases must follow Semantic Versioning (`major.minor.patch`).

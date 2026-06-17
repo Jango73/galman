@@ -663,176 +663,84 @@ Item {
         Menu {
             id: contextMenu
             parent: Window.window ? Window.window.contentItem : root
-            property real menuContentWidth: implicitWidth
 
-            function updateMenuWidth() {
-                let widest = implicitWidth
-                for (let i = 0; i < count; i += 1) {
-                    const item = itemAt(i)
-                    if (item) {
-                        widest = Math.max(widest, item.implicitWidth)
+            MenuItem {
+                text: qsTr("Rename")
+                enabled: root.selectedCount === 1
+                onTriggered: {
+                    if (!root.browserModel || !root.browserModel.pathForRow) {
+                        return
+                    }
+                    const path = root.browserModel.pathForRow(root.contextMenuIndex)
+                    if (path) {
+                        root.renameRequested(path)
                     }
                 }
-                menuContentWidth = widest
             }
-
-            width: menuContentWidth
-            onAboutToShow: updateMenuWidth()
-            Instantiator {
-                id: renameFactory
-                active: root.selectedCount === 1
-                delegate: MenuItem {
-                    text: qsTr("Rename")
-                    onTriggered: {
-                        if (!root.browserModel || !root.browserModel.pathForRow) {
-                            return
-                        }
-                        const path = root.browserModel.pathForRow(root.contextMenuIndex)
-                        if (path) {
-                            root.renameRequested(path)
-                        }
-                    }
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
-                }
+            MenuItem {
+                text: qsTr("Copy to other pane")
+                enabled: root.selectedCount > 0
+                onTriggered: root.copyOtherRequested()
             }
-            Instantiator {
-                id: copyOtherFactory
-                active: root.selectedCount > 0
-                delegate: MenuItem {
-                    text: qsTr("Copy to other pane")
-                    onTriggered: root.copyOtherRequested()
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
-                }
+            MenuItem {
+                text: qsTr("Move to other pane")
+                enabled: root.selectedCount > 0
+                onTriggered: root.moveOtherRequested()
             }
-            Instantiator {
-                id: moveOtherFactory
-                active: root.selectedCount > 0
-                delegate: MenuItem {
-                    text: qsTr("Move to other pane")
-                    onTriggered: root.moveOtherRequested()
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
-                }
+            MenuItem {
+                text: qsTr("Move to trash")
+                enabled: root.selectedCount > 0
+                onTriggered: root.trashRequested()
             }
-            Instantiator {
-                id: trashFactory
-                active: root.selectedCount > 0
-                delegate: MenuItem {
-                    text: qsTr("Move to trash")
-                    onTriggered: root.trashRequested()
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
-                }
+            MenuItem {
+                text: qsTr("Delete permanently")
+                enabled: root.selectedCount > 0
+                onTriggered: root.deleteRequested()
             }
-            Instantiator {
-                id: deleteFactory
-                active: root.selectedCount > 0
-                delegate: MenuItem {
-                    text: qsTr("Delete permanently")
-                    onTriggered: root.deleteRequested()
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-            }
-
-            Instantiator {
-                id: backupFileFactory
-                active: root.selectedCount === 1 && root.contextMenuIndex >= 0
+            MenuItem {
+                text: qsTr("Backup file")
+                enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
                     && root.browserModel && root.browserModel.isDir
                     && !root.browserModel.isDir(root.contextMenuIndex)
-                delegate: MenuItem {
-                    text: qsTr("Backup file")
-                    onTriggered: {
-                        const path = root.browserModel
-                            ? root.browserModel.pathForRow(root.contextMenuIndex)
-                            : ""
-                        if (!path) {
-                            root.backupOperationError(qsTr("No file selected"))
-                            return
-                        }
-                        const destPath = backupSystem.backupFile(path)
-                        const fileName = path.split("/").pop()
-                        if (destPath) {
-                            root.backupOperationFinished(qsTr("%1 backed up to %2").arg(fileName).arg(destPath))
-                        } else {
-                            root.backupOperationError(qsTr("Failed to back up %1").arg(fileName))
-                        }
+                onTriggered: {
+                    const path = root.browserModel
+                        ? root.browserModel.pathForRow(root.contextMenuIndex)
+                        : ""
+                    if (!path) {
+                        root.backupOperationError(qsTr("No file selected"))
+                        return
                     }
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
+                    const destPath = backupSystem.backupFile(path)
+                    const fileName = path.split("/").pop()
+                    if (destPath) {
+                        root.backupOperationFinished(qsTr("%1 backed up to %2").arg(fileName).arg(destPath))
+                    } else {
+                        root.backupOperationError(qsTr("Failed to back up %1").arg(fileName))
+                    }
                 }
             }
-
-            Instantiator {
-                id: restoreFileFactory
-                active: root.selectedCount === 1 && root.contextMenuIndex >= 0
+            MenuItem {
+                text: qsTr("Restore file")
+                enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
                     && root.browserModel && root.browserModel.isDir
                     && !root.browserModel.isDir(root.contextMenuIndex)
-                delegate: MenuItem {
-                    text: qsTr("Restore file")
-                    onTriggered: {
-                        const path = root.browserModel
-                            ? root.browserModel.pathForRow(root.contextMenuIndex)
-                            : ""
-                        if (!path) {
-                            root.backupOperationError(qsTr("No file selected"))
-                            return
-                        }
-                        const backupPath = backupSystem.restoreFile(path)
-                        const fileName = path.split("/").pop()
-                        if (backupPath) {
-                            const backupName = backupPath.split("/").pop()
-                            root.backupOperationFinished(qsTr("%1 restored from %2").arg(fileName).arg(backupName))
-                        } else {
-                            root.backupOperationError(qsTr("No backup found for %1").arg(fileName))
-                        }
+                    && backupSystem.hasBackup(root.browserModel.pathForRow(root.contextMenuIndex))
+                onTriggered: {
+                    const path = root.browserModel
+                        ? root.browserModel.pathForRow(root.contextMenuIndex)
+                        : ""
+                    if (!path) {
+                        root.backupOperationError(qsTr("No file selected"))
+                        return
                     }
-                }
-                onObjectAdded: (index, object) => {
-                    contextMenu.addItem(object)
-                    contextMenu.updateMenuWidth()
-                }
-                onObjectRemoved: (index, object) => {
-                    contextMenu.removeItem(object)
-                    contextMenu.updateMenuWidth()
+                    const backupPath = backupSystem.restoreFile(path)
+                    const fileName = path.split("/").pop()
+                    if (backupPath) {
+                        const backupName = backupPath.split("/").pop()
+                        root.backupOperationFinished(qsTr("%1 restored from %2").arg(fileName).arg(backupName))
+                    } else {
+                        root.backupOperationError(qsTr("No backup found for %1").arg(fileName))
+                    }
                 }
             }
         }

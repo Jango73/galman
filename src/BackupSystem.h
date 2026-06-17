@@ -14,6 +14,7 @@ public:
 
     Q_INVOKABLE QString findBackupDirectory(const QString &directoryPath) const;
     Q_INVOKABLE bool createBackupFolder(const QString &directoryPath);
+    Q_INVOKABLE bool hasBackup(const QString &filePath) const;
     Q_INVOKABLE QString backupFile(const QString &filePath);
     Q_INVOKABLE QString restoreFile(const QString &filePath);
 

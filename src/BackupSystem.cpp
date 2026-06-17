@@ -116,6 +116,32 @@ bool BackupSystem::createBackupFolder(const QString &directoryPath)
     return ok;
 }
 
+bool BackupSystem::hasBackup(const QString &filePath) const
+{
+    qInfo() << "hasBackup:" << filePath;
+    QFileInfo fileInfo(filePath);
+    if (!fileInfo.exists()) {
+        qInfo() << "hasBackup: source does not exist";
+        return false;
+    }
+
+    QString backupDirectory = findBackupDirectory(fileInfo.absolutePath());
+    if (backupDirectory.isEmpty()) {
+        qInfo() << "hasBackup: no backup directory found";
+        return false;
+    }
+
+    QString backupRootParent = QFileInfo(backupDirectory).path();
+    QDir backupRootParentDir(backupRootParent);
+    QString relativePath = backupRootParentDir.relativeFilePath(fileInfo.absolutePath());
+
+    QString baseName = fileInfo.fileName();
+    int highest = highestBackupIndex(backupDirectory, relativePath, baseName);
+
+    qInfo() << "hasBackup: highest index:" << highest;
+    return highest >= 0;
+}
+
 QString BackupSystem::backupFile(const QString &filePath)
 {
     qInfo() << "backupFile:" << filePath;
