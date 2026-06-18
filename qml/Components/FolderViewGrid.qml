@@ -355,7 +355,8 @@ Item {
                     }
                 }
 
-                const current = root.effectiveCurrentIndex()
+                const gridPos = grid.currentIndex >= 0 ? grid.currentIndex : 0
+                const current = hasShift ? gridPos : root.effectiveCurrentIndex()
                 let next = current
 
                 if (event.key === Qt.Key_Left) {
@@ -398,6 +399,7 @@ Item {
                     if (root.browserModel) {
                         if (event.modifiers & Qt.ControlModifier) {
                             root.browserModel.select(current, true)
+                            root.anchorIndex = current
                         } else {
                             root.browserModel.select(current, false)
                             root.anchorIndex = current
@@ -413,7 +415,7 @@ Item {
                 if (root.browserModel) {
                     if (hasShift) {
                         if (root.anchorIndex < 0) {
-                            root.anchorIndex = current
+                            root.anchorIndex = gridPos
                         }
                         root.browserModel.setSelectionRange(root.anchorIndex, next, hasCtrl)
                     } else if (!hasCtrl) {
