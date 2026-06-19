@@ -538,6 +538,16 @@ ApplicationWindow {
         Menu {
             title: qsTr("File")
             MenuItem {
+                text: qsTr("Settings...")
+                onTriggered: {
+                    const model = leftBrowser.browserModel
+                    if (model && model.junkExtensionsString) {
+                        settingsDialog.setInitialJunkText(model.junkExtensionsString())
+                    }
+                    settingsDialog.open()
+                }
+            }
+            MenuItem {
                 text: qsTr("Quit")
                 onTriggered: Qt.quit()
             }
@@ -1310,5 +1320,18 @@ ApplicationWindow {
     ShortcutsDialog {
         id: shortcutsDialog
         parent: window.contentItem
+    }
+
+    SettingsDialog {
+        id: settingsDialog
+        parent: window.contentItem
+        onAccepted: {
+            const model = leftBrowser.browserModel
+            if (model && model.setJunkExtensionsList) {
+                model.setJunkExtensionsList(settingsDialog.junkExtensionsInput)
+            }
+            leftBrowser.refresh()
+            rightBrowser.refresh()
+        }
     }
 }

@@ -817,6 +817,8 @@ FocusScope {
     }
 
 
+
+
     Connections {
         target: browserModel
         function onCopyFinished(result) {

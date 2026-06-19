@@ -264,12 +264,9 @@ void FolderCompareSideModel::setSortOrder(Qt::SortOrder order)
  */
 static QStringList junkExtensions()
 {
-    static const QStringList extensions = []() {
-        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
-        return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
-            .toString().split(',', Qt::SkipEmptyParts);
-    }();
-    return extensions;
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
+        .toString().split(',', Qt::SkipEmptyParts);
 }
 
 /**

@@ -98,6 +98,7 @@ qt_add_qml_module(galman
         qml/Components/ConfirmDialog.qml
         qml/Components/InputDialog.qml
         qml/Components/AboutDialog.qml
+        qml/Components/SettingsDialog.qml
         qml/Components/ShortcutsDialog.qml
         qml/Components/StatusBadge.qml
     RESOURCES

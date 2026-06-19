@@ -360,12 +360,29 @@ bool FolderBrowserModel::showDirsFirst() const
  */
 QStringList FolderBrowserModel::junkExtensions()
 {
-    static const QStringList extensions = []() {
-        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
-        return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
-            .toString().split(',', Qt::SkipEmptyParts);
-    }();
-    return extensions;
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
+        .toString().split(',', Qt::SkipEmptyParts);
+}
+
+/**
+ * @brief Returns junk extensions as a comma-separated string.
+ * @return Comma-separated extension list for QML access.
+ */
+QString FolderBrowserModel::junkExtensionsString() const
+{
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1").toString();
+}
+
+/**
+ * @brief Sets the junk extensions list from a comma-separated string.
+ * @param extensions Comma-separated list of extensions (e.g. ".jpg~,.png~,.blend1").
+ */
+void FolderBrowserModel::setJunkExtensionsList(const QString &extensions)
+{
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    settings.setValue("junkFiles/extensions", extensions);
 }
 
 /**

@@ -96,6 +96,8 @@ public:
     qint64 minimumByteSize() const;
 
     static QStringList junkExtensions();
+    Q_INVOKABLE QString junkExtensionsString() const;
+    Q_INVOKABLE void setJunkExtensionsList(const QString &extensions);
     void setMinimumByteSize(qint64 value);
     qint64 maximumByteSize() const;
     void setMaximumByteSize(qint64 value);
