@@ -27,6 +27,7 @@ FocusScope {
     signal sortKeyChangedByUser(int sortKey)
     signal sortOrderChangedByUser(int sortOrder)
     signal dirsFirstChangedByUser(bool enabled)
+    signal hideJunkFilesChangedByUser(bool enabled)
     signal nameFilterChangedByUser(string filter)
     signal minimumByteSizeChangedByUser(int value)
     signal maximumByteSizeChangedByUser(int value)
@@ -713,6 +714,7 @@ FocusScope {
                 onSortKeyChangedByUser: (sortKey) => root.sortKeyChangedByUser(sortKey)
                 onSortOrderChangedByUser: (sortOrder) => root.sortOrderChangedByUser(sortOrder)
                 onDirsFirstChangedByUser: (enabled) => root.dirsFirstChangedByUser(enabled)
+                onHideJunkFilesChangedByUser: (enabled) => root.hideJunkFilesChangedByUser(enabled)
                 onNameFilterChangedByUser: (filter) => root.nameFilterChangedByUser(filter)
                 onMinimumByteSizeChangedByUser: (value) => root.minimumByteSizeChangedByUser(value)
                 onMaximumByteSizeChangedByUser: (value) => root.maximumByteSizeChangedByUser(value)
@@ -895,6 +897,11 @@ FocusScope {
                 sortBar.dirsFirstBox.checked = browserModel.showDirsFirst
             }
         }
+        function onHideJunkFilesChanged() {
+            if (sortBar.hideJunkBox.checked !== browserModel.hideJunkFiles) {
+                sortBar.hideJunkBox.checked = browserModel.hideJunkFiles
+            }
+        }
         function onNameFilterChanged() {
             if (sortBar.nameFilterField.text !== browserModel.nameFilter) {
                 sortBar.nameFilterField.text = browserModel.nameFilter
@@ -985,6 +992,7 @@ FocusScope {
         sortBar.sortCombo.currentIndex = browserModel.sortKey
         sortBar.sortOrderBox.checked = browserModel.sortOrder === Qt.DescendingOrder
         sortBar.dirsFirstBox.checked = browserModel.showDirsFirst
+        sortBar.hideJunkBox.checked = browserModel.hideJunkFiles
         sortBar.nameFilterField.text = browserModel.nameFilter
         sortBar.minimumByteSizeField.text = browserModel.minimumByteSize < 0 ? "" : String(browserModel.minimumByteSize)
         sortBar.maximumByteSizeField.text = browserModel.maximumByteSize < 0 ? "" : String(browserModel.maximumByteSize)

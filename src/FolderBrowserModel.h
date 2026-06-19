@@ -28,6 +28,7 @@ class FolderBrowserModel : public QAbstractListModel
     Q_PROPERTY(SortKey sortKey READ sortKey WRITE setSortKey NOTIFY sortKeyChanged)
     Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
     Q_PROPERTY(bool showDirsFirst READ showDirsFirst WRITE setShowDirsFirst NOTIFY showDirsFirstChanged)
+    Q_PROPERTY(bool hideJunkFiles READ hideJunkFiles WRITE setHideJunkFiles NOTIFY hideJunkFilesChanged)
     Q_PROPERTY(qint64 minimumByteSize READ minimumByteSize WRITE setMinimumByteSize NOTIFY minimumByteSizeChanged)
     Q_PROPERTY(qint64 maximumByteSize READ maximumByteSize WRITE setMaximumByteSize NOTIFY maximumByteSizeChanged)
     Q_PROPERTY(int minimumImageWidth READ minimumImageWidth WRITE setMinimumImageWidth NOTIFY minimumImageWidthChanged)
@@ -90,7 +91,11 @@ public:
 
     bool showDirsFirst() const;
     void setShowDirsFirst(bool enabled);
+    bool hideJunkFiles() const;
+    void setHideJunkFiles(bool enabled);
     qint64 minimumByteSize() const;
+
+    static QStringList junkExtensions();
     void setMinimumByteSize(qint64 value);
     qint64 maximumByteSize() const;
     void setMaximumByteSize(qint64 value);
@@ -158,6 +163,7 @@ signals:
     void sortKeyChanged();
     void sortOrderChanged();
     void showDirsFirstChanged();
+    void hideJunkFilesChanged();
     void minimumByteSizeChanged();
     void maximumByteSizeChanged();
     void minimumImageWidthChanged();
@@ -211,6 +217,7 @@ private:
     SortKey m_sortKey = Name;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
     bool m_showDirsFirst = true;
+    bool m_hideJunkFiles = true;
     qint64 m_minimumByteSize = -1;
     qint64 m_maximumByteSize = -1;
     int m_minimumImageWidth = -1;

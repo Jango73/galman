@@ -87,6 +87,7 @@ ApplicationWindow {
         target.browserModel.sortKey = source.browserModel.sortKey
         target.browserModel.sortOrder = source.browserModel.sortOrder
         target.browserModel.showDirsFirst = source.browserModel.showDirsFirst
+        target.browserModel.hideJunkFiles = source.browserModel.hideJunkFiles
         target.browserModel.nameFilter = source.browserModel.nameFilter
         target.browserModel.minimumByteSize = source.browserModel.minimumByteSize
         target.browserModel.maximumByteSize = source.browserModel.maximumByteSize
@@ -920,6 +921,7 @@ ApplicationWindow {
                 onSortKeyChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onSortOrderChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onDirsFirstChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
+                onHideJunkFilesChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onNameFilterChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onMinimumByteSizeChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onMaximumByteSizeChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
@@ -1071,6 +1073,7 @@ ApplicationWindow {
                 onSortKeyChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onSortOrderChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onDirsFirstChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
+                onHideJunkFilesChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onNameFilterChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onMinimumByteSizeChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onMaximumByteSizeChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)

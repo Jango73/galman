@@ -11,6 +11,7 @@ ColumnLayout {
     property alias refreshButton: refreshButton
     property alias sortOrderBox: sortOrderBox
     property alias dirsFirstBox: dirsFirstBox
+    property alias hideJunkBox: hideJunkBox
     property alias nameFilterField: nameFilterField
     property alias minimumByteSizeField: minimumByteSizeField
     property alias maximumByteSizeField: maximumByteSizeField
@@ -32,6 +33,7 @@ ColumnLayout {
     signal sortKeyChangedByUser(int sortKey)
     signal sortOrderChangedByUser(int sortOrder)
     signal dirsFirstChangedByUser(bool enabled)
+    signal hideJunkFilesChangedByUser(bool enabled)
     signal nameFilterChangedByUser(string filter)
     signal minimumByteSizeChangedByUser(int value)
     signal maximumByteSizeChangedByUser(int value)
@@ -136,12 +138,26 @@ ColumnLayout {
             id: dirsFirstBox
             text: qsTr("Folders first")
             KeyNavigation.backtab: sortOrderBox
-            KeyNavigation.tab: nameFilterField
+            KeyNavigation.tab: hideJunkBox
             onToggled: (checked) => {
                 if (root.browserModel) {
                     root.browserModel.showDirsFirst = checked
                 }
                 root.dirsFirstChangedByUser(checked)
+            }
+        }
+
+        CheckBox {
+            id: hideJunkBox
+            text: qsTr("Hide junk files")
+            KeyNavigation.backtab: dirsFirstBox
+            KeyNavigation.tab: nameFilterField
+            checked: true
+            onToggled: (checked) => {
+                if (root.browserModel) {
+                    root.browserModel.hideJunkFiles = checked
+                }
+                root.hideJunkFilesChangedByUser(checked)
             }
         }
 
@@ -170,7 +186,7 @@ ColumnLayout {
             placeholderText: qsTr("Name")
             Layout.preferredWidth: Theme.filterNameFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled
-            KeyNavigation.backtab: dirsFirstBox
+            KeyNavigation.backtab: hideJunkBox
             KeyNavigation.tab: minimumByteSizeField
             onTextChanged: {
                 if (root.browserModel) {

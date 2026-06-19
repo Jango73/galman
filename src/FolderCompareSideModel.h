@@ -25,6 +25,7 @@ class FolderCompareSideModel : public QAbstractListModel
     Q_PROPERTY(SortKey sortKey READ sortKey WRITE setSortKey NOTIFY sortKeyChanged)
     Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
     Q_PROPERTY(bool showDirsFirst READ showDirsFirst WRITE setShowDirsFirst NOTIFY showDirsFirstChanged)
+    Q_PROPERTY(bool hideJunkFiles READ hideJunkFiles WRITE setHideJunkFiles NOTIFY hideJunkFilesChanged)
     Q_PROPERTY(qint64 minimumByteSize READ minimumByteSize WRITE setMinimumByteSize NOTIFY minimumByteSizeChanged)
     Q_PROPERTY(qint64 maximumByteSize READ maximumByteSize WRITE setMaximumByteSize NOTIFY maximumByteSizeChanged)
     Q_PROPERTY(int minimumImageWidth READ minimumImageWidth WRITE setMinimumImageWidth NOTIFY minimumImageWidthChanged)
@@ -111,6 +112,8 @@ public:
 
     bool showDirsFirst() const;
     void setShowDirsFirst(bool enabled);
+    bool hideJunkFiles() const;
+    void setHideJunkFiles(bool enabled);
     qint64 minimumByteSize() const;
     void setMinimumByteSize(qint64 value);
     qint64 maximumByteSize() const;
@@ -179,6 +182,7 @@ signals:
     void sortKeyChanged();
     void sortOrderChanged();
     void showDirsFirstChanged();
+    void hideJunkFilesChanged();
     void minimumByteSizeChanged();
     void maximumByteSizeChanged();
     void minimumImageWidthChanged();
@@ -242,6 +246,7 @@ private:
     SortKey m_sortKey = Name;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
     bool m_showDirsFirst = true;
+    bool m_hideJunkFiles = true;
     bool m_loading = false;
     bool m_hideIdentical = false;
     qint64 m_minimumByteSize = -1;

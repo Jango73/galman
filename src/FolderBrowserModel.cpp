@@ -355,6 +355,44 @@ bool FolderBrowserModel::showDirsFirst() const
 }
 
 /**
+ * @brief Returns the list of junk file extensions from persistent settings.
+ * @return List of junk extensions (with leading dots).
+ */
+QStringList FolderBrowserModel::junkExtensions()
+{
+    static const QStringList extensions = []() {
+        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+        return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
+            .toString().split(',', Qt::SkipEmptyParts);
+    }();
+    return extensions;
+}
+
+/**
+ * @brief Returns whether junk files are hidden.
+ * @return True when junk files are hidden, false otherwise.
+ */
+bool FolderBrowserModel::hideJunkFiles() const
+{
+    return m_hideJunkFiles;
+}
+
+/**
+ * @brief Sets whether junk files are hidden and refreshes the model.
+ * @param enabled True to hide junk files, false to show them.
+ */
+void FolderBrowserModel::setHideJunkFiles(bool enabled)
+{
+    if (enabled == m_hideJunkFiles) {
+        return;
+    }
+
+    m_hideJunkFiles = enabled;
+    emit hideJunkFilesChanged();
+    rebuildEntries();
+}
+
+/**
  * @brief Sets whether folders are shown before files and refreshes the model.
  * @param enabled True to list folders first, false otherwise.
  */
@@ -1998,8 +2036,22 @@ void FolderBrowserModel::applyFilterAndSort(QVector<QFileInfo> &entries) const
     const bool imageSizeActive = imageSizeFiltersActive();
     const QString needle = trimmed.toLower();
 
-    if (nameFilterActive || byteSizeActive || imageSizeActive) {
+    const bool junkFilterActive = m_hideJunkFiles;
+    const QStringList junkExts = junkExtensions();
+
+    if (nameFilterActive || byteSizeActive || imageSizeActive || junkFilterActive) {
         entries.erase(std::remove_if(entries.begin(), entries.end(), [&](const QFileInfo &info) {
+            if (junkFilterActive && !info.isDir()) {
+                const QString suffix = info.suffix();
+                for (const QString &ext : junkExts) {
+                    QString normalized = ext;
+                    if (normalized.startsWith(QLatin1Char('.')))
+                        normalized = normalized.mid(1);
+                    if (suffix.compare(normalized, Qt::CaseInsensitive) == 0)
+                        return true;
+                }
+            }
+
             if (nameFilterActive && !info.fileName().toLower().contains(needle)) {
                 return true;
             }
