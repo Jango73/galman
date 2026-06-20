@@ -1273,6 +1273,7 @@ ApplicationWindow {
                     text: qsTr("Stop")
                     enabled: copyInProgress || scriptInProgress
                     visible: copyInProgress || scriptInProgress
+                    Layout.fillHeight: true
                     onClicked: stopActiveOperations()
                 }
             }
