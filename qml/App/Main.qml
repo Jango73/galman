@@ -13,9 +13,8 @@ ApplicationWindow {
     title: qsTr("Galman")
     property color panelBackground: Theme.panelBackground
     property int copyBarSize: 40
-    property var errorQueue: []
+    property var messageQueue: []
     property string currentError: ""
-    property bool statusActive: false
     property int emptyItemCount: 0
     property int singleItemCount: 1
     property bool copyInProgress: leftBrowser.copyInProgress || rightBrowser.copyInProgress
@@ -404,57 +403,40 @@ ApplicationWindow {
     }
 
     function pushError(message) {
+        pushMessage(message)
+    }
+
+    function pushStatus(message) {
+        pushMessage(message)
+    }
+
+    function pushMessage(message) {
         if (!message || String(message).trim() === "") {
             return
         }
         const text = String(message)
-        if (statusActive) {
-            statusTimer.stop()
-            statusActive = false
-        }
         if (currentError === "") {
             currentError = text
+            messageTimer.restart()
             return
         }
-        errorQueue.push(text)
-        if (errorQueue.length === 1) {
-            errorTimer.restart()
-        }
+        messageQueue.push(text)
     }
 
-    function pushStatus(message) {
-        if (!message || String(message).trim() === "") {
-            return
-        }
-        currentError = String(message)
-        statusActive = true
-        statusTimer.restart()
-    }
-
-    function advanceErrorQueue() {
-        if (errorQueue.length === 0) {
-            return
-        }
-        currentError = errorQueue.shift()
-        if (errorQueue.length > 0) {
-            errorTimer.restart()
+    function advanceMessageQueue() {
+        if (messageQueue.length > 0) {
+            currentError = messageQueue.shift()
+            messageTimer.restart()
+        } else {
+            currentError = ""
         }
     }
 
     Timer {
-        id: errorTimer
+        id: messageTimer
         interval: 5000
         repeat: false
-        onTriggered: advanceErrorQueue()
-    }
-
-    Timer {
-        id: statusTimer
-        interval: 2500
-        repeat: false
-        onTriggered: {
-            statusActive = false
-        }
+        onTriggered: advanceMessageQueue()
     }
 
     function goUpFocusedPane() {
@@ -544,6 +526,7 @@ ApplicationWindow {
                     if (model && model.junkExtensionsString) {
                         settingsDialog.setInitialJunkText(model.junkExtensionsString())
                     }
+                    settingsDialog.setInitialBackupsLimit(backupSystem.maxBackupsPerFile)
                     settingsDialog.open()
                 }
             }
@@ -1254,7 +1237,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     text: scriptInProgress
                         ? (scriptEngine.processStatusMessage !== "" ? scriptEngine.processStatusMessage : qsTr("Running script..."))
-                        : (currentError !== "" ? currentError : "Ready")
+                        : currentError
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -1331,6 +1314,7 @@ ApplicationWindow {
             if (model && model.setJunkExtensionsList) {
                 model.setJunkExtensionsList(settingsDialog.junkExtensionsInput)
             }
+            backupSystem.maxBackupsPerFile = settingsDialog.backupsLimitInput
             leftBrowser.refresh()
             rightBrowser.refresh()
         }

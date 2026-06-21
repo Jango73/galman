@@ -716,7 +716,12 @@ Item {
                     const destPath = backupSystem.backupFile(path)
                     const fileName = path.split("/").pop()
                     if (destPath) {
-                        root.backupOperationFinished(qsTr("%1 backed up to %2").arg(fileName).arg(destPath))
+                        let message = qsTr("%1 backed up to %2").arg(fileName).arg(destPath)
+                        const pruned = backupSystem.lastPruneCount()
+                        if (pruned > 0) {
+                            message += " (" + qsTr("%n old backup(s) removed)", "", pruned)
+                        }
+                        root.backupOperationFinished(message)
                     } else {
                         root.backupOperationError(qsTr("Failed to back up %1").arg(fileName))
                     }

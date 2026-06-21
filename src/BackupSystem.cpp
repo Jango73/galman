@@ -27,10 +27,73 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSettings>
 
 BackupSystem::BackupSystem(QObject *parent)
     : QObject(parent)
 {
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    m_maxBackupsPerFile = settings.value("backup/maxBackupsPerFile", 20).toInt();
+}
+
+int BackupSystem::maxBackupsPerFile() const
+{
+    return m_maxBackupsPerFile;
+}
+
+void BackupSystem::setMaxBackupsPerFile(int max)
+{
+    if (max == m_maxBackupsPerFile) {
+        return;
+    }
+    m_maxBackupsPerFile = max;
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    settings.setValue("backup/maxBackupsPerFile", m_maxBackupsPerFile);
+    emit maxBackupsPerFileChanged();
+}
+
+int BackupSystem::lastPruneCount() const
+{
+    return m_lastPruneCount;
+}
+
+void BackupSystem::pruneBackups(const QString &backupDirectory,
+                                 const QString &relativePath,
+                                 const QString &baseName)
+{
+    m_lastPruneCount = 0;
+
+    QString targetDir = QDir(backupDirectory).filePath(relativePath);
+    QDir dir(targetDir);
+    if (!dir.exists()) {
+        return;
+    }
+
+    QRegularExpression pattern(QStringLiteral("^%1\\.(\\d+)$").arg(QRegularExpression::escape(baseName)));
+    QList<int> indices;
+
+    const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
+    for (const QString &entry : entries) {
+        QRegularExpressionMatch match = pattern.match(entry);
+        if (match.hasMatch()) {
+            indices.append(match.captured(1).toInt());
+        }
+    }
+
+    if (indices.size() <= m_maxBackupsPerFile) {
+        return;
+    }
+
+    std::sort(indices.begin(), indices.end());
+
+    int toRemove = indices.size() - m_maxBackupsPerFile;
+    for (int i = 0; i < toRemove; ++i) {
+        QString backupFileName = QStringLiteral("%1.%2").arg(baseName).arg(indices[i], 3, 10, QChar('0'));
+        QString backupPath = dir.absoluteFilePath(backupFileName);
+        QFile::remove(backupPath);
+        qInfo() << "pruneBackups: removed" << backupPath;
+    }
+    m_lastPruneCount = toRemove;
 }
 
 QString BackupSystem::findBackupDirectory(const QString &directoryPath) const
@@ -185,6 +248,9 @@ QString BackupSystem::backupFile(const QString &filePath)
         return {};
     }
     qInfo() << "backupFile: success";
+
+    pruneBackups(backupDirectory, relativePath, baseName);
+
     return targetPath;
 }
 

@@ -21,9 +21,14 @@ Dialog {
     y: Math.round(((dialog.parent ? dialog.parent.height : 0) - height) / 2)
 
     property string junkExtensionsInput: junkField.text
+    property int backupsLimitInput: backupsLimitSpinBox.value
 
     function setInitialJunkText(text) {
         junkField.text = text
+    }
+
+    function setInitialBackupsLimit(value) {
+        backupsLimitSpinBox.value = value
     }
 
     onOpened: {
@@ -50,6 +55,31 @@ Dialog {
             id: junkField
             placeholderText: qsTr(".jpg~,.png~,.blend1")
             Layout.fillWidth: true
+        }
+
+        Item {
+            height: Theme.spaceLg
+        }
+
+        Label {
+            text: qsTr("Backups")
+            font.bold: true
+            Layout.fillWidth: true
+        }
+
+        Label {
+            text: qsTr("Maximum number of backup copies to keep per file. Older backups are removed when the limit is exceeded.")
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+        }
+
+        SpinBox {
+            id: backupsLimitSpinBox
+            from: 1
+            to: 9999
+            value: 20
+            editable: true
+            Layout.preferredWidth: 120
         }
 
         Item {
