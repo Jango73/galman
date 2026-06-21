@@ -808,6 +808,7 @@ ApplicationWindow {
                 previousPanelFocusItem: null
                 nextPanelFocusItem: leftBrowser.firstFocusItem
                 onErrorRaised: (message) => pushError(message)
+                onMessageRaised: (message) => pushStatus(message)
                 onSyncEnabledChanged: {
                     if (compareModel.enabled === syncEnabled) {
                         return

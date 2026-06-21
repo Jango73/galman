@@ -26,6 +26,7 @@ Item {
     readonly property Item firstFocusItem: syncModeCheckBox
     readonly property Item lastFocusItem: runScriptButton
     signal errorRaised(string message)
+    signal messageRaised(string message)
 
     onSyncEnabledChanged: {
         if (!syncEnabled) {
@@ -210,8 +211,10 @@ Item {
             const okCount = output.filter(entry => entry && entry.ok).length
             if (output.length === 0) {
                 scriptResult = qsTr("No files selected")
+                root.messageRaised(scriptResult)
             } else if (okCount === output.length) {
                 scriptResult = qsTr("Done: %1 / %2").arg(okCount).arg(output.length)
+                root.messageRaised(scriptResult)
             } else {
                 let lastError = ""
                 for (let i = output.length - 1; i >= 0; i -= 1) {
@@ -232,6 +235,7 @@ Item {
             root.errorRaised(String(output.error))
         } else {
             scriptResult = String(output)
+            root.messageRaised(scriptResult)
         }
     }
 
@@ -270,7 +274,7 @@ Item {
                 clip: true
                 ScrollBar.vertical.policy: ScrollBar.AlwaysOff
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                contentWidth: controlColumn.implicitWidth
+                contentWidth: controlScroll.availableWidth
                 contentHeight: controlColumn.implicitHeight
 
                 ColumnLayout {
