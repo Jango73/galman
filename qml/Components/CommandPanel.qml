@@ -39,6 +39,7 @@ Item {
     property var scriptControls: []
     property var scriptValues: ({})
     property string scriptResult: ""
+    property string scriptErrorDetail: ""
     property color panelBackground: Material.background
     readonly property bool multiSelection: selectedPaths && selectedPaths.length > 1
     readonly property bool singleSelection: selectedPath !== "" && !multiSelection
@@ -164,6 +165,7 @@ Item {
         scriptControls = meta.controls || []
         scriptName = meta.name || scriptEntry.name || ""
         scriptDescription = meta.description || ""
+        scriptEngine.lastScriptPath = scriptEntry.path
     }
 
     function synchronizeSelectedScript() {
@@ -171,16 +173,24 @@ Item {
             clearSelectedScript()
             return
         }
-        if (!scriptPath) {
-            return
+        if (scriptPath) {
+            for (let i = 0; i < availableScripts.length; i += 1) {
+                const scriptEntry = availableScripts[i]
+                if (scriptEntry && scriptEntry.path === scriptPath) {
+                    return
+                }
+            }
+            clearSelectedScript()
         }
-        for (let i = 0; i < availableScripts.length; i += 1) {
-            const scriptEntry = availableScripts[i]
-            if (scriptEntry && scriptEntry.path === scriptPath) {
-                return
+        if (!scriptPath && scriptEngine && scriptEngine.lastScriptPath) {
+            for (let i = 0; i < availableScripts.length; i += 1) {
+                const scriptEntry = availableScripts[i]
+                if (scriptEntry && scriptEntry.path === scriptEngine.lastScriptPath) {
+                    loadSelectedScript(scriptEntry)
+                    return
+                }
             }
         }
-        clearSelectedScript()
     }
 
     function executeCurrentScript() {
@@ -217,10 +227,12 @@ Item {
                 root.messageRaised(scriptResult)
             } else {
                 let lastError = ""
+                let lastStderr = ""
                 for (let i = output.length - 1; i >= 0; i -= 1) {
                     const entry = output[i]
                     if (entry && entry.error) {
                         lastError = entry.error
+                        lastStderr = entry.stderr || ""
                         break
                     }
                 }
@@ -228,11 +240,19 @@ Item {
                 if (lastError) {
                     scriptResult += qsTr(" (error: %1)").arg(lastError)
                     root.errorRaised(lastError)
+                    if (lastStderr) {
+                        scriptErrorDetail = lastStderr
+                        scriptErrorDialog.open()
+                    }
                 }
             }
         } else if (output && output.error) {
             scriptResult = String(output.error)
             root.errorRaised(String(output.error))
+            if (output.stderr) {
+                scriptErrorDetail = String(output.stderr)
+                scriptErrorDialog.open()
+            }
         } else {
             scriptResult = String(output)
             root.messageRaised(scriptResult)
@@ -577,6 +597,38 @@ Item {
                         opacity: 0.8
                     }
                 }
+            }
+        }
+    }
+
+    Dialog {
+        id: scriptErrorDialog
+        modal: true
+        title: qsTr("Script Error Details")
+        Material.theme: Material.Dark
+        Material.primary: Material.Blue
+        Material.accent: Material.DeepOrange
+        Overlay.modal: Rectangle {
+            color: Theme.modalOverlayColor
+        }
+        standardButtons: Dialog.Ok
+        x: Math.round(((window ? window.width : 0) - width) / 2)
+        y: Math.round(((window ? window.height : 0) - height) / 2)
+        width: Math.min(window ? window.width * 0.6 : 600, 800)
+        height: Math.min(window ? window.height * 0.5 : 400, 600)
+
+        contentItem: ScrollView {
+            clip: true
+            padding: Theme.panelPadding
+
+            TextArea {
+                text: root.scriptErrorDetail
+                readOnly: true
+                wrapMode: TextArea.Wrap
+                selectByMouse: true
+                font.family: "monospace"
+                font.pixelSize: 12
+                width: parent ? parent.width : 0
             }
         }
     }

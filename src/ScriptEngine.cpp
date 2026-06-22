@@ -118,6 +118,31 @@ QString ScriptEngine::processStatusMessage() const
 }
 
 /**
+ * @brief Returns the path of the last used script from persisted settings.
+ * @return Script file path, or empty string if none.
+ */
+QString ScriptEngine::lastScriptPath() const
+{
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    return settings.value("scripts/lastScriptPath", QString()).toString();
+}
+
+/**
+ * @brief Persists the last used script path and emits the change signal.
+ * @param path Script file path to store.
+ */
+void ScriptEngine::setLastScriptPath(const QString &path)
+{
+    if (lastScriptPath() == path) {
+        return;
+    }
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    settings.setValue("scripts/lastScriptPath", path);
+    settings.sync();
+    emit lastScriptPathChanged();
+}
+
+/**
  * @brief Builds the script selection metadata from a list of paths.
  * @param paths File or folder paths to include in the selection.
  */

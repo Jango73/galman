@@ -15,6 +15,7 @@ class ScriptEngine : public QObject
     Q_PROPERTY(bool processRunning READ processRunning NOTIFY processRunningChanged)
     Q_PROPERTY(qreal processProgress READ processProgress NOTIFY processProgressChanged)
     Q_PROPERTY(QString processStatusMessage READ processStatusMessage NOTIFY processStatusMessageChanged)
+    Q_PROPERTY(QString lastScriptPath READ lastScriptPath WRITE setLastScriptPath NOTIFY lastScriptPathChanged)
 
 public:
     explicit ScriptEngine(QObject *parent = nullptr);
@@ -45,6 +46,8 @@ public:
                                        const QStringList &arguments,
                                        const QString &workingFolder = QString());
     Q_INVOKABLE void cancelRunningProcess();
+    QString lastScriptPath() const;
+    void setLastScriptPath(const QString &path);
     Q_INVOKABLE QString comfyDefaultOutputDir() const;
     Q_INVOKABLE QVariantMap loadScriptParams(const QString &scriptPath);
     Q_INVOKABLE void saveScriptParams(const QString &scriptPath, const QVariantMap &params);
@@ -54,6 +57,7 @@ signals:
     void processRunningChanged();
     void processProgressChanged();
     void processStatusMessageChanged();
+    void lastScriptPathChanged();
 
 private:
     void updateEngineSelection();
