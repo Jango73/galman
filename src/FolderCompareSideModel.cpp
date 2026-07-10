@@ -2038,7 +2038,7 @@ void FolderCompareSideModel::applyFilterAndSort(QVector<CompareEntry> &entries) 
 
     if (nameFilterActive || byteSizeActive || imageSizeActive || junkFilterActive) {
         entries.erase(std::remove_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
-            if (junkFilterActive && !entry.isDir && !entry.isGhost) {
+            if (junkFilterActive && !entry.isDir) {
                 const int dot = entry.fileName.lastIndexOf('.');
                 if (dot >= 0) {
                     const QString suffix = entry.fileName.mid(dot + 1);
