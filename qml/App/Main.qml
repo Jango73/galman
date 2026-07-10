@@ -490,6 +490,21 @@ ApplicationWindow {
         }
     }
 
+    function setSyncEnabled(enabled) {
+        if (compareModel.enabled === enabled) {
+            return
+        }
+        if (enabled) {
+            compareModel.leftModel.rootPath = leftBrowser.currentPath
+            compareModel.rightModel.rootPath = rightBrowser.currentPath
+        }
+        compareModel.enabled = enabled
+        if (enabled) {
+            syncBrowserSettings(leftBrowser, rightBrowser)
+            syncBrowserState(leftBrowser, rightBrowser)
+        }
+    }
+
     function syncEnterFolder(sourcePane, targetPane, path) {
         if (!compareModel.enabled || navigationSyncing || !sourcePane || !targetPane) {
             return
@@ -500,6 +515,7 @@ ApplicationWindow {
         }
         const targetPath = targetPane.findDirectoryPathByName(name)
         if (targetPath === "") {
+            compareModel.enabled = false
             return
         }
         navigationSyncing = true
@@ -612,7 +628,7 @@ ApplicationWindow {
         enabled: !(leftBrowser.textInputActive || rightBrowser.textInputActive)
             && !confirmDialog.visible
         onActivated: {
-            leftPanel.syncEnabled = !leftPanel.syncEnabled
+            setSyncEnabled(!compareModel.enabled)
         }
     }
 
@@ -809,6 +825,9 @@ ApplicationWindow {
                 nextPanelFocusItem: leftBrowser.firstFocusItem
                 onErrorRaised: (message) => pushError(message)
                 onMessageRaised: (message) => pushStatus(message)
+                onSyncToggleRequested: {
+                    setSyncEnabled(!compareModel.enabled)
+                }
                 onSyncEnabledChanged: {
                     if (compareModel.enabled === syncEnabled) {
                         return

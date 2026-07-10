@@ -27,8 +27,10 @@ Item {
     readonly property Item lastFocusItem: runScriptButton
     signal errorRaised(string message)
     signal messageRaised(string message)
+    signal syncToggleRequested()
 
     onSyncEnabledChanged: {
+        syncModeCheckBox.checked = syncEnabled
         if (!syncEnabled) {
             syncPreviewEnabled = false
         }
@@ -317,7 +319,7 @@ Item {
                         bottomPadding: Theme.controlPaddingV
                         Layout.fillWidth: true
                         KeyNavigation.backtab: root.previousPanelFocusItem
-                        onToggled: root.syncEnabled = checked
+                        onToggled: root.syncToggleRequested()
                     }
 
                     CheckBox {
