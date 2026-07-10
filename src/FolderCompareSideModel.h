@@ -76,7 +76,8 @@ public:
         ModifiedRole,
         SelectedRole,
         CompareStatusRole,
-        GhostRole
+        GhostRole,
+        IsNewerRole
     };
 
     struct CompareEntry {
@@ -90,6 +91,7 @@ public:
         bool isImage = false;
         bool isVideo = false;
         bool isGhost = false;
+        bool isNewer = false;
         CompareStatus status = StatusNone;
     };
 
@@ -163,6 +165,7 @@ public:
     Q_INVOKABLE bool isGhost(int row) const;
     Q_INVOKABLE int selectedCompareStatus() const;
     Q_INVOKABLE bool selectedIsGhost() const;
+    Q_INVOKABLE bool selectedIsNewer() const;
     Q_INVOKABLE QVariantMap selectionStats() const;
     Q_INVOKABLE QVariantMap copySelectedTo(const QString &targetDir);
     Q_INVOKABLE void startCopySelectedTo(const QString &targetDir);

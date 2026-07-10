@@ -73,6 +73,7 @@ FocusScope {
     property string selectedMediaPath: ""
     property int selectedCompareStatus: 0
     property bool selectedGhost: false
+    property bool selectedIsNewer: false
     readonly property bool pendingTrue: true
     readonly property int statusPending: 1
     readonly property int statusIdentical: 2
@@ -169,12 +170,14 @@ FocusScope {
             selectedMediaPath = ""
             selectedCompareStatus = 0
             selectedGhost = false
+            selectedIsNewer = false
             return
         }
         const paths = browserModel.selectedPaths || []
         selectedMediaPath = paths.length > 0 ? paths[0] : ""
         selectedCompareStatus = browserModel.selectedCompareStatus ? browserModel.selectedCompareStatus() : 0
         selectedGhost = browserModel.selectedIsGhost ? browserModel.selectedIsGhost() : false
+        selectedIsNewer = browserModel.selectedIsNewer ? browserModel.selectedIsNewer() : false
     }
 
     function rememberCurrentPath() {

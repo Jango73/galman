@@ -145,6 +145,7 @@ public:
     Q_INVOKABLE bool isVideo(int row) const;
     Q_INVOKABLE int selectedCompareStatus() const;
     Q_INVOKABLE bool selectedIsGhost() const;
+    Q_INVOKABLE bool selectedIsNewer() const;
     Q_INVOKABLE QVariantMap selectionStats() const;
     Q_INVOKABLE QVariantMap copySelectedTo(const QString &targetDir);
     Q_INVOKABLE void startCopySelectedTo(const QString &targetDir);

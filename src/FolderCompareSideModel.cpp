@@ -83,6 +83,7 @@ bool compareEntryEquivalent(const FolderCompareSideModel::CompareEntry &left,
         && left.isImage == right.isImage
         && left.isVideo == right.isVideo
         && left.isGhost == right.isGhost
+        && left.isNewer == right.isNewer
         && left.status == right.status;
 }
 
@@ -630,6 +631,8 @@ QVariant FolderCompareSideModel::data(const QModelIndex &index, int role) const
         return static_cast<int>(entry.status);
     case GhostRole:
         return entry.isGhost;
+    case IsNewerRole:
+        return entry.isNewer;
     default:
         return {};
     }
@@ -656,6 +659,7 @@ QHash<int, QByteArray> FolderCompareSideModel::roleNames() const
         {SelectedRole, "selected"},
         {CompareStatusRole, "compareStatus"},
         {GhostRole, "isGhost"},
+        {IsNewerRole, "isNewer"},
     };
 }
 
@@ -982,6 +986,25 @@ bool FolderCompareSideModel::selectedIsGhost() const
         return false;
     }
     return it->isGhost;
+}
+
+/**
+ * @brief Returns whether the current selection is newer than its counterpart.
+ * @return True if the selection is newer, false otherwise.
+ */
+bool FolderCompareSideModel::selectedIsNewer() const
+{
+    if (m_selectedIds.isEmpty()) {
+        return false;
+    }
+    const QString id = m_selectedIds.first();
+    auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
+        return entry.id == id;
+    });
+    if (it == m_entries.end()) {
+        return false;
+    }
+    return it->isNewer;
 }
 
 /**
@@ -1649,6 +1672,7 @@ void FolderCompareSideModel::applyEntriesIncremental(const QVector<CompareEntry>
         ModifiedRole,
         CompareStatusRole,
         GhostRole,
+        IsNewerRole,
     };
 
     int i = 0;

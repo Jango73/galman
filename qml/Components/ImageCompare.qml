@@ -142,6 +142,7 @@ FocusRememberingScope {
                 reloadToken: root.reloadToken
                 compareStatus: leftBrowser ? leftBrowser.selectedCompareStatus : 0
                 ghost: leftBrowser ? leftBrowser.selectedGhost : false
+                isNewer: leftBrowser ? leftBrowser.selectedIsNewer : false
                 statusPending: leftBrowser ? leftBrowser.statusPending : 1
                 statusIdentical: leftBrowser ? leftBrowser.statusIdentical : 2
                 statusDifferent: leftBrowser ? leftBrowser.statusDifferent : 3
@@ -161,6 +162,7 @@ FocusRememberingScope {
                 reloadToken: root.reloadToken
                 compareStatus: rightBrowser ? rightBrowser.selectedCompareStatus : 0
                 ghost: rightBrowser ? rightBrowser.selectedGhost : false
+                isNewer: rightBrowser ? rightBrowser.selectedIsNewer : false
                 statusPending: rightBrowser ? rightBrowser.statusPending : 1
                 statusIdentical: rightBrowser ? rightBrowser.statusIdentical : 2
                 statusDifferent: rightBrowser ? rightBrowser.statusDifferent : 3

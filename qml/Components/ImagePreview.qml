@@ -151,6 +151,7 @@ FocusRememberingScope {
                     reloadToken: root.reloadToken
                     compareStatus: browser ? browser.selectedCompareStatus : 0
                     ghost: browser ? browser.selectedGhost : false
+                    isNewer: browser ? browser.selectedIsNewer : false
                     statusPending: browser ? browser.statusPending : 1
                     statusIdentical: browser ? browser.statusIdentical : 2
                     statusDifferent: browser ? browser.statusDifferent : 3

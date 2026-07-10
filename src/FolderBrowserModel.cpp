@@ -1160,6 +1160,15 @@ bool FolderBrowserModel::selectedIsGhost() const
 }
 
 /**
+ * @brief Returns whether the selection is newer than its counterpart.
+ * @return Always false in browse mode (no comparison).
+ */
+bool FolderBrowserModel::selectedIsNewer() const
+{
+    return false;
+}
+
+/**
  * @brief Computes counts of selected folders and files.
  * @return Map with "dirs" and "files" counts.
  */

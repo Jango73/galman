@@ -26,6 +26,7 @@ Item {
     property color statusDifferentColor: Theme.statusDifferentAlt
     property bool showRowStartIndex: false
     property string rowStartIndexText: ""
+    property bool isNewer: false
 
     Rectangle {
         anchors.fill: parent
@@ -173,7 +174,39 @@ Item {
         }
     }
 
+    Canvas {
+        id: newerBadge
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.topMargin: Theme.spaceSm
+        anchors.leftMargin: Theme.spaceSm + 12 + Theme.spaceXs
+        width: 12
+        height: 12
+        visible: root.isNewer && !root.isGhost
+        onPaint: {
+            const ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
+            const cx = width / 2
+            const cy = height / 2
+            const r = width / 2 - 1
+            ctx.strokeStyle = Theme.newerIndicator
+            ctx.lineWidth = 1.5
+            ctx.beginPath()
+            ctx.arc(cx, cy, r, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(cx, cy)
+            ctx.lineTo(cx, cy - r * 0.55)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(cx, cy)
+            ctx.lineTo(cx + r * 0.45, cy)
+            ctx.stroke()
+        }
+    }
+
     StatusBadge {
+        id: statusBadge
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.margins: Theme.spaceSm

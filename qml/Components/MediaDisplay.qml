@@ -20,6 +20,7 @@ Pane {
     property int statusDifferent: 3
     property color statusIdenticalColor: Theme.statusIdentical
     property color statusDifferentColor: Theme.statusDifferent
+    property bool isNewer: false
     property bool useAdjustments: false
     property real bloomValue: 0.0
     property real bloomRadiusPercent: 0.12
@@ -80,6 +81,36 @@ Pane {
             statusDifferent: root.statusDifferent
             statusIdenticalColor: root.statusIdenticalColor
             statusDifferentColor: root.statusDifferentColor
+        }
+
+        Canvas {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.topMargin: Theme.spaceMd
+            anchors.leftMargin: Theme.spaceMd + 12 + Theme.spaceXs
+            width: 12
+            height: 12
+            visible: root.isNewer && !root.ghost
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                const cx = width / 2
+                const cy = height / 2
+                const r = width / 2 - 1
+                ctx.strokeStyle = Theme.newerIndicator
+                ctx.lineWidth = 1.5
+                ctx.beginPath()
+                ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(cx, cy)
+                ctx.lineTo(cx, cy - r * 0.55)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(cx, cy)
+                ctx.lineTo(cx + r * 0.45, cy)
+                ctx.stroke()
+            }
         }
 
         Image {

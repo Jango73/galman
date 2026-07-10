@@ -13,12 +13,23 @@ Item {
     property int statusDifferent: 3
     property color statusIdenticalColor: Theme.statusIdentical
     property color statusDifferentColor: Theme.statusDifferent
+    property color ghostBadgeColor: "#cccccc"
+    property int statusMissing: 4
 
     Rectangle {
         anchors.fill: parent
         radius: width / 2
         visible: (root.status === root.statusIdentical || root.status === root.statusDifferent) && !root.ghost
         color: root.status === root.statusIdentical ? root.statusIdenticalColor : root.statusDifferentColor
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: width / 2
+        visible: root.status === root.statusMissing && !root.ghost
+        color: "transparent"
+        border.color: root.ghostBadgeColor
+        border.width: 2
     }
 
     Item {

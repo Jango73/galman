@@ -519,6 +519,7 @@ Item {
                     statusDifferentColor: root.statusDifferentColor
                     showRowStartIndex: row.firstItemOnRow
                     rowStartIndexText: String(row.firstIndexOnRow + 1)
+                    isNewer: model.isNewer
                 }
 
                 MouseArea {
