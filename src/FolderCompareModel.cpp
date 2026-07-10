@@ -434,19 +434,24 @@ CompareResult compareCaches(const QHash<QString, FolderCompareModel::CachedEntry
             }
             left.matched = true;
             right.matched = true;
-            const bool sameModified = std::abs(left.modified - right.modified) <= timeToleranceSeconds;
-            const auto status = left.isDir || sameModified
-                ? FolderCompareSideModel::StatusIdentical
-                : FolderCompareSideModel::StatusDifferent;
-            result.leftEntries[left.entryIndex].status = status;
-            result.rightEntries[right.entryIndex].status = status;
-            if (status == FolderCompareSideModel::StatusDifferent) {
-                const QDateTime &leftModified = result.leftEntries[left.entryIndex].modified;
-                const QDateTime &rightModified = result.rightEntries[right.entryIndex].modified;
-                if (leftModified > rightModified) {
-                    result.leftEntries[left.entryIndex].isNewer = true;
-                } else if (rightModified > leftModified) {
-                    result.rightEntries[right.entryIndex].isNewer = true;
+            if (left.isDir) {
+                result.leftEntries[left.entryIndex].status = FolderCompareSideModel::StatusNone;
+                result.rightEntries[right.entryIndex].status = FolderCompareSideModel::StatusNone;
+            } else {
+                const bool sameModified = std::abs(left.modified - right.modified) <= timeToleranceSeconds;
+                const auto status = sameModified
+                    ? FolderCompareSideModel::StatusIdentical
+                    : FolderCompareSideModel::StatusDifferent;
+                result.leftEntries[left.entryIndex].status = status;
+                result.rightEntries[right.entryIndex].status = status;
+                if (status == FolderCompareSideModel::StatusDifferent) {
+                    const QDateTime &leftModified = result.leftEntries[left.entryIndex].modified;
+                    const QDateTime &rightModified = result.rightEntries[right.entryIndex].modified;
+                    if (leftModified > rightModified) {
+                        result.leftEntries[left.entryIndex].isNewer = true;
+                    } else if (rightModified > leftModified) {
+                        result.rightEntries[right.entryIndex].isNewer = true;
+                    }
                 }
             }
             break;

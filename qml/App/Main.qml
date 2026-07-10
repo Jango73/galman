@@ -898,6 +898,9 @@ ApplicationWindow {
                     openInternalPreviewForBrowser(leftBrowser)
                 }
                 onSelectionChanged: (paths) => {
+                    if (compareSyncing) {
+                        return
+                    }
                     if (leftBrowser.hasFocus) {
                         window.activeSelectionPane = leftBrowser
                     }
@@ -1050,6 +1053,9 @@ ApplicationWindow {
                     openInternalPreviewForBrowser(rightBrowser)
                 }
                 onSelectionChanged: (paths) => {
+                    if (compareSyncing) {
+                        return
+                    }
                     if (rightBrowser.hasFocus) {
                         window.activeSelectionPane = rightBrowser
                     }
