@@ -556,6 +556,13 @@ ApplicationWindow {
             id: favoritesMenu
             title: qsTr("Favorites")
 
+            MenuItem {
+                text: qsTr("Save favorite pair")
+                onTriggered: saveCurrentFavoritePair()
+            }
+
+            MenuSeparator {}
+
             Instantiator {
                 model: (!favoritesManager || favoritesManager.favoritePairs.length === 0) ? [true] : []
                 delegate: MenuItem {
