@@ -40,6 +40,7 @@ Dialog {
                     { keys: "Del", action: qsTr("Move selection to trash (asks for confirmation)") },
                     { keys: "Shift+Del", action: qsTr("Permanently delete selection (asks for confirmation)") },
                     { keys: "F5", action: qsTr("Refresh current folder") },
+                    { keys: "Ctrl+Shift+N", action: qsTr("Create new folder") },
                     { keys: "Ctrl+Left", action: qsTr("Copy selection right to left") },
                     { keys: "Ctrl+Right", action: qsTr("Copy selection left to right") },
                     { keys: "Ctrl+Shift+Left", action: qsTr("Move selection right to left") },

@@ -686,6 +686,13 @@ FocusScope {
         onActivated: root.requestRenameSelected()
     }
 
+    Shortcut {
+        sequences: ["Ctrl+Shift+N"]
+        context: Qt.ApplicationShortcut
+        enabled: root.hasFocus && !root.textInputActive
+        onActivated: root.requestCreateFolder(root.browserModel.rootPath)
+    }
+
     Pane {
         anchors.fill: parent
         padding: Theme.panelPadding
@@ -706,13 +713,16 @@ FocusScope {
                 onGoUpRequested: {
                     root.goUp()
                 }
+                onCreateFolderRequested: {
+                    root.requestCreateFolder(root.browserModel.rootPath)
+                }
             }
 
             FolderViewSortBar {
                 id: sortBar
                 Layout.fillWidth: true
                 browserModel: root.browserModel
-                previousFocusItem: toolbar.upButton
+                previousFocusItem: toolbar.createFolderButton
                 nextFocusItem: browserGrid.focusItem
                 onSortKeyChangedByUser: (sortKey) => root.sortKeyChangedByUser(sortKey)
                 onSortOrderChangedByUser: (sortOrder) => root.sortOrderChangedByUser(sortOrder)

@@ -12,10 +12,12 @@ ColumnLayout {
     property alias pathField: pathField
     property alias volumeCombo: volumeCombo
     property alias upButton: upButton
+    property alias createFolderButton: createFolderButton
     property Item previousFocusItem: null
     property Item nextFocusItem: null
     property bool pathFieldActiveFocus: pathField.activeFocus
     signal goUpRequested()
+    signal createFolderRequested()
 
     spacing: Theme.spaceSm
 
@@ -59,9 +61,20 @@ ColumnLayout {
             id: upButton
             text: "\u2190"
             KeyNavigation.backtab: pathField
-            KeyNavigation.tab: root.nextFocusItem
+            KeyNavigation.tab: createFolderButton
             onClicked: {
                 root.goUpRequested()
+            }
+        }
+
+        Button {
+            id: createFolderButton
+            text: "+"
+            font.pixelSize: upButton.font.pixelSize
+            KeyNavigation.backtab: upButton
+            KeyNavigation.tab: root.nextFocusItem
+            onClicked: {
+                root.createFolderRequested()
             }
         }
 
