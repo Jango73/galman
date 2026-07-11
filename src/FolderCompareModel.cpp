@@ -628,6 +628,11 @@ FolderCompareModel::FolderCompareModel(QObject *parent)
         if (!m_enabled) {
             return;
         }
+        if (isCopyInProgress()) {
+            m_pendingWatcherFullRefresh = true;
+            return;
+        }
+        requestRefresh();
     });
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this](const QString &path) {
         if (!m_enabled) {
