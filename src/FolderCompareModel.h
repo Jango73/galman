@@ -76,6 +76,7 @@ private:
     QString sidePath(Side side) const;
     void refresh();
     void refreshFilesInternal(const QStringList &leftPaths, const QStringList &rightPaths);
+    void refreshChangedDirectories(const QStringList &changedDirs);
     void setLoading(bool loading);
 
     void applyResult(const QVector<FolderCompareSideModel::CompareEntry> &left,
@@ -86,7 +87,7 @@ private:
     QString m_leftPath;
     QString m_rightPath;
     bool m_enabled = false;
-    bool m_pendingWatcherFullRefresh = false;
+    QSet<QString> m_pendingWatcherDirs;
     QSet<QString> m_pendingWatcherLeftPaths;
     QSet<QString> m_pendingWatcherRightPaths;
     QAtomicInt m_signatureGeneration = 0;

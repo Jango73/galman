@@ -569,17 +569,18 @@ FolderCompareModel::FolderCompareModel(QObject *parent)
     m_leftModel->setHideIdentical(m_hideIdentical);
     m_rightModel->setHideIdentical(m_hideIdentical);
     const auto handleSideOperationChanged = [this]() {
-        const bool hasPending = m_pendingWatcherFullRefresh
+        const bool hasPending = !m_pendingWatcherDirs.isEmpty()
             || !m_pendingWatcherLeftPaths.isEmpty()
             || !m_pendingWatcherRightPaths.isEmpty();
         if (isCopyInProgress() || !hasPending) {
             return;
         }
-        if (m_pendingWatcherFullRefresh) {
-            m_pendingWatcherFullRefresh = false;
+        if (!m_pendingWatcherDirs.isEmpty()) {
+            const QStringList dirs = m_pendingWatcherDirs.values();
+            m_pendingWatcherDirs.clear();
             m_pendingWatcherLeftPaths.clear();
             m_pendingWatcherRightPaths.clear();
-            requestRefresh();
+            refreshChangedDirectories(dirs);
             return;
         }
         const QStringList leftPaths = QStringList(m_pendingWatcherLeftPaths.begin(), m_pendingWatcherLeftPaths.end());
@@ -629,7 +630,7 @@ FolderCompareModel::FolderCompareModel(QObject *parent)
             return;
         }
         if (isCopyInProgress()) {
-            m_pendingWatcherFullRefresh = true;
+            m_pendingWatcherDirs.insert(path);
             return;
         }
         requestRefresh();
@@ -644,7 +645,12 @@ FolderCompareModel::FolderCompareModel(QObject *parent)
             } else if (isPathInRoot(m_rightPath, path)) {
                 m_pendingWatcherRightPaths.insert(path);
             } else {
-                m_pendingWatcherFullRefresh = true;
+                if (!m_leftPath.isEmpty()) {
+                    m_pendingWatcherDirs.insert(m_leftPath);
+                }
+                if (!m_rightPath.isEmpty()) {
+                    m_pendingWatcherDirs.insert(m_rightPath);
+                }
             }
             return;
         }
@@ -925,6 +931,143 @@ void FolderCompareModel::refreshFilesInternal(const QStringList &leftPaths, cons
         setLoading(false);
         if (m_enabled) {
             startSignatureRefresh(leftPath, rightPath, m_leftCache, m_rightCache, leftPathsCopy, rightPathsCopy);
+        }
+    });
+
+    watcher->setFuture(future);
+}
+
+/**
+ * @brief Refreshes compare data by rescanning only the directories that changed.
+ * @param changedDirs List of directory paths that changed on disk.
+ */
+void FolderCompareModel::refreshChangedDirectories(const QStringList &changedDirs)
+{
+    if (m_leftPath.isEmpty() || m_rightPath.isEmpty()) {
+        requestRefresh();
+        return;
+    }
+
+    cancelSignatureRefresh();
+    setLoading(true);
+    const int token = ++m_generation;
+    const QString leftPath = m_leftPath;
+    const QString rightPath = m_rightPath;
+    const bool enabled = m_enabled;
+    const QHash<QString, CachedEntry> leftCache = m_leftCache;
+    const QHash<QString, CachedEntry> rightCache = m_rightCache;
+
+    auto future = QtConcurrent::run([changedDirs, leftPath, rightPath, enabled, leftCache, rightCache]() {
+        RefreshResult output;
+        output.leftCache = leftCache;
+        output.rightCache = rightCache;
+
+        QStringList leftChangedPaths;
+        QStringList rightChangedPaths;
+
+        for (const QString &dirPath : changedDirs) {
+            QDir dir(dirPath);
+            if (!dir.exists()) {
+                continue;
+            }
+            const QFileInfoList infoList = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::NoSort);
+            QSet<QString> currentOnDisk;
+            currentOnDisk.reserve(infoList.size());
+            for (const QFileInfo &info : infoList) {
+                currentOnDisk.insert(info.absoluteFilePath());
+            }
+
+            QHash<QString, CachedEntry> *targetCache = nullptr;
+            QStringList *targetPaths = nullptr;
+            if (isPathInRoot(leftPath, dirPath)) {
+                targetCache = &output.leftCache;
+                targetPaths = &leftChangedPaths;
+            } else if (isPathInRoot(rightPath, dirPath)) {
+                targetCache = &output.rightCache;
+                targetPaths = &rightChangedPaths;
+            }
+            if (!targetCache || !targetPaths) {
+                continue;
+            }
+
+            for (auto it = targetCache->constBegin(); it != targetCache->constEnd(); ) {
+                if (isPathInRoot(dirPath, it.key()) && !currentOnDisk.contains(it.key())) {
+                    targetPaths->append(it.key());
+                    it = targetCache->erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            for (const QString &path : currentOnDisk) {
+                if (!targetCache->contains(path)) {
+                    targetCache->insert(path, buildCachedEntry(QFileInfo(path), enabled, false));
+                    targetPaths->append(path);
+                }
+            }
+        }
+
+        output.result = compareCaches(output.leftCache, output.rightCache, enabled);
+        return output;
+    });
+
+    auto *watcher = new QFutureWatcher<RefreshResult>(this);
+    connect(watcher, &QFutureWatcher<RefreshResult>::finished, this, [this, watcher, token, leftPath, rightPath, changedDirs]() {
+        const RefreshResult output = watcher->result();
+        watcher->deleteLater();
+        if (token != m_generation) {
+            return;
+        }
+        {
+            QMutexLocker locker(&m_cacheMutex);
+            m_leftCache = output.leftCache;
+            m_rightCache = output.rightCache;
+        }
+        updateWatchers();
+
+        QSet<QString> affectedNames;
+        QSet<QString> affectedLeftPaths;
+        QSet<QString> affectedRightPaths;
+
+        for (const FolderCompareSideModel::CompareEntry &entry : output.result.leftEntries) {
+            if (entry.filePath.isEmpty()) {
+                continue;
+            }
+            for (const QString &dirPath : changedDirs) {
+                if (isPathInRoot(dirPath, entry.filePath)) {
+                    affectedLeftPaths.insert(entry.filePath);
+                    if (!entry.fileName.isEmpty()) {
+                        affectedNames.insert(entry.fileName);
+                    }
+                    break;
+                }
+            }
+        }
+        for (const FolderCompareSideModel::CompareEntry &entry : output.result.rightEntries) {
+            if (entry.filePath.isEmpty()) {
+                continue;
+            }
+            for (const QString &dirPath : changedDirs) {
+                if (isPathInRoot(dirPath, entry.filePath)) {
+                    affectedRightPaths.insert(entry.filePath);
+                    if (!entry.fileName.isEmpty()) {
+                        affectedNames.insert(entry.fileName);
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (m_leftModel) {
+            m_leftModel->updateBaseEntriesPartial(output.result.leftEntries, affectedNames, affectedLeftPaths);
+        }
+        if (m_rightModel) {
+            m_rightModel->updateBaseEntriesPartial(output.result.rightEntries, affectedNames, affectedRightPaths);
+        }
+
+        setLoading(false);
+        if (m_enabled) {
+            startSignatureRefresh(leftPath, rightPath, m_leftCache, m_rightCache);
         }
     });
 
