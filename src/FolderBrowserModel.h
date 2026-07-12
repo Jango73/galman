@@ -158,6 +158,7 @@ public:
     Q_INVOKABLE void cancelTrash();
     Q_INVOKABLE QVariantMap renamePath(const QString &path, const QString &newName);
     Q_INVOKABLE bool createFolder(const QString &parentPath, const QString &folderName);
+    Q_INVOKABLE bool hasGhostOnOtherSide(int row) const;
 
 signals:
     void rootPathChanged();

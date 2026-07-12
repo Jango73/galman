@@ -53,6 +53,7 @@ Item {
     signal backgroundClicked()
     signal backupOperationFinished(string message)
     signal backupOperationError(string message)
+    signal createOtherPaneFolderRequested(string folderName)
 
     Timer {
         id: scrollRelockTimer
@@ -689,6 +690,26 @@ Item {
                 text: qsTr("Move to other pane")
                 enabled: root.selectedCount > 0
                 onTriggered: root.moveOtherRequested()
+            }
+            MenuItem {
+                text: qsTr("Create on other pane")
+                enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
+                    && root.browserModel && root.browserModel.isDir
+                    && root.browserModel.isDir(root.contextMenuIndex)
+                    && root.browserModel.hasGhostOnOtherSide
+                    && root.browserModel.hasGhostOnOtherSide(root.contextMenuIndex)
+                onTriggered: {
+                    if (!root.browserModel || !root.browserModel.pathForRow) {
+                        return
+                    }
+                    const path = root.browserModel.pathForRow(root.contextMenuIndex)
+                    if (!path) {
+                        return
+                    }
+                    const parts = path.split("/")
+                    const folderName = parts[parts.length - 1]
+                    root.createOtherPaneFolderRequested(folderName)
+                }
             }
             MenuItem {
                 text: qsTr("Move to trash")

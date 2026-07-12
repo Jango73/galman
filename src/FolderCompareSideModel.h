@@ -177,6 +177,8 @@ public:
     Q_INVOKABLE void startDeleteSelectedPermanently();
     Q_INVOKABLE void cancelTrash();
     Q_INVOKABLE QVariantMap renamePath(const QString &path, const QString &newName);
+    Q_INVOKABLE bool hasGhostOnOtherSide(int row) const;
+    Q_INVOKABLE bool createFolder(const QString &parentPath, const QString &folderName);
 
 signals:
     void rootPathChanged();

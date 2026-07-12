@@ -1520,6 +1520,17 @@ bool FolderBrowserModel::createFolder(const QString &parentPath, const QString &
 }
 
 /**
+ * @brief Stub: standalone browser model has no compare side, so no ghosts.
+ * @param row Row index (unused).
+ * @return Always returns false.
+ */
+bool FolderBrowserModel::hasGhostOnOtherSide(int row) const
+{
+    Q_UNUSED(row)
+    return false;
+}
+
+/**
  * @brief Updates the loading state and emits change notification.
  * @param loading True when loading is active, false otherwise.
  */

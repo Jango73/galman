@@ -940,6 +940,20 @@ ApplicationWindow {
                 onMoveLeftRequested: triggerMoveRightToLeft()
                 onMoveRightRequested: triggerMoveLeftToRight()
                 onMoveOtherRequested: triggerMoveLeftToRight()
+                onCreateOtherPaneFolderRequested: (folderName) => {
+                    const otherModel = rightBrowser.browserModel
+                    if (!otherModel || !otherModel.createFolder) {
+                        pushError(qsTr("Failed to create folder on other pane"))
+                        return
+                    }
+                    const created = otherModel.createFolder(rightBrowser.currentPath, folderName)
+                    if (created) {
+                        otherModel.refresh()
+                        pushStatus(qsTr("Folder created on other pane"))
+                    } else {
+                        pushError(qsTr("Failed to create folder on other pane"))
+                    }
+                }
                 onViewSyncRequested: syncBrowserState(leftBrowser, rightBrowser)
                 onSortKeyChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
                 onSortOrderChangedByUser: syncBrowserSettings(leftBrowser, rightBrowser)
@@ -1095,6 +1109,20 @@ ApplicationWindow {
                 onMoveLeftRequested: triggerMoveRightToLeft()
                 onMoveRightRequested: triggerMoveLeftToRight()
                 onMoveOtherRequested: triggerMoveRightToLeft()
+                onCreateOtherPaneFolderRequested: (folderName) => {
+                    const otherModel = leftBrowser.browserModel
+                    if (!otherModel || !otherModel.createFolder) {
+                        pushError(qsTr("Failed to create folder on other pane"))
+                        return
+                    }
+                    const created = otherModel.createFolder(leftBrowser.currentPath, folderName)
+                    if (created) {
+                        otherModel.refresh()
+                        pushStatus(qsTr("Folder created on other pane"))
+                    } else {
+                        pushError(qsTr("Failed to create folder on other pane"))
+                    }
+                }
                 onViewSyncRequested: syncBrowserState(rightBrowser, leftBrowser)
                 onSortKeyChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)
                 onSortOrderChangedByUser: syncBrowserSettings(rightBrowser, leftBrowser)

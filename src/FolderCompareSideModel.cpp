@@ -1507,6 +1507,52 @@ QVariantMap FolderCompareSideModel::renamePath(const QString &path, const QStrin
 }
 
 /**
+ * @brief Checks whether the entry at the given row has a ghost on the other compare side.
+ * @param row Row index to inspect.
+ * @return True if the other side contains a ghost directory with the same name.
+ */
+bool FolderCompareSideModel::hasGhostOnOtherSide(int row) const
+{
+    const CompareEntry *entry = entryForRow(row);
+    if (!entry || !entry->isDir || entry->isGhost) {
+        return false;
+    }
+    if (!m_compareModel) {
+        return false;
+    }
+    FolderCompareSideModel *otherModel = (m_side == FolderCompareModel::Left)
+        ? qobject_cast<FolderCompareSideModel*>(m_compareModel->rightModel())
+        : qobject_cast<FolderCompareSideModel*>(m_compareModel->leftModel());
+    if (!otherModel) {
+        return false;
+    }
+    for (const CompareEntry &otherEntry : otherModel->m_entries) {
+        if (otherEntry.isGhost && otherEntry.isDir && otherEntry.fileName == entry->fileName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @brief Creates a folder inside a parent path.
+ * @param parentPath Parent directory path.
+ * @param folderName Name of the folder to create.
+ * @return True when the folder was created successfully.
+ */
+bool FolderCompareSideModel::createFolder(const QString &parentPath, const QString &folderName)
+{
+    if (parentPath.isEmpty() || folderName.isEmpty()) {
+        return false;
+    }
+    QDir dir(parentPath);
+    if (!dir.exists()) {
+        return false;
+    }
+    return dir.mkdir(folderName);
+}
+
+/**
  * @brief Updates the loading state and emits change notification.
  * @param loading True when loading is active, false otherwise.
  */

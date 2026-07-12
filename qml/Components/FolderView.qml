@@ -38,6 +38,7 @@ FocusScope {
     signal goUpRequested()
     signal renameSucceeded(string message)
     signal errorRaised(string message)
+    signal createOtherPaneFolderRequested(string folderName)
     property string settingsKey: ""
     property bool useExternalModel: false
     property var externalModel: null
@@ -769,6 +770,7 @@ FocusScope {
                 onDeleteRequested: root.confirmDeleteSelectedPermanently()
                 onBackupOperationFinished: (message) => root.renameSucceeded(message)
                 onBackupOperationError: (message) => root.errorRaised(message)
+                onCreateOtherPaneFolderRequested: (folderName) => root.createOtherPaneFolderRequested(folderName)
                 onCurrentIndexUpdated: (value) => {
                     if (root.restoringIndex) {
                         return
