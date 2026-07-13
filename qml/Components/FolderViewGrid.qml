@@ -432,46 +432,20 @@ Item {
                 event.accepted = true
             }
 
-            TapHandler {
-                acceptedButtons: Qt.LeftButton
-                onTapped: (eventPoint) => {
-                    const idx = grid.indexAt(
-                        eventPoint.position.x + grid.contentX,
-                        eventPoint.position.y + grid.contentY
-                    )
-                    if (idx < 0) {
-                        root.backgroundClicked()
-                        grid.forceActiveFocus()
-                    }
-                }
-            }
-
-            TapHandler {
-                acceptedButtons: Qt.RightButton
-                onTapped: (eventPoint) => {
-                    const idx = grid.indexAt(
-                        eventPoint.position.x + grid.contentX,
-                        eventPoint.position.y + grid.contentY
-                    )
-                    if (idx < 0) {
-                        const container = backgroundContextMenu.parent
-                            ? backgroundContextMenu.parent : root
-                        const point = mapToItem(container, eventPoint.position.x, eventPoint.position.y)
-                        backgroundContextMenu.x = point.x
-                        backgroundContextMenu.y = point.y
-                        backgroundContextMenu.open()
-                    }
-                }
-            }
-
             MouseArea {
                 id: emptyGridFocusArea
                 anchors.fill: parent
-                visible: grid.count === 0
-                enabled: visible
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 z: 2
                 onPressed: (mouse) => {
+                    const idx = grid.indexAt(
+                        mouse.x + grid.contentX,
+                        mouse.y + grid.contentY
+                    )
+                    if (idx >= 0) {
+                        mouse.accepted = false
+                        return
+                    }
                     if (mouse.button === Qt.RightButton) {
                         const container = backgroundContextMenu.parent
                             ? backgroundContextMenu.parent : root
