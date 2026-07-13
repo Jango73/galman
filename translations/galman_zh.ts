@@ -808,5 +808,61 @@
         <source>Delete permanently</source>
         <translation>永久删除</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>创建文件夹</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>创建备份文件夹</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>备份文件</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>还原文件</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>在另一侧面板创建</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>未选择文件夹</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>未选择文件</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>备份文件夹已创建</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>创建备份文件夹失败</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 已备份到 %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>已删除 %n 个旧备份</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>备份 %1 失败</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 已从 %2 还原</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>未找到 %1 的备份</translation>
+    </message>
 </context>
 </TS>

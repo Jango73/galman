@@ -623,5 +623,61 @@
         <source>Delete permanently</source>
         <translation>Delete permanently</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Create folder</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>Create backup folder</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>Backup file</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>Restore file</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>Create on other pane</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>No folder selected</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>No file selected</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>Backup folder created</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>Failed to create backup folder</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 backed up to %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>%n old backup(s) removed</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>Failed to back up %1</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 restored from %2</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>No backup found for %1</translation>
+    </message>
 </context>
 </TS>

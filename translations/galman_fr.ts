@@ -647,5 +647,61 @@
         <source>Delete permanently</source>
         <translation>Supprimer définitivement</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Créer un dossier</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>Créer un dossier de sauvegarde</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>Sauvegarder le fichier</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>Restaurer le fichier</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>Créer dans l'autre panneau</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>Aucun dossier sélectionné</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>Aucun fichier sélectionné</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>Dossier de sauvegarde créé</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>Échec de la création du dossier de sauvegarde</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 sauvegardé dans %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>%n ancienne(s) sauvegarde(s) supprimée(s)</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>Échec de la sauvegarde de %1</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 restauré depuis %2</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>Aucune sauvegarde trouvée pour %1</translation>
+    </message>
 </context>
 </TS>

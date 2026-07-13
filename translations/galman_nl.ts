@@ -811,5 +811,61 @@
         <source>Delete permanently</source>
         <translation>Definitief verwijderen</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Map aanmaken</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>Back-upmap aanmaken</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>Bestand back-uppen</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>Bestand herstellen</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>Aanmaken in ander paneel</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>Geen map geselecteerd</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>Geen bestand geselecteerd</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>Back-upmap aangemaakt</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>Kan back-upmap niet aanmaken</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 geback-upt naar %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>%n oude back-up(s) verwijderd</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>Back-up van %1 mislukt</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 hersteld van %2</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>Geen back-up gevonden voor %1</translation>
+    </message>
 </context>
 </TS>

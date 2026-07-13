@@ -649,5 +649,61 @@
         <source>Delete permanently</source>
         <translation>Eliminar permanentemente</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Crear carpeta</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>Crear carpeta de respaldo</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>Respaldar archivo</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>Restaurar archivo</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>Crear en el otro panel</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>No hay carpeta seleccionada</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>No hay archivo seleccionado</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>Carpeta de respaldo creada</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>Error al crear la carpeta de respaldo</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 respaldado en %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>%n respaldo(s) antiguo(s) eliminado(s)</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>Error al respaldar %1</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 restaurado desde %2</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>No se encontró respaldo para %1</translation>
+    </message>
 </context>
 </TS>

@@ -608,7 +608,12 @@ Item {
             }
 
             width: menuContentWidth
-            onAboutToShow: updateMenuWidth()
+            property bool backupFolderExists: false
+            onAboutToShow: {
+                updateMenuWidth()
+                backupFolderExists = root.browserModel
+                    && backupSystem.hasBackupFolder(root.browserModel.rootPath)
+            }
 
             MenuItem {
                 text: qsTr("Create folder")
@@ -623,6 +628,7 @@ Item {
 
             MenuItem {
                 text: qsTr("Create backup folder")
+                enabled: !backgroundContextMenu.backupFolderExists
                 onTriggered: {
                     if (!root.browserModel) {
                         root.backupOperationError(qsTr("No folder selected"))

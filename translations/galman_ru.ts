@@ -814,5 +814,61 @@
         <source>Delete permanently</source>
         <translation>Удалить навсегда</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Создать папку</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>Создать папку резервного копирования</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>Создать резервную копию файла</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>Восстановить файл</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>Создать в другой панели</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>Папка не выбрана</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>Файл не выбран</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>Папка резервного копирования создана</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>Не удалось создать папку резервного копирования</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 сохранён в %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>Удалено %n старых резервных копий</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>Не удалось создать резервную копию %1</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 восстановлен из %2</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>Резервная копия для %1 не найдена</translation>
+    </message>
 </context>
 </TS>

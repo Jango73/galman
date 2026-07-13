@@ -649,5 +649,61 @@
         <source>Delete permanently</source>
         <translation>Elimina definitivamente</translation>
     </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Crea cartella</translation>
+    </message>
+    <message>
+        <source>Create backup folder</source>
+        <translation>Crea cartella di backup</translation>
+    </message>
+    <message>
+        <source>Backup file</source>
+        <translation>Esegui backup del file</translation>
+    </message>
+    <message>
+        <source>Restore file</source>
+        <translation>Ripristina il file</translation>
+    </message>
+    <message>
+        <source>Create on other pane</source>
+        <translation>Crea nell'altro pannello</translation>
+    </message>
+    <message>
+        <source>No folder selected</source>
+        <translation>Nessuna cartella selezionata</translation>
+    </message>
+    <message>
+        <source>No file selected</source>
+        <translation>Nessun file selezionato</translation>
+    </message>
+    <message>
+        <source>Backup folder created</source>
+        <translation>Cartella di backup creata</translation>
+    </message>
+    <message>
+        <source>Failed to create backup folder</source>
+        <translation>Creazione cartella di backup fallita</translation>
+    </message>
+    <message>
+        <source>%1 backed up to %2</source>
+        <translation>%1 salvato in %2</translation>
+    </message>
+    <message>
+        <source>%n old backup(s) removed)</source>
+        <translation>%n vecchi backup eliminati</translation>
+    </message>
+    <message>
+        <source>Failed to back up %1</source>
+        <translation>Backup di %1 non riuscito</translation>
+    </message>
+    <message>
+        <source>%1 restored from %2</source>
+        <translation>%1 ripristinato da %2</translation>
+    </message>
+    <message>
+        <source>No backup found for %1</source>
+        <translation>Nessun backup trovato per %1</translation>
+    </message>
 </context>
 </TS>
