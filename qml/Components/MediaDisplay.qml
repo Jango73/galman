@@ -29,6 +29,7 @@ Pane {
     readonly property real opacityVisible: 1.0
     readonly property real opacityHidden: 0.0
     readonly property real centerFactor: 0.5
+    property int rotation: 0
     property int reloadToken: 0
     property int invalidIndex: -1
     property string reloadQueryKey: "reload"
@@ -113,15 +114,37 @@ Pane {
             }
         }
 
-        Image {
-            id: imageItem
-            anchors.fill: parent
-            fillMode: Image.PreserveAspectFit
-            cache: false
-            source: root.resolvedImageSource
-            asynchronous: true
-            visible: root.showingImage
-            opacity: root.useAdjustments ? root.opacityHidden : root.opacityVisible
+        Item {
+            id: imageContainer
+            anchors.centerIn: parent
+            readonly property bool isRotated: root.rotation % 180 !== 0
+            width: isRotated ? parent.height : parent.width
+            height: isRotated ? parent.width : parent.height
+            transform: Rotation {
+                angle: root.rotation
+                origin.x: imageContainer.width / 2
+                origin.y: imageContainer.height / 2
+            }
+
+            Image {
+                id: imageItem
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectFit
+                cache: false
+                source: root.resolvedImageSource
+                asynchronous: true
+                visible: root.showingImage
+            }
+
+            ImageAdjustmentsEffect {
+                anchors.fill: parent
+                sourceItem: imageItem
+                active: root.useAdjustments && root.showingImage
+                bloomValue: root.bloomValue
+                bloomRadiusPercent: root.bloomRadiusPercent
+                brightnessValue: root.brightnessValue
+                contrastValue: root.contrastValue
+            }
         }
 
         VideoOutput {
@@ -140,23 +163,6 @@ Pane {
 
         AudioOutput {
             id: audioOutput
-        }
-
-        ImageAdjustmentsEffect {
-            x: imageItem.x + root.paintedHorizontalOffset
-            y: imageItem.y + root.paintedVerticalOffset
-            width: root.paintedWidth
-            height: root.paintedHeight
-            sourceItem: imageItem
-            active: root.useAdjustments && root.showingImage
-            bloomValue: root.bloomValue
-            bloomRadiusPercent: root.bloomRadiusPercent
-            brightnessValue: root.brightnessValue
-            contrastValue: root.contrastValue
-            sourceRect: Qt.rect(root.paintedHorizontalOffset,
-                                root.paintedVerticalOffset,
-                                root.paintedWidth,
-                                root.paintedHeight)
         }
 
         Label {

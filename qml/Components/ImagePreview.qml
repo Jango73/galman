@@ -11,6 +11,7 @@ FocusRememberingScope {
     property var browser: null
     property color panelBackground: Theme.panelBackground
     property bool adjustmentsVisible: false
+    property int rotation: 0
     property int reloadToken: 0
     property int reloadTokenIncrement: 1
     readonly property bool adjustmentsAvailable: browser ? browser.selectedIsImage : false
@@ -24,6 +25,7 @@ FocusRememberingScope {
     clip: true
 
     onBrowserChanged: {
+        root.rotation = 0
         if (!root.adjustmentsAvailable) {
             root.adjustmentsVisible = false
         }
@@ -47,6 +49,18 @@ FocusRememberingScope {
             }
             if (event.key === Qt.Key_Right) {
                 root.copyRightRequested()
+                event.accepted = true
+                return
+            }
+        }
+        if ((event.modifiers & Qt.ShiftModifier) !== 0) {
+            if (event.key === Qt.Key_Left) {
+                root.rotation = ((root.rotation - 90) % 360 + 360) % 360
+                event.accepted = true
+                return
+            }
+            if (event.key === Qt.Key_Right) {
+                root.rotation = (root.rotation + 90) % 360
                 event.accepted = true
                 return
             }
@@ -158,22 +172,42 @@ FocusRememberingScope {
                     statusIdenticalColor: browser ? browser.statusIdenticalColor : Theme.statusIdentical
                     statusDifferentColor: browser ? browser.statusDifferentColor : Theme.statusDifferent
                     useAdjustments: root.adjustmentsActive
+                    rotation: root.rotation
                     bloomValue: adjustmentsPanel.bloomValue
                     bloomRadiusPercent: adjustmentsPanel.bloomRadiusValue
                     brightnessValue: adjustmentsPanel.brightnessValue
                     contrastValue: adjustmentsPanel.contrastValue
                 }
 
-                ToolButton {
-                    id: adjustmentsToggle
+                Row {
+                    id: imageToolBar
                     anchors.top: parent.top
                     anchors.right: parent.right
                     anchors.margins: Theme.spaceSm
-                    text: qsTr("Adjustments")
                     visible: root.adjustmentsAvailable
-                    checkable: true
-                    checked: root.adjustmentsVisible
-                    onToggled: root.adjustmentsVisible = checked && root.adjustmentsAvailable
+                    spacing: Theme.spaceXs
+
+                    ToolButton {
+                        id: rotateLeftButton
+                        text: "\u21B6"
+                        font.pixelSize: 18
+                        onClicked: root.rotation = ((root.rotation - 90) % 360 + 360) % 360
+                    }
+
+                    ToolButton {
+                        id: rotateRightButton
+                        text: "\u21B7"
+                        font.pixelSize: 18
+                        onClicked: root.rotation = (root.rotation + 90) % 360
+                    }
+
+                    ToolButton {
+                        id: adjustmentsToggle
+                        text: qsTr("Adjustments")
+                        checkable: true
+                        checked: root.adjustmentsVisible
+                        onToggled: root.adjustmentsVisible = checked && root.adjustmentsAvailable
+                    }
                 }
 
                 Rectangle {
