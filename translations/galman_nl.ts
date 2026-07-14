@@ -558,6 +558,21 @@
         <source>Favorite pair already saved</source>
         <translation>Favorietenpaar is al opgeslagen</translation>
     </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="539" />
+        <source>Settings...</source>
+        <translation>Instellingen...</translation>
+    </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="560" />
+        <source>Save favorite pair</source>
+        <translation>Favorietenpaar opslaan</translation>
+    </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="612" />
+        <source>About</source>
+        <translation>Over</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>

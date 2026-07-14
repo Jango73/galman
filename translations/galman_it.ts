@@ -447,6 +447,18 @@
         <source>Favorite pair already saved</source>
         <translation>Coppia preferita già salvata</translation>
     </message>
+    <message>
+        <source>Settings...</source>
+        <translation>Impostazioni...</translation>
+    </message>
+    <message>
+        <source>Save favorite pair</source>
+        <translation>Salva coppia preferita</translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation>Informazioni</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>

@@ -556,6 +556,21 @@
         <source>Favorite pair already saved</source>
         <translation>收藏夹对已存在</translation>
     </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="539" />
+        <source>Settings...</source>
+        <translation>设置...</translation>
+    </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="560" />
+        <source>Save favorite pair</source>
+        <translation>保存收藏夹对</translation>
+    </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="612" />
+        <source>About</source>
+        <translation>关于</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>

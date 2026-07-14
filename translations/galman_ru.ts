@@ -561,6 +561,21 @@
         <source>Favorite pair already saved</source>
         <translation>Избранная пара уже сохранена</translation>
     </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="539" />
+        <source>Settings...</source>
+        <translation>Настройки...</translation>
+    </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="560" />
+        <source>Save favorite pair</source>
+        <translation>Сохранить избранную пару</translation>
+    </message>
+    <message>
+        <location filename="../qml/App/Main.qml" line="612" />
+        <source>About</source>
+        <translation>О программе</translation>
+    </message>
 </context>
 <context>
     <name>PlatformUtils</name>
