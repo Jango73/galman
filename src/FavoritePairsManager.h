@@ -16,6 +16,8 @@ public:
     QVariantList favoritePairs() const;
 
     Q_INVOKABLE bool addFavoritePair(const QString &leftPath, const QString &rightPath);
+    Q_INVOKABLE void removeFavoritePair(int index);
+    Q_INVOKABLE void moveFavoritePair(int fromIndex, int toIndex);
 
 signals:
     void favoritePairsChanged();

@@ -61,6 +61,28 @@ bool FavoritePairsManager::addFavoritePair(const QString &leftPath, const QStrin
     return true;
 }
 
+void FavoritePairsManager::removeFavoritePair(int index)
+{
+    if (index < 0 || index >= m_pairs.size()) {
+        return;
+    }
+    m_pairs.removeAt(index);
+    saveToSettings();
+    emit favoritePairsChanged();
+}
+
+void FavoritePairsManager::moveFavoritePair(int fromIndex, int toIndex)
+{
+    if (fromIndex < 0 || fromIndex >= m_pairs.size()
+        || toIndex < 0 || toIndex >= m_pairs.size()
+        || fromIndex == toIndex) {
+        return;
+    }
+    m_pairs.move(fromIndex, toIndex);
+    saveToSettings();
+    emit favoritePairsChanged();
+}
+
 QString FavoritePairsManager::normalizePath(const QString &path)
 {
     const QString trimmed = path.trimmed();
