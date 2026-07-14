@@ -150,13 +150,32 @@
         <translation>%1 будет перемещено в корзину.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../qml/Components/ConfirmDialog.qml" line="75" />
         <source>%n item</source>
         <translation>
             <numerusform>%n элемент</numerusform>
             <numerusform>%n элемента</numerusform>
             <numerusform>%n элементов</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Permanently delete?</source>
+        <translation>Удалить навсегда?</translation>
+    </message>
+    <message>
+        <source>Move files?</source>
+        <translation>Переместить файлы?</translation>
+    </message>
+    <message>
+        <source>%1, %2 will be moved (%3).</source>
+        <translation>%1, %2 будут перемещены (%3).</translation>
+    </message>
+    <message>
+        <source>Warning: %1 already exist in target.</source>
+        <translation>Внимание: %1 уже существует в месте назначения.</translation>
+    </message>
+    <message>
+        <source>%1 will be permanently deleted.</source>
+        <translation>%1 будет удалено навсегда.</translation>
     </message>
 </context>
 <context>

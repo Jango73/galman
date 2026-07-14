@@ -126,6 +126,26 @@
             <numerusform />
         </translation>
     </message>
+    <message>
+        <source>Permanently delete?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move files?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1, %2 will be moved (%3).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Warning: %1 already exist in target.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 will be permanently deleted.</source>
+        <translation type="unfinished" />
+    </message>
 </context>
 <context>
     <name>CopyWorker</name>

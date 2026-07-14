@@ -148,12 +148,31 @@
         <translation>%1 wordt naar de prullenbak verplaatst.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../qml/Components/ConfirmDialog.qml" line="75" />
         <source>%n item</source>
         <translation>
             <numerusform>%n item</numerusform>
             <numerusform>%n items</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Permanently delete?</source>
+        <translation>Definitief verwijderen?</translation>
+    </message>
+    <message>
+        <source>Move files?</source>
+        <translation>Bestanden verplaatsen?</translation>
+    </message>
+    <message>
+        <source>%1, %2 will be moved (%3).</source>
+        <translation>%1, %2 worden verplaatst (%3).</translation>
+    </message>
+    <message>
+        <source>Warning: %1 already exist in target.</source>
+        <translation>Waarschuwing: %1 bestaat al in het doel.</translation>
+    </message>
+    <message>
+        <source>%1 will be permanently deleted.</source>
+        <translation>%1 wordt definitief verwijderd.</translation>
     </message>
 </context>
 <context>

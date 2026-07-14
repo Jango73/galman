@@ -126,6 +126,26 @@
             <numerusform>%n éléments</numerusform>
         </translation>
     </message>
+    <message>
+        <source>Permanently delete?</source>
+        <translation>Supprimer définitivement ?</translation>
+    </message>
+    <message>
+        <source>Move files?</source>
+        <translation>Déplacer les fichiers ?</translation>
+    </message>
+    <message>
+        <source>%1, %2 will be moved (%3).</source>
+        <translation>%1, %2 seront déplacés (%3).</translation>
+    </message>
+    <message>
+        <source>Warning: %1 already exist in target.</source>
+        <translation>Attention : %1 existe déjà dans la cible.</translation>
+    </message>
+    <message>
+        <source>%1 will be permanently deleted.</source>
+        <translation>%1 sera définitivement supprimé.</translation>
+    </message>
 </context>
 <context>
     <name>CopyWorker</name>
