@@ -234,7 +234,7 @@ ColumnLayout {
             Layout.preferredWidth: Theme.filterNumberFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled
             KeyNavigation.backtab: maximumByteSizeField
-            KeyNavigation.tab: maximumImageWidthField
+            KeyNavigation.tab: minimumImageHeightField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
                 const value = parseNumberFilter(minimumImageWidthField.text)
@@ -244,27 +244,12 @@ ColumnLayout {
         }
 
             TextField {
-            id: maximumImageWidthField
-            placeholderText: qsTr("Max. width")
-            Layout.preferredWidth: Theme.filterNumberFieldWidth
-            selectByMouse: root.filterSelectByMouseEnabled
-            KeyNavigation.backtab: minimumImageWidthField
-            KeyNavigation.tab: minimumImageHeightField
-            inputMethodHints: Qt.ImhDigitsOnly
-            onTextChanged: {
-                const value = parseNumberFilter(maximumImageWidthField.text)
-                setBrowserFilterValue((valueToSet) => { root.browserModel.maximumImageWidth = valueToSet }, value)
-                root.maximumImageWidthChangedByUser(value)
-            }
-        }
-
-            TextField {
             id: minimumImageHeightField
             placeholderText: qsTr("Min. height")
             Layout.preferredWidth: Theme.filterNumberFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled
-            KeyNavigation.backtab: maximumImageWidthField
-            KeyNavigation.tab: maximumImageHeightField
+            KeyNavigation.backtab: minimumImageWidthField
+            KeyNavigation.tab: maximumImageWidthField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
                 const value = parseNumberFilter(minimumImageHeightField.text)
@@ -274,11 +259,26 @@ ColumnLayout {
         }
 
             TextField {
+            id: maximumImageWidthField
+            placeholderText: qsTr("Max. width")
+            Layout.preferredWidth: Theme.filterNumberFieldWidth
+            selectByMouse: root.filterSelectByMouseEnabled
+            KeyNavigation.backtab: minimumImageHeightField
+            KeyNavigation.tab: maximumImageHeightField
+            inputMethodHints: Qt.ImhDigitsOnly
+            onTextChanged: {
+                const value = parseNumberFilter(maximumImageWidthField.text)
+                setBrowserFilterValue((valueToSet) => { root.browserModel.maximumImageWidth = valueToSet }, value)
+                root.maximumImageWidthChangedByUser(value)
+            }
+        }
+
+            TextField {
             id: maximumImageHeightField
             placeholderText: qsTr("Max. height")
             Layout.preferredWidth: Theme.filterNumberFieldWidth
             selectByMouse: root.filterSelectByMouseEnabled
-            KeyNavigation.backtab: minimumImageHeightField
+            KeyNavigation.backtab: maximumImageWidthField
             KeyNavigation.tab: clearFiltersButton
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
