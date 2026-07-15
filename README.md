@@ -15,6 +15,7 @@ The app also supports automation scripts, and you can add your own JavaScript sc
 - A C++17 compiler
 
 On Debian or Ubuntu, `./scripts/linux/deps.sh` installs the required dependencies.
+On Debian or Ubuntu with backports enabled, `./scripts/linux/deps-with-temporary-backports-disable.sh` installs dependencies while temporarily disabling the backports suite to avoid version conflicts.
 On Windows, ensure Qt 6, CMake, and Ninja are in `PATH`.
 
 Galman detects supported image formats through `QImageReader`, so formats such as WebP are available when the matching Qt image format plugin is installed.
@@ -47,6 +48,23 @@ scripts\windows\run.bat
 ```
 
 `scripts/windows/run.bat` triggers a build if the matching build folder (debug or release) is missing. Output is logged to `temp/run.log`.
+
+### Install desktop shortcut (GNOME)
+```bash
+./scripts/linux/install-desktop.sh
+```
+
+Installs a `.desktop` file in `~/.local/share/applications/` pointing to the release build binary.
+
+### Clean build folders
+```bash
+./scripts/linux/clean.sh
+```
+
+Removes build folders. Options:
+- `--debug` or `-d` remove only the debug build folder
+- `--release` or `-r` remove only the release build folder
+- `--all` or `-a` remove both (default)
 
 ### Package (Debian)
 ```bash
