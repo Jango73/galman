@@ -647,6 +647,17 @@ Item {
         Menu {
             id: contextMenu
             parent: Window.window ? Window.window.contentItem : root
+            property bool backupFileExists: false
+            property bool backupFolderExists: false
+
+            onAboutToShow: {
+                const hasModel = root.browserModel && root.contextMenuIndex >= 0
+                const isFile = hasModel && !root.browserModel.isDir(root.contextMenuIndex)
+                backupFolderExists = hasModel && root.browserModel.isDir
+                    && backupSystem.hasBackupFolder(root.browserModel.rootPath)
+                backupFileExists = isFile
+                    && backupSystem.hasBackup(root.browserModel.pathForRow(root.contextMenuIndex))
+            }
 
             MenuItem {
                 text: qsTr("Rename")
@@ -703,10 +714,8 @@ Item {
             }
             MenuItem {
                 text: qsTr("Backup file")
-                enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
-                    && root.browserModel && root.browserModel.isDir
-                    && !root.browserModel.isDir(root.contextMenuIndex)
-                    && backupSystem.hasBackupFolder(root.browserModel.rootPath)
+                enabled: root.selectedCount === 1 && contextMenu.backupFolderExists
+                    && root.browserModel && !root.browserModel.isDir(root.contextMenuIndex)
                 onTriggered: {
                     const path = root.browserModel
                         ? root.browserModel.pathForRow(root.contextMenuIndex)
@@ -731,10 +740,7 @@ Item {
             }
             MenuItem {
                 text: qsTr("Restore file")
-                enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
-                    && root.browserModel && root.browserModel.isDir
-                    && !root.browserModel.isDir(root.contextMenuIndex)
-                    && backupSystem.hasBackup(root.browserModel.pathForRow(root.contextMenuIndex))
+                enabled: root.selectedCount === 1 && contextMenu.backupFileExists
                 onTriggered: {
                     const path = root.browserModel
                         ? root.browserModel.pathForRow(root.contextMenuIndex)
