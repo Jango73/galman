@@ -830,6 +830,16 @@ QVariantMap ScriptEngine::runProcess(const QString &program,
     QString standardError;
 
     while (process.state() != QProcess::NotRunning) {
+        if (QCoreApplication::closingDown()) {
+            qInfo() << "runProcess aborting: application is closing down";
+            process.terminate();
+            if (!process.waitForFinished(ProcessProgressConstants::shortWaitMilliseconds)) {
+                process.kill();
+                process.waitForFinished(ProcessProgressConstants::shortWaitMilliseconds);
+            }
+            break;
+        }
+
         process.waitForReadyRead(ProcessProgressConstants::shortWaitMilliseconds);
 
         const QString chunkOutput = QString::fromUtf8(process.readAllStandardOutput());

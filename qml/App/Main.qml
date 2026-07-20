@@ -11,6 +11,9 @@ ApplicationWindow {
     height: 800
     visible: true
     title: qsTr("Galman")
+    onClosing: (close) => {
+        stopActiveOperations()
+    }
     property color panelBackground: Theme.panelBackground
     property int copyBarSize: 40
     property var messageQueue: []
