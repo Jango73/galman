@@ -70,6 +70,26 @@ FocusRememberingScope {
             event.accepted = true
             return
         }
+        if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) {
+            mainMediaDisplay.zoomIn()
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_Minus) {
+            mainMediaDisplay.zoomOut()
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_0) {
+            mainMediaDisplay.resetZoom()
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_1) {
+            mainMediaDisplay.zoomToHundredPercent()
+            event.accepted = true
+            return
+        }
         if (event.key === Qt.Key_Left) {
             if (browser) {
                 browser.selectAdjacentMedia(-1)
@@ -234,14 +254,6 @@ FocusRememberingScope {
                     z: 3
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    onPressed: (mouse) => {
-                        imageArea.forceActiveFocus()
-                        mouse.accepted = false
-                    }
-                }
             }
 
             ImageAdjustmentsPanel {

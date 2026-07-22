@@ -66,7 +66,14 @@ Dialog {
                     { keys: "Left / Right", action: qsTr("Previous / next image") },
                     { keys: "Home / End", action: qsTr("First / last image") },
                     { keys: "Ctrl+Left", action: qsTr("Copy selection right to left") },
-                    { keys: "Ctrl+Right", action: qsTr("Copy selection left to right") }
+                    { keys: "Ctrl+Right", action: qsTr("Copy selection left to right") },
+                    { keys: "Scroll wheel", action: qsTr("Zoom in / out") },
+                    { keys: "Drag", action: qsTr("Pan image (when zoomed)") },
+                    { keys: "Double-click", action: qsTr("Reset zoom to fit") },
+                    { keys: "+", action: qsTr("Zoom in") },
+                    { keys: "-", action: qsTr("Zoom out") },
+                    { keys: "0", action: qsTr("Reset zoom to fit") },
+                    { keys: "1", action: qsTr("Zoom to 100% (1:1 pixels)") }
                 ]
             }
         ]

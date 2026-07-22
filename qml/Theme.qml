@@ -42,6 +42,11 @@ QtObject {
     readonly property int rowIndexBadgeFontPixelSize: 12
     readonly property color rowIndexBadgeBackground: Qt.rgba(0, 0, 0, 0.65)
     readonly property color rowIndexBadgeTextColor: "#f2f2f2"
+    readonly property real zoomStepFactor: 1.25
+    readonly property real zoomMaxLevel: 16.0
+    readonly property real zoomMinLevel: 1.0
+    readonly property real panBorderPadding: 20.0
+    readonly property int zoomButtonsSpacing: 4
 
     function elideFileName(name) {
         const raw = String(name || "")

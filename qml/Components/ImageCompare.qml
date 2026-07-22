@@ -24,6 +24,16 @@ FocusRememberingScope {
         return navigationBrowser ? navigationBrowser : leftBrowser
     }
 
+    function activeMediaDisplay() {
+        if (leftImageDisplay.activeFocus) {
+            return leftImageDisplay
+        }
+        if (rightImageDisplay.activeFocus) {
+            return rightImageDisplay
+        }
+        return navigationBrowser === rightBrowser ? rightImageDisplay : leftImageDisplay
+    }
+
     function confirmTrashSelected() {
         const paths = selectedPaths()
         if (paths.length === 0) {
@@ -78,6 +88,38 @@ FocusRememberingScope {
         }
         if (event.key === Qt.Key_Escape) {
             root.closeRequested()
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) {
+            const target = root.activeMediaDisplay()
+            if (target) {
+                target.zoomIn()
+            }
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_Minus) {
+            const target = root.activeMediaDisplay()
+            if (target) {
+                target.zoomOut()
+            }
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_0) {
+            const target = root.activeMediaDisplay()
+            if (target) {
+                target.resetZoom()
+            }
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_1) {
+            const target = root.activeMediaDisplay()
+            if (target) {
+                target.zoomToHundredPercent()
+            }
             event.accepted = true
             return
         }
@@ -168,15 +210,6 @@ FocusRememberingScope {
                 statusDifferent: rightBrowser ? rightBrowser.statusDifferent : 3
                 statusIdenticalColor: rightBrowser ? rightBrowser.statusIdenticalColor : Theme.statusIdentical
                 statusDifferentColor: rightBrowser ? rightBrowser.statusDifferentColor : Theme.statusDifferent
-            }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton
-            onPressed: (mouse) => {
-                root.forceActiveFocus()
-                mouse.accepted = false
             }
         }
     }
