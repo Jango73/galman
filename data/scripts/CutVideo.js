@@ -32,7 +32,7 @@ function fileNameWithoutExtension(fileName) {
 function outputPathFromInputPath(inputPath) {
     const folderPath = folderPathFromFilePath(inputPath)
     const fileName = fileNameFromPath(inputPath)
-    const outputFileName = fileNameWithoutExtension(fileName) + "-repaired.mp4"
+    const outputFileName = fileNameWithoutExtension(fileName) + "-cut.mp4"
     return folderPath ? (folderPath + "/" + outputFileName) : outputFileName
 }
 
@@ -57,43 +57,27 @@ function isVideoFilePath(path) {
     return supportedVideoExtensions.indexOf(extension) >= 0
 }
 
-function videoRotationOptions() {
-    return [
-        "None",
-        "Rotate right 90",
-        "Rotate left 90"
-    ]
-}
-
-function videoFilterFromRotation(rotation) {
-    const filterParts = []
-
-    if (rotation === "Rotate right 90") {
-        filterParts.push("transpose=1")
-    } else if (rotation === "Rotate left 90") {
-        filterParts.push("transpose=2")
-    }
-
-    filterParts.push("scale=ceil(iw/2)*2:ceil(ih/2)*2")
-    return filterParts.join(",")
-}
-
 function scriptDefinition() {
     return {
-        name: "Repair video",
-        description: "Repair selected videos with ffmpeg (libx264 + AAC audio).",
+        name: "Cut video",
+        description: "Cut selected videos with ffmpeg (stream copy, no re-encoding).",
         controls: [
             {
-                id: "rotation",
-                type: "combo",
-                label: "Rotation",
-                options: videoRotationOptions(),
-                default: "None"
+                id: "startTime",
+                type: "text",
+                label: "Start time (h:m:s)",
+                default: "00:00:00"
+            },
+            {
+                id: "endTime",
+                type: "text",
+                label: "End time (h:m:s)",
+                default: "00:00:10"
             }
         ],
         run: function(params, selection) {
-            const rotation = String(params.rotation || "None")
-            const videoFilter = videoFilterFromRotation(rotation)
+            const startTime = String(params.startTime || "00:00:00")
+            const endTime = String(params.endTime || "00:00:10")
             const items = Array.isArray(selection) ? selection : []
             const files = items.filter(item => item && item.path && !item.isDir && isVideoFilePath(item.path))
             const results = []
@@ -104,16 +88,10 @@ function scriptDefinition() {
                 const temporaryOutputPath = temporaryOutputPathFromOutputPath(outputPath)
                 const arguments = [
                     "-y",
-                    "-fflags", "+genpts",
+                    "-ss", startTime,
+                    "-to", endTime,
                     "-i", inputPath,
-                    "-map", "0:v:0",
-                    "-map", "0:a?",
-                    "-c:v", "libx264",
-                    "-vf", videoFilter,
-                    "-preset", "fast",
-                    "-crf", "18",
-                    "-c:a", "aac",
-                    "-b:a", "192k",
+                    "-c", "copy",
                     "-movflags", "+faststart",
                     temporaryOutputPath
                 ]
