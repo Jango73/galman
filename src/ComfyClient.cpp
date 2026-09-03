@@ -59,6 +59,28 @@ QVariantMap ComfyClient::runWorkflow(const QString &serverUrl,
                                      int pollIntervalMs,
                                      int maxPollMs)
 {
+    return runWorkflowCancellable(serverUrl, promptPayload, clientId, timeoutMs, pollIntervalMs, maxPollMs, {});
+}
+
+/**
+ * @brief Submits a workflow prompt and polls until completion, timeout, or cancel.
+ * @param serverUrl Base URL of the ComfyUI server.
+ * @param promptPayload JSON payload describing the workflow prompt.
+ * @param clientId Client identifier forwarded to the server.
+ * @param timeoutMs Timeout in milliseconds for each HTTP request.
+ * @param pollIntervalMs Delay in milliseconds between polling attempts.
+ * @param maxPollMs Maximum total polling time in milliseconds.
+ * @param isCancelled Optional polling callback returning true when cancel is requested.
+ * @return A map with ok=true and data on success, or ok=false and error on failure.
+ */
+QVariantMap ComfyClient::runWorkflowCancellable(const QString &serverUrl,
+                                               const QJsonObject &promptPayload,
+                                               const QString &clientId,
+                                               int timeoutMs,
+                                               int pollIntervalMs,
+                                               int maxPollMs,
+                                               const std::function<bool()> &isCancelled)
+{
     QVariantMap result;
     result.insert("ok", false);
 
@@ -86,6 +108,10 @@ QVariantMap ComfyClient::runWorkflow(const QString &serverUrl,
     timer.start();
 
     while (timer.elapsed() < maxPollMs) {
+        if (isCancelled && isCancelled()) {
+            result.insert("error", "Cancelled by user");
+            return result;
+        }
         const QJsonObject raw = getJson(historyUrl, timeoutMs, &error);
         if (!error.isEmpty()) {
             if (error.contains("404")) {
@@ -210,6 +236,72 @@ bool ComfyClient::downloadImage(const QString &serverUrl,
 }
 
 /**
+ * @brief Downloads a ComfyUI output file (image or video) via the view endpoint.
+ * @param serverUrl Base URL of the ComfyUI server.
+ * @param filename Output filename on the server.
+ * @param subfolder Optional server subfolder.
+ * @param type Optional ComfyUI type parameter.
+ * @param targetPath Destination file path on disk.
+ * @param timeoutMs Timeout in milliseconds for the HTTP request.
+ * @param error Optional output error message.
+ * @return True on successful download and write, false otherwise.
+ */
+bool ComfyClient::downloadOutput(const QString &serverUrl,
+                                 const QString &filename,
+                                 const QString &subfolder,
+                                 const QString &type,
+                                 const QString &targetPath,
+                                 int timeoutMs,
+                                 QString *error)
+{
+    return downloadImage(serverUrl, filename, subfolder, type, targetPath, timeoutMs, error);
+}
+
+/**
+ * @brief Sends a best-effort interrupt request to ComfyUI.
+ * @param serverUrl Base URL of the ComfyUI server.
+ * @param timeoutMs Timeout in milliseconds for the HTTP request.
+ * @param error Optional output error message.
+ * @return True if the request was accepted, false otherwise.
+ */
+bool ComfyClient::interrupt(const QString &serverUrl, int timeoutMs, QString *error)
+{
+    const QString baseUrl = serverUrl.endsWith("/") ? serverUrl.left(serverUrl.size() - 1) : serverUrl;
+    const QString url = baseUrl + "/interrupt";
+
+    QNetworkAccessManager manager;
+    QNetworkRequest request{QUrl(url)};
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QEventLoop loop;
+    QTimer timer;
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    QNetworkReply *reply = manager.post(request, QByteArray("{}"));
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    timer.start(timeoutMs);
+    loop.exec();
+
+    const bool timedOut = !reply->isFinished() || timer.isActive() == false;
+    const bool failed = reply->error() != QNetworkReply::NoError;
+    QString failure;
+    if (timedOut) {
+        failure = QStringLiteral("HTTP timeout while interrupting ComfyUI");
+    } else if (failed) {
+        failure = QString("HTTP error: %1").arg(reply->errorString());
+    }
+    reply->deleteLater();
+    if (!failure.isEmpty()) {
+        if (error) {
+            *error = failure;
+        }
+        return false;
+    }
+    return true;
+}
+
+/**
  * @brief Sends a JSON payload via HTTP POST and returns the JSON response.
  * @param url Target URL to post to.
  * @param payload JSON payload to send.
@@ -240,7 +332,11 @@ QJsonObject ComfyClient::postJson(const QString &url, const QJsonObject &payload
         }
     } else if (reply->error() != QNetworkReply::NoError) {
         if (error) {
+            const QString detail = QString::fromUtf8(reply->readAll()).left(500);
             *error = QString("HTTP error: %1").arg(reply->errorString());
+            if (!detail.isEmpty()) {
+                *error += QString(" - %1").arg(detail);
+            }
         }
     } else {
         const QByteArray body = reply->readAll();
@@ -305,11 +401,15 @@ QJsonObject ComfyClient::getJson(const QString &url, int timeoutMs, QString *err
 QString ComfyClient::extractStatus(const QJsonObject &payload) const
 {
     const QJsonObject statusBlock = payload.value("status").toObject();
-    const QString statusValue = statusBlock.value("status").toString().toLower();
+    QString statusValue = statusBlock.value("status_str").toString();
+    if (statusValue.isEmpty()) {
+        statusValue = statusBlock.value("status").toString();
+    }
+    statusValue = statusValue.toLower();
     if (statusValue == "success" || statusValue == "ok" || statusValue == "completed") {
         return "done";
     }
-    if (statusValue == "error" || statusValue == "failed") {
+    if (statusValue == "error" || statusValue == "failed" || statusValue == "interrupted") {
         return "error";
     }
     if (payload.contains("outputs")) {

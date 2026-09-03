@@ -25,6 +25,10 @@ qt_add_executable(galman
         src/FavoritePairsManager.cpp
         src/ComfyClient.cpp
         src/ComfyWorkflowParser.cpp
+        src/ComfyWorkflowBuilder.cpp
+        src/ComfyPromptImporter.cpp
+        src/ComfyPilotWorker.cpp
+        src/ComfyPilotController.cpp
         src/PlatformUtils.cpp
 )
 
@@ -70,6 +74,10 @@ qt_add_qml_module(galman
         src/FavoritePairsManager.h
         src/ComfyClient.h
         src/ComfyWorkflowParser.h
+        src/ComfyWorkflowBuilder.h
+        src/ComfyPromptImporter.h
+        src/ComfyPilotWorker.h
+        src/ComfyPilotController.h
         src/PlatformUtils.h
         src/ImageMetadataUtils.h
         src/ImageMetadataUtils.cpp
@@ -101,6 +109,7 @@ qt_add_qml_module(galman
         qml/Components/SettingsDialog.qml
         qml/Components/ShortcutsDialog.qml
         qml/Components/StatusBadge.qml
+        qml/Components/ComfyPilotView.qml
     RESOURCES
         qml/Assets/Galman.png
 )

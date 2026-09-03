@@ -7,6 +7,7 @@ QtObject {
     readonly property color statusIdentical: "#6bbf59"
     readonly property color statusDifferent: "#d6b14a"
     readonly property color statusMissing: "#c06565"
+    readonly property color danger: "#c06565"
     readonly property color statusIdenticalAlt: "#86e1aa"
     readonly property color statusDifferentAlt: "#ffcf5a"
     readonly property color newerIndicator: "#5ba3e6"

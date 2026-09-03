@@ -271,6 +271,9 @@ ApplicationWindow {
         if (scriptEngine && scriptEngine.processRunning) {
             scriptEngine.cancelRunningProcess()
         }
+        if (comfyPilotController && comfyPilotController.running) {
+            comfyPilotController.cancel()
+        }
     }
 
     function startRemovalSelection(sourcePane, moveToTrash) {
@@ -815,9 +818,31 @@ ApplicationWindow {
         anchors.margins: singlePreviewFullscreen ? 0 : Theme.windowMargin
         spacing: singlePreviewFullscreen ? 0 : Theme.spaceMd
 
-        RowLayout {
+        TabBar {
+            id: mainTabBar
+            Layout.fillWidth: true
+            visible: !singlePreviewFullscreen
+            TabButton {
+                text: qsTr("Browser")
+            }
+            TabButton {
+                text: qsTr("ComfyUI")
+            }
+        }
+
+        StackLayout {
+            id: mainTabStack
             Layout.fillWidth: true
             Layout.fillHeight: true
+            currentIndex: mainTabBar.currentIndex
+
+            Item {
+                id: galleryTab
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                RowLayout {
+                    anchors.fill: parent
             spacing: singlePreviewFullscreen ? 0 : Theme.spaceLg
 
             CommandPanel {
@@ -1279,6 +1304,29 @@ ApplicationWindow {
                     }
                 }
             }
+                }
+            }
+            }
+
+            ComfyPilotView {
+                id: comfyPilotTab
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                panelBackground: window.panelBackground
+            }
+        }
+
+        Connections {
+            target: comfyPilotController
+            function onErrorMessageChanged() {
+                if (comfyPilotController && comfyPilotController.errorMessage !== "") {
+                    pushError(comfyPilotController.errorMessage)
+                }
+            }
+            function onOutputPathChanged() {
+                if (comfyPilotController && comfyPilotController.outputPath !== "") {
+                    pushStatus(qsTr("ComfyUI done: %1").arg(baseNameFromPath(comfyPilotController.outputPath)))
+                }
             }
         }
 

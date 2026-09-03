@@ -30,6 +30,7 @@
 #include "ApplicationVersion.h"
 #include "AppLogger.h"
 #include "BackupSystem.h"
+#include "ComfyPilotController.h"
 #include "FavoritePairsManager.h"
 #include "LanguageManager.h"
 #include "ScriptEngine.h"
@@ -74,8 +75,10 @@ int main(int argc, char *argv[])
     ScriptManager scriptManager;
     LanguageManager languageManager(&engine);
     FavoritePairsManager favoritePairsManager;
+    ComfyPilotController comfyPilotController;
     engine.rootContext()->setContextProperty("backupSystem", &backupSystem);
     engine.rootContext()->setContextProperty("scriptEngine", &scriptEngine);
+    engine.rootContext()->setContextProperty("comfyPilotController", &comfyPilotController);
     engine.rootContext()->setContextProperty("scriptManager", &scriptManager);
     engine.rootContext()->setContextProperty("languageManager", &languageManager);
     engine.rootContext()->setContextProperty("favoritesManager", &favoritePairsManager);
