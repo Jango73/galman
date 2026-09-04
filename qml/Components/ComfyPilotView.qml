@@ -15,6 +15,10 @@ Item {
         outputPath: comfyPilotController ? comfyPilotController.outputPath : ""
     }
 
+    function previewExternalImage(path) {
+        return outputBrowser.previewExternalImage(path)
+    }
+
     onVisibleChanged: {
         if (visible) {
             outputPreview.forceActiveFocus()

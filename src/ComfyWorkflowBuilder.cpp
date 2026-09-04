@@ -34,6 +34,11 @@ struct BuilderLimits
     static constexpr int faceMaskBlur = 0;
     static constexpr int faceDilateValue = 3;
     static constexpr int faceErodeValue = 3;
+    static constexpr double videoModelShift = 8.0;
+    static constexpr int videoBatchSize = 1;
+    static constexpr int videoLoopCount = 0;
+    static constexpr int videoCombineCrf = 19;
+    static constexpr int videoFrameBlock = 4;
 };
 
 QJsonArray latentLink(const QString &nodeId)
@@ -117,6 +122,81 @@ QString ComfyWorkflowBuilder::ModelConstants::savePrefix()
     return QStringLiteral("Galman");
 }
 
+QString ComfyWorkflowBuilder::ModelConstants::videoUnetName()
+{
+    return QStringLiteral("wan2.1_i2v_480p_14B_fp8_scaled.safetensors");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoClipName()
+{
+    return QStringLiteral("umt5_xxl_fp8_e4m3fn_scaled.safetensors");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoClipVisionName()
+{
+    return QStringLiteral("clip_vision_h.safetensors");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoVaeName()
+{
+    return QStringLiteral("wan_2.1_vae.safetensors");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoWeightDtype()
+{
+    return QStringLiteral("default");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoClipType()
+{
+    return QStringLiteral("wan");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoClipDevice()
+{
+    return QStringLiteral("default");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoSamplerName()
+{
+    return QStringLiteral("uni_pc");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoSchedulerName()
+{
+    return QStringLiteral("simple");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoUpscaleMethod()
+{
+    return QStringLiteral("nearest-exact");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoUpscaleCrop()
+{
+    return QStringLiteral("disabled");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoVisionCrop()
+{
+    return QStringLiteral("none");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoCombineFormat()
+{
+    return QStringLiteral("video/h264-mp4");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoCombinePixelFormat()
+{
+    return QStringLiteral("yuv420p");
+}
+
+QString ComfyWorkflowBuilder::ModelConstants::videoCombinePrefix()
+{
+    return QStringLiteral("wan");
+}
+
 /**
  * @brief Returns the default filename prefix for generated outputs.
  * @return Default save prefix.
@@ -146,6 +226,9 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
                                               QString *error,
                                               const QString &savePrefixOverride)
 {
+    if (params.videoEnabled) {
+        return buildVideoPrompt(params, error, savePrefixOverride);
+    }
     if (params.canvasWidth < ComfyPilotDefaults::minCanvasSize
         || params.canvasWidth > ComfyPilotDefaults::maxCanvasSize
         || params.canvasHeight < ComfyPilotDefaults::minCanvasSize
@@ -364,5 +447,222 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
 
     qInfo() << "ComfyWorkflowBuilder build done: nodes=" << prompt.count()
             << "refines=" << params.refineCount << "face=" << params.faceDetail;
+    return prompt;
+}
+
+/**
+ * @brief Builds an image-to-video ComfyUI API prompt from pilot parameters.
+ * @param params Validated pilot parameters, video mode must be enabled.
+ * @param error Optional output error message.
+ * @param savePrefixOverride Optional filename prefix replacing the default one.
+ * @return Prompt object keyed by node id, or empty object on validation failure.
+ */
+QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &params,
+                                                  QString *error,
+                                                  const QString &savePrefixOverride)
+{
+    if (params.canvasWidth < ComfyPilotDefaults::minCanvasSize
+        || params.canvasWidth > ComfyPilotDefaults::maxCanvasSize
+        || params.canvasHeight < ComfyPilotDefaults::minCanvasSize
+        || params.canvasHeight > ComfyPilotDefaults::maxCanvasSize) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid canvas size");
+        }
+        return {};
+    }
+    if (params.initialSteps < ComfyPilotDefaults::minSteps || params.initialSteps > ComfyPilotDefaults::maxSteps) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid steps value");
+        }
+        return {};
+    }
+    if (params.initialGuidance < ComfyPilotDefaults::minGuidance
+        || params.initialGuidance > ComfyPilotDefaults::maxGuidance) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid guidance value");
+        }
+        return {};
+    }
+    if (params.initialDenoise < ComfyPilotDefaults::minDenoise
+        || params.initialDenoise > ComfyPilotDefaults::maxDenoise) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid denoise value");
+        }
+        return {};
+    }
+    if (params.videoDuration < ComfyPilotDefaults::minVideoDuration
+        || params.videoDuration > ComfyPilotDefaults::maxVideoDuration) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid video duration");
+        }
+        return {};
+    }
+    if (params.videoFrameRate < ComfyPilotDefaults::minVideoFrameRate
+        || params.videoFrameRate > ComfyPilotDefaults::maxVideoFrameRate) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid video frame rate");
+        }
+        return {};
+    }
+    if (params.canvasSize < ComfyPilotDefaults::minVideoCanvasSize
+        || params.canvasSize > ComfyPilotDefaults::maxVideoCanvasSize) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid canvas size");
+        }
+        return {};
+    }
+    if (!params.useCurrentImage) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Video input image is not enabled");
+        }
+        return {};
+    }
+    if (params.videoInputFileName.trimmed().isEmpty()) {
+        if (error) {
+            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Missing video input image");
+        }
+        return {};
+    }
+
+    const int requestedFrames = params.videoDuration * params.videoFrameRate;
+    const int frameRemainder = (requestedFrames - 1) % BuilderLimits::videoFrameBlock;
+    const int frameCount = requestedFrames
+        + (BuilderLimits::videoFrameBlock - frameRemainder) % BuilderLimits::videoFrameBlock;
+    qInfo() << "ComfyWorkflowBuilder video build start:"
+            << "canvas=" << params.canvasWidth << "x" << params.canvasHeight
+            << "frames=" << frameCount
+            << "rate=" << params.videoFrameRate
+            << "seed=" << params.seed;
+
+    QJsonObject prompt;
+    int nextId = 1;
+    const auto newId = [&nextId]() {
+        return QString::number(nextId++);
+    };
+
+    const QString unetId = newId();
+    const QString samplingId = newId();
+    const QString clipId = newId();
+    const QString clipVisionLoaderId = newId();
+    const QString vaeId = newId();
+    const QString positiveId = newId();
+    const QString negativeId = newId();
+    const QString loadImageId = newId();
+    const QString scaleImageId = newId();
+    const QString clipVisionEncodeId = newId();
+    const QString wanId = newId();
+    const QString samplerId = newId();
+    const QString decodeId = newId();
+    const QString combineId = newId();
+
+    QJsonObject unetInputs;
+    unetInputs.insert(QStringLiteral("unet_name"), ModelConstants::videoUnetName());
+    unetInputs.insert(QStringLiteral("weight_dtype"), ModelConstants::videoWeightDtype());
+    insertPromptNode(prompt, unetId, QStringLiteral("UNETLoader"), unetInputs);
+
+    QJsonObject samplingInputs;
+    samplingInputs.insert(QStringLiteral("model"), latentLink(unetId));
+    samplingInputs.insert(QStringLiteral("shift"), BuilderLimits::videoModelShift);
+    insertPromptNode(prompt, samplingId, QStringLiteral("ModelSamplingSD3"), samplingInputs);
+
+    QJsonObject clipInputs;
+    clipInputs.insert(QStringLiteral("clip_name"), ModelConstants::videoClipName());
+    clipInputs.insert(QStringLiteral("type"), ModelConstants::videoClipType());
+    clipInputs.insert(QStringLiteral("device"), ModelConstants::videoClipDevice());
+    insertPromptNode(prompt, clipId, QStringLiteral("CLIPLoader"), clipInputs);
+
+    QJsonObject clipVisionLoaderInputs;
+    clipVisionLoaderInputs.insert(QStringLiteral("clip_name"), ModelConstants::videoClipVisionName());
+    insertPromptNode(prompt, clipVisionLoaderId, QStringLiteral("CLIPVisionLoader"), clipVisionLoaderInputs);
+
+    QJsonObject vaeInputs;
+    vaeInputs.insert(QStringLiteral("vae_name"), ModelConstants::videoVaeName());
+    insertPromptNode(prompt, vaeId, QStringLiteral("VAELoader"), vaeInputs);
+
+    QJsonObject positiveInputs;
+    positiveInputs.insert(QStringLiteral("clip"), latentLink(clipId));
+    positiveInputs.insert(QStringLiteral("text"), params.positivePrompt);
+    insertPromptNode(prompt, positiveId, QStringLiteral("CLIPTextEncode"), positiveInputs);
+
+    QJsonObject negativeInputs;
+    negativeInputs.insert(QStringLiteral("clip"), latentLink(clipId));
+    negativeInputs.insert(QStringLiteral("text"), params.negativePrompt);
+    insertPromptNode(prompt, negativeId, QStringLiteral("CLIPTextEncode"), negativeInputs);
+
+    QJsonObject loadImageInputs;
+    loadImageInputs.insert(QStringLiteral("image"), params.videoInputFileName.trimmed());
+    insertPromptNode(prompt, loadImageId, QStringLiteral("LoadImage"), loadImageInputs);
+
+    QJsonObject scaleImageInputs;
+    scaleImageInputs.insert(QStringLiteral("image"), latentLink(loadImageId));
+    scaleImageInputs.insert(QStringLiteral("upscale_method"), ModelConstants::videoUpscaleMethod());
+    scaleImageInputs.insert(QStringLiteral("width"), params.canvasWidth);
+    scaleImageInputs.insert(QStringLiteral("height"), params.canvasHeight);
+    scaleImageInputs.insert(QStringLiteral("crop"), ModelConstants::videoUpscaleCrop());
+    insertPromptNode(prompt, scaleImageId, QStringLiteral("ImageScale"), scaleImageInputs);
+
+    QJsonObject clipVisionEncodeInputs;
+    clipVisionEncodeInputs.insert(QStringLiteral("clip_vision"), latentLink(clipVisionLoaderId));
+    clipVisionEncodeInputs.insert(QStringLiteral("image"), latentLink(scaleImageId));
+    clipVisionEncodeInputs.insert(QStringLiteral("crop"), ModelConstants::videoVisionCrop());
+    insertPromptNode(prompt, clipVisionEncodeId, QStringLiteral("CLIPVisionEncode"), clipVisionEncodeInputs);
+
+    QJsonObject wanInputs;
+    wanInputs.insert(QStringLiteral("positive"), latentLink(positiveId));
+    wanInputs.insert(QStringLiteral("negative"), latentLink(negativeId));
+    wanInputs.insert(QStringLiteral("vae"), latentLink(vaeId));
+    wanInputs.insert(QStringLiteral("clip_vision_output"), latentLink(clipVisionEncodeId));
+    wanInputs.insert(QStringLiteral("start_image"), latentLink(scaleImageId));
+    wanInputs.insert(QStringLiteral("width"), params.canvasWidth);
+    wanInputs.insert(QStringLiteral("height"), params.canvasHeight);
+    wanInputs.insert(QStringLiteral("length"), frameCount);
+    wanInputs.insert(QStringLiteral("batch_size"), BuilderLimits::videoBatchSize);
+    insertPromptNode(prompt, wanId, QStringLiteral("WanImageToVideo"), wanInputs);
+
+    QJsonArray wanPositiveLink;
+    wanPositiveLink.append(wanId);
+    wanPositiveLink.append(0);
+    QJsonArray wanNegativeLink;
+    wanNegativeLink.append(wanId);
+    wanNegativeLink.append(1);
+    QJsonArray wanLatentLink;
+    wanLatentLink.append(wanId);
+    wanLatentLink.append(2);
+    QJsonObject samplerInputs;
+    samplerInputs.insert(QStringLiteral("model"), latentLink(samplingId));
+    samplerInputs.insert(QStringLiteral("positive"), wanPositiveLink);
+    samplerInputs.insert(QStringLiteral("negative"), wanNegativeLink);
+    samplerInputs.insert(QStringLiteral("latent_image"), wanLatentLink);
+    samplerInputs.insert(QStringLiteral("seed"), params.seed);
+    samplerInputs.insert(QStringLiteral("steps"), params.initialSteps);
+    samplerInputs.insert(QStringLiteral("cfg"), params.initialGuidance);
+    samplerInputs.insert(QStringLiteral("sampler_name"), ModelConstants::videoSamplerName());
+    samplerInputs.insert(QStringLiteral("scheduler"), ModelConstants::videoSchedulerName());
+    samplerInputs.insert(QStringLiteral("denoise"), params.initialDenoise);
+    insertPromptNode(prompt, samplerId, QStringLiteral("KSampler"), samplerInputs);
+
+    QJsonObject decodeInputs;
+    decodeInputs.insert(QStringLiteral("samples"), latentLink(samplerId));
+    decodeInputs.insert(QStringLiteral("vae"), latentLink(vaeId));
+    insertPromptNode(prompt, decodeId, QStringLiteral("VAEDecode"), decodeInputs);
+
+    QJsonObject combineInputs;
+    combineInputs.insert(QStringLiteral("images"), latentLink(decodeId));
+    combineInputs.insert(QStringLiteral("frame_rate"), params.videoFrameRate);
+    combineInputs.insert(QStringLiteral("loop_count"), BuilderLimits::videoLoopCount);
+    combineInputs.insert(QStringLiteral("filename_prefix"),
+                         savePrefixOverride.isEmpty() ? ModelConstants::videoCombinePrefix()
+                                                      : savePrefixOverride);
+    combineInputs.insert(QStringLiteral("format"), ModelConstants::videoCombineFormat());
+    combineInputs.insert(QStringLiteral("pingpong"), false);
+    combineInputs.insert(QStringLiteral("save_output"), true);
+    combineInputs.insert(QStringLiteral("pix_fmt"), ModelConstants::videoCombinePixelFormat());
+    combineInputs.insert(QStringLiteral("crf"), BuilderLimits::videoCombineCrf);
+    combineInputs.insert(QStringLiteral("save_metadata"), true);
+    combineInputs.insert(QStringLiteral("trim_to_audio"), false);
+    insertPromptNode(prompt, combineId, QStringLiteral("VHS_VideoCombine"), combineInputs);
+
+    qInfo() << "ComfyWorkflowBuilder video build done: nodes=" << prompt.count()
+            << "frames=" << frameCount;
     return prompt;
 }

@@ -11,6 +11,7 @@ struct ComfyPilotJob
 {
     QString serverUrl;
     ComfyPilotParameters parameters;
+    QString videoInputPath;
 };
 
 class ComfyPilotWorker : public QObject

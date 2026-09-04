@@ -22,9 +22,11 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QImageReader>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMimeDatabase>
+#include <QtMath>
 #include <QVariantList>
 
 #include "ComfyClient.h"
@@ -40,6 +42,30 @@ struct PilotNetworkConstants
     static constexpr int pollIntervalMs = 1000;
     static constexpr int maxPollMs = 600000;
 };
+
+struct PilotVideoConstants
+{
+    static constexpr int dimensionAlignment = 8;
+};
+
+bool normalizeVideoDimensions(const QSize &sourceSize, int canvasSize, QSize *normalizedSize)
+{
+    if (normalizedSize == nullptr || sourceSize.isEmpty() || canvasSize <= 0) {
+        return false;
+    }
+    const int longestSide = qMax(sourceSize.width(), sourceSize.height());
+    const double scale = static_cast<double>(canvasSize) / static_cast<double>(longestSide);
+    const int alignedWidth = qMax(PilotVideoConstants::dimensionAlignment,
+                                  qRound(sourceSize.width() * scale
+                                         / PilotVideoConstants::dimensionAlignment)
+                                      * PilotVideoConstants::dimensionAlignment);
+    const int alignedHeight = qMax(PilotVideoConstants::dimensionAlignment,
+                                   qRound(sourceSize.height() * scale
+                                          / PilotVideoConstants::dimensionAlignment)
+                                       * PilotVideoConstants::dimensionAlignment);
+    *normalizedSize = QSize(alignedWidth, alignedHeight);
+    return true;
+}
 
 bool outputIsVideoPath(const QString &path)
 {
@@ -118,10 +144,52 @@ void ComfyPilotWorker::start()
     if (serverUrl.isEmpty()) {
         serverUrl = ComfyPilotDefaults::serverUrl();
     }
-    qInfo() << "ComfyPilot generation started on" << serverUrl;
+    qInfo() << "ComfyPilot generation started on" << serverUrl
+            << "video=" << m_job.parameters.videoEnabled;
+
+    ComfyPilotJob job = m_job;
+    if (job.parameters.videoEnabled) {
+        if (!job.parameters.useCurrentImage) {
+            qWarning() << "ComfyPilot video build failed: input image not enabled";
+            result.insert(QStringLiteral("error"), tr("Enable \"Use current image\" to generate video"));
+            emit finished(result);
+            return;
+        }
+        const QFileInfo inputInfo(job.videoInputPath);
+        if (job.videoInputPath.trimmed().isEmpty() || !inputInfo.exists() || !inputInfo.isFile()) {
+            qWarning() << "ComfyPilot video build failed: missing input image";
+            result.insert(QStringLiteral("error"), tr("Select an input image to generate video"));
+            emit finished(result);
+            return;
+        }
+        ComfyClient uploadClient;
+        QString uploadError;
+        QImageReader inputReader(job.videoInputPath);
+        QSize videoSize;
+        if (!normalizeVideoDimensions(inputReader.size(), job.parameters.canvasSize, &videoSize)) {
+            qWarning() << "ComfyPilot video build failed: cannot read input image dimensions";
+            result.insert(QStringLiteral("error"), tr("Cannot read input image dimensions"));
+            emit finished(result);
+            return;
+        }
+        job.parameters.canvasWidth = videoSize.width();
+        job.parameters.canvasHeight = videoSize.height();
+        qInfo() << "ComfyPilot video dimensions:" << inputReader.size() << "->" << videoSize;
+        const QString serverName = uploadClient.uploadImage(
+            serverUrl, job.videoInputPath, PilotNetworkConstants::requestTimeoutMs, &uploadError);
+        if (serverName.isEmpty()) {
+            qWarning() << "ComfyPilot video upload failed:" << uploadError;
+            result.insert(QStringLiteral("error"),
+                          uploadError.isEmpty() ? tr("Failed to upload input image") : uploadError);
+            emit finished(result);
+            return;
+        }
+        qInfo() << "ComfyPilot video input uploaded:" << serverName;
+        job.parameters.videoInputFileName = serverName;
+    }
 
     QString buildError;
-    const QJsonObject prompt = ComfyWorkflowBuilder::buildPrompt(m_job.parameters, &buildError);
+    const QJsonObject prompt = ComfyWorkflowBuilder::buildPrompt(job.parameters, &buildError);
     if (!buildError.isEmpty() || prompt.isEmpty()) {
         qWarning() << "ComfyPilot build failed:" << buildError;
         result.insert(QStringLiteral("error"), buildError.isEmpty() ? tr("Invalid parameters") : buildError);
@@ -148,7 +216,7 @@ void ComfyPilotWorker::start()
     qInfo() << "ComfyPilot output missing, forcing re-execution with prefix"
             << ComfyWorkflowBuilder::retrySavePrefix();
     const QJsonObject retryPrompt = ComfyWorkflowBuilder::buildPrompt(
-        m_job.parameters, &buildError, ComfyWorkflowBuilder::retrySavePrefix());
+        job.parameters, &buildError, ComfyWorkflowBuilder::retrySavePrefix());
     if (!buildError.isEmpty() || retryPrompt.isEmpty()) {
         qWarning() << "ComfyPilot retry build failed:" << buildError;
         emit finished(result);

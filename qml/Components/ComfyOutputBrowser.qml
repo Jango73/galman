@@ -74,6 +74,27 @@ QtObject {
         }
     }
 
+    function previewExternalImage(path) {
+        const target = String(path || "")
+        if (target === "" || !outputModel) {
+            return false
+        }
+        const folder = folderPathFromPath(target)
+        if (folder === "") {
+            return false
+        }
+        if (outputModel.rootPath !== folder) {
+            outputModel.rootPath = folder
+        }
+        pendingOutputPath = target
+        syncAttempts = 0
+        if (!trySelectPendingOutput()) {
+            outputModel.refresh()
+            syncTimer.start()
+        }
+        return true
+    }
+
     function trySelectPendingOutput() {
         if (pendingOutputPath === "") {
             syncTimer.stop()

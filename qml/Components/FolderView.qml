@@ -38,6 +38,7 @@ FocusScope {
     signal goUpRequested()
     signal renameSucceeded(string message)
     signal errorRaised(string message)
+    signal createVideoRequested(string path)
     signal createOtherPaneFolderRequested(string folderName)
     property string settingsKey: ""
     property bool useExternalModel: false
@@ -765,6 +766,7 @@ FocusScope {
                     }
                 }
                 onRenameRequested: (path) => root.requestRenamePath(path)
+                onCreateVideoRequested: (path) => root.createVideoRequested(path)
                 onCreateFolderRequested: (path) => root.requestCreateFolder(path)
                 onTrashRequested: root.confirmTrashSelected()
                 onDeleteRequested: root.confirmDeleteSelectedPermanently()

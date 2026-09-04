@@ -169,6 +169,31 @@ double ComfyPilotController::refineDenoise() const
     return m_refineDenoise;
 }
 
+bool ComfyPilotController::videoEnabled() const
+{
+    return m_videoEnabled;
+}
+
+bool ComfyPilotController::useCurrentImage() const
+{
+    return m_useCurrentImage;
+}
+
+int ComfyPilotController::videoDuration() const
+{
+    return m_videoDuration;
+}
+
+int ComfyPilotController::videoFrameRate() const
+{
+    return m_videoFrameRate;
+}
+
+int ComfyPilotController::canvasSize() const
+{
+    return m_canvasSize;
+}
+
 bool ComfyPilotController::running() const
 {
     return m_running;
@@ -239,6 +264,31 @@ double ComfyPilotController::defaultRefineDenoise() const
     return ComfyPilotDefaults::refineDenoise;
 }
 
+bool ComfyPilotController::defaultVideoEnabled() const
+{
+    return ComfyPilotDefaults::videoEnabled;
+}
+
+bool ComfyPilotController::defaultUseCurrentImage() const
+{
+    return ComfyPilotDefaults::useCurrentImage;
+}
+
+int ComfyPilotController::defaultVideoDuration() const
+{
+    return ComfyPilotDefaults::videoDuration;
+}
+
+int ComfyPilotController::defaultVideoFrameRate() const
+{
+    return ComfyPilotDefaults::videoFrameRate;
+}
+
+int ComfyPilotController::defaultCanvasSize() const
+{
+    return ComfyPilotDefaults::canvasSize;
+}
+
 int ComfyPilotController::minCanvasSize() const
 {
     return ComfyPilotDefaults::minCanvasSize;
@@ -297,6 +347,36 @@ double ComfyPilotController::minDenoise() const
 double ComfyPilotController::maxDenoise() const
 {
     return ComfyPilotDefaults::maxDenoise;
+}
+
+int ComfyPilotController::minVideoDuration() const
+{
+    return ComfyPilotDefaults::minVideoDuration;
+}
+
+int ComfyPilotController::maxVideoDuration() const
+{
+    return ComfyPilotDefaults::maxVideoDuration;
+}
+
+int ComfyPilotController::minVideoFrameRate() const
+{
+    return ComfyPilotDefaults::minVideoFrameRate;
+}
+
+int ComfyPilotController::maxVideoFrameRate() const
+{
+    return ComfyPilotDefaults::maxVideoFrameRate;
+}
+
+int ComfyPilotController::minVideoCanvasSize() const
+{
+    return ComfyPilotDefaults::minVideoCanvasSize;
+}
+
+int ComfyPilotController::maxVideoCanvasSize() const
+{
+    return ComfyPilotDefaults::maxVideoCanvasSize;
 }
 
 QString ComfyPilotController::actionPreview() const
@@ -484,6 +564,56 @@ void ComfyPilotController::setRefineDenoise(double value)
     saveParameters();
 }
 
+void ComfyPilotController::setVideoEnabled(bool value)
+{
+    if (m_videoEnabled == value) {
+        return;
+    }
+    m_videoEnabled = value;
+    emit videoEnabledChanged();
+    saveParameters();
+}
+
+void ComfyPilotController::setUseCurrentImage(bool value)
+{
+    if (m_useCurrentImage == value) {
+        return;
+    }
+    m_useCurrentImage = value;
+    emit useCurrentImageChanged();
+    saveParameters();
+}
+
+void ComfyPilotController::setVideoDuration(int value)
+{
+    if (m_videoDuration == value) {
+        return;
+    }
+    m_videoDuration = value;
+    emit videoDurationChanged();
+    saveParameters();
+}
+
+void ComfyPilotController::setVideoFrameRate(int value)
+{
+    if (m_videoFrameRate == value) {
+        return;
+    }
+    m_videoFrameRate = value;
+    emit videoFrameRateChanged();
+    saveParameters();
+}
+
+void ComfyPilotController::setCanvasSize(int value)
+{
+    if (m_canvasSize == value) {
+        return;
+    }
+    m_canvasSize = value;
+    emit canvasSizeChanged();
+    saveParameters();
+}
+
 /**
  * @brief Starts an asynchronous ComfyUI generation in a worker thread.
  */
@@ -491,6 +621,11 @@ void ComfyPilotController::generate()
 {
     if (m_running) {
         qWarning() << "ComfyPilot generate rejected: already running";
+        return;
+    }
+    if (m_videoEnabled) {
+        qWarning() << "ComfyPilot generate rejected: video mode needs an input image";
+        setErrorMessage(tr("Enable \"Use current image\" and select an image to generate video"));
         return;
     }
     qInfo() << "ComfyPilot generate requested:"
@@ -504,12 +639,59 @@ void ComfyPilotController::generate()
 }
 
 /**
+ * @brief Starts an asynchronous image-to-video generation from an input image.
+ * @param inputPath Local path of the image displayed in the Comfy view.
+ */
+void ComfyPilotController::generateVideo(const QString &inputPath)
+{
+    if (m_running) {
+        qWarning() << "ComfyPilot video generate rejected: already running";
+        return;
+    }
+    if (!m_videoEnabled) {
+        qWarning() << "ComfyPilot video generate rejected: video mode disabled";
+        return;
+    }
+    if (!m_useCurrentImage) {
+        qWarning() << "ComfyPilot video generate rejected: input image not enabled";
+        setErrorMessage(tr("Enable \"Use current image\" to generate video"));
+        return;
+    }
+    const QFileInfo inputInfo(inputPath);
+    if (inputPath.trimmed().isEmpty() || !inputInfo.exists() || !inputInfo.isFile()) {
+        qWarning() << "ComfyPilot video generate rejected: missing input image";
+        setErrorMessage(tr("Select an input image to generate video"));
+        return;
+    }
+    if (VideoThumbnailUtils::isVideoFile(inputInfo)) {
+        qWarning() << "ComfyPilot video generate rejected: input is a video";
+        setErrorMessage(tr("Video input must be an image"));
+        return;
+    }
+    qInfo() << "ComfyPilot video generate requested:"
+            << "input=" << inputPath
+            << "duration=" << m_videoDuration
+            << "rate=" << m_videoFrameRate;
+
+    setErrorMessage(QString());
+    setStatusMessage(tr("Generating video..."));
+    m_runningAction = ComfyPilotDefaults::actionGenerate();
+    ComfyPilotJob job = buildJob();
+    job.videoInputPath = inputPath;
+    launchJob(job);
+}
+
+/**
  * @brief Starts a fast preview generation without refinement or face detail.
  */
 void ComfyPilotController::preview()
 {
     if (m_running) {
         qWarning() << "ComfyPilot preview rejected: already running";
+        return;
+    }
+    if (m_videoEnabled) {
+        qWarning() << "ComfyPilot preview rejected: unavailable in video mode";
         return;
     }
     qInfo() << "ComfyPilot preview requested:"
@@ -531,6 +713,10 @@ void ComfyPilotController::previewNextSeed()
 {
     if (m_running) {
         qWarning() << "ComfyPilot preview next seed rejected: already running";
+        return;
+    }
+    if (m_videoEnabled) {
+        qWarning() << "ComfyPilot preview next seed rejected: unavailable in video mode";
         return;
     }
     setSeed(m_seed + 1);
@@ -587,6 +773,11 @@ void ComfyPilotController::loadParameters()
     m_refineGuidance = settings.value(QStringLiteral("refineGuidance"), m_refineGuidance).toDouble();
     m_initialDenoise = settings.value(QStringLiteral("initialDenoise"), m_initialDenoise).toDouble();
     m_refineDenoise = settings.value(QStringLiteral("refineDenoise"), m_refineDenoise).toDouble();
+    m_videoEnabled = settings.value(QStringLiteral("videoEnabled"), m_videoEnabled).toBool();
+    m_useCurrentImage = settings.value(QStringLiteral("useCurrentImage"), m_useCurrentImage).toBool();
+    m_videoDuration = settings.value(QStringLiteral("videoDuration"), m_videoDuration).toInt();
+    m_videoFrameRate = settings.value(QStringLiteral("videoFrameRate"), m_videoFrameRate).toInt();
+    m_canvasSize = settings.value(QStringLiteral("canvasSize"), m_canvasSize).toInt();
     settings.endGroup();
     qInfo() << "ComfyPilot parameters loaded";
     restoreOutputPath();
@@ -644,6 +835,11 @@ void ComfyPilotController::saveParameters() const
     settings.setValue(QStringLiteral("refineGuidance"), m_refineGuidance);
     settings.setValue(QStringLiteral("initialDenoise"), m_initialDenoise);
     settings.setValue(QStringLiteral("refineDenoise"), m_refineDenoise);
+    settings.setValue(QStringLiteral("videoEnabled"), m_videoEnabled);
+    settings.setValue(QStringLiteral("useCurrentImage"), m_useCurrentImage);
+    settings.setValue(QStringLiteral("videoDuration"), m_videoDuration);
+    settings.setValue(QStringLiteral("videoFrameRate"), m_videoFrameRate);
+    settings.setValue(QStringLiteral("canvasSize"), m_canvasSize);
     settings.endGroup();
     settings.sync();
 }
@@ -722,6 +918,11 @@ ComfyPilotJob ComfyPilotController::buildJob() const
     job.parameters.refineDenoise = m_refineDenoise;
     job.parameters.positivePrompt = m_positivePrompt;
     job.parameters.negativePrompt = m_negativePrompt;
+    job.parameters.videoEnabled = m_videoEnabled;
+    job.parameters.useCurrentImage = m_useCurrentImage;
+    job.parameters.videoDuration = m_videoDuration;
+    job.parameters.videoFrameRate = m_videoFrameRate;
+    job.parameters.canvasSize = m_canvasSize;
     return job;
 }
 

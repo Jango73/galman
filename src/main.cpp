@@ -27,6 +27,8 @@
 #include <QQmlContext>
 #include <QDebug>
 
+#include <memory>
+
 #include "ApplicationVersion.h"
 #include "AppLogger.h"
 #include "BackupSystem.h"
@@ -69,23 +71,23 @@ int main(int argc, char *argv[])
     appLogger.initialize();
     qInfo() << "Qt app initialized";
 
-    QQmlApplicationEngine engine;
+    std::unique_ptr<QQmlApplicationEngine> engine = std::make_unique<QQmlApplicationEngine>();
     BackupSystem backupSystem;
     ScriptEngine scriptEngine;
     ScriptManager scriptManager;
-    LanguageManager languageManager(&engine);
+    LanguageManager languageManager(engine.get());
     FavoritePairsManager favoritePairsManager;
     ComfyPilotController comfyPilotController;
-    engine.rootContext()->setContextProperty("backupSystem", &backupSystem);
-    engine.rootContext()->setContextProperty("scriptEngine", &scriptEngine);
-    engine.rootContext()->setContextProperty("comfyPilotController", &comfyPilotController);
-    engine.rootContext()->setContextProperty("scriptManager", &scriptManager);
-    engine.rootContext()->setContextProperty("languageManager", &languageManager);
-    engine.rootContext()->setContextProperty("favoritesManager", &favoritePairsManager);
+    engine->rootContext()->setContextProperty("backupSystem", &backupSystem);
+    engine->rootContext()->setContextProperty("scriptEngine", &scriptEngine);
+    engine->rootContext()->setContextProperty("comfyPilotController", &comfyPilotController);
+    engine->rootContext()->setContextProperty("scriptManager", &scriptManager);
+    engine->rootContext()->setContextProperty("languageManager", &languageManager);
+    engine->rootContext()->setContextProperty("favoritesManager", &favoritePairsManager);
     const QUrl url(u"qrc:/Galman/qml/App/Main.qml"_qs);
     qInfo() << "Loading QML root:" << url;
     QObject::connect(
-        &engine,
+        engine.get(),
         &QQmlApplicationEngine::objectCreated,
         &app,
         [url](QObject *obj, const QUrl &objUrl) {
@@ -95,8 +97,13 @@ int main(int argc, char *argv[])
         },
         Qt::QueuedConnection);
 
-    engine.load(url);
-    qInfo() << "QML load complete. Root objects:" << engine.rootObjects().size();
+    engine->load(url);
+    qInfo() << "QML load complete. Root objects:" << engine->rootObjects().size();
 
-    return app.exec();
+    const int exitCode = app.exec();
+    qInfo() << "Galman shutdown";
+    // Destroy QML before the context objects it binds to, otherwise bindings
+    // re-evaluate on destroyed controllers and flood the log with warnings.
+    engine.reset();
+    return exitCode;
 }

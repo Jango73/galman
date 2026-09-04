@@ -29,6 +29,17 @@ struct ComfyPilotDefaults
     static constexpr double maxGuidance = 10.0;
     static constexpr double minDenoise = 0.0;
     static constexpr double maxDenoise = 1.0;
+    static constexpr bool videoEnabled = false;
+    static constexpr bool useCurrentImage = true;
+    static constexpr int videoDuration = 2;
+    static constexpr int videoFrameRate = 24;
+    static constexpr int minVideoDuration = 1;
+    static constexpr int maxVideoDuration = 16;
+    static constexpr int minVideoFrameRate = 1;
+    static constexpr int maxVideoFrameRate = 60;
+    static constexpr int canvasSize = 480;
+    static constexpr int minVideoCanvasSize = 128;
+    static constexpr int maxVideoCanvasSize = 4096;
 
     static QString serverUrl();
     static QString actionPreview();
@@ -52,6 +63,12 @@ struct ComfyPilotParameters
     double refineDenoise = ComfyPilotDefaults::refineDenoise;
     QString positivePrompt;
     QString negativePrompt;
+    bool videoEnabled = ComfyPilotDefaults::videoEnabled;
+    bool useCurrentImage = ComfyPilotDefaults::useCurrentImage;
+    int videoDuration = ComfyPilotDefaults::videoDuration;
+    int videoFrameRate = ComfyPilotDefaults::videoFrameRate;
+    QString videoInputFileName;
+    int canvasSize = ComfyPilotDefaults::canvasSize;
 };
 
 class ComfyWorkflowBuilder
@@ -74,5 +91,23 @@ private:
         static QString faceMaskType();
         static QString faceMaskControl();
         static QString savePrefix();
+        static QString videoUnetName();
+        static QString videoClipName();
+        static QString videoClipVisionName();
+        static QString videoVaeName();
+        static QString videoWeightDtype();
+        static QString videoClipType();
+        static QString videoClipDevice();
+        static QString videoSamplerName();
+        static QString videoSchedulerName();
+        static QString videoUpscaleMethod();
+        static QString videoUpscaleCrop();
+        static QString videoVisionCrop();
+        static QString videoCombineFormat();
+        static QString videoCombinePixelFormat();
+        static QString videoCombinePrefix();
     };
+    static QJsonObject buildVideoPrompt(const ComfyPilotParameters &params,
+                                        QString *error,
+                                        const QString &savePrefixOverride);
 };

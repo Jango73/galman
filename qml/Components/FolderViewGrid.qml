@@ -47,6 +47,7 @@ Item {
     signal contentYUpdated(real value)
     signal currentIndexUpdated(int value)
     signal renameRequested(string path)
+    signal createVideoRequested(string path)
     signal createFolderRequested(string path)
     signal trashRequested()
     signal deleteRequested()
@@ -756,6 +757,21 @@ Item {
                         root.backupOperationFinished(qsTr("%1 restored from %2").arg(fileName).arg(backupName))
                     } else {
                         root.backupOperationError(qsTr("No backup found for %1").arg(fileName))
+                    }
+                }
+            }
+            MenuItem {
+                text: qsTr("Create video from this...")
+                enabled: root.selectedCount === 1 && root.contextMenuIndex >= 0
+                    && root.browserModel && root.browserModel.isImage
+                    && root.browserModel.isImage(root.contextMenuIndex)
+                onTriggered: {
+                    if (!root.browserModel || !root.browserModel.pathForRow) {
+                        return
+                    }
+                    const path = root.browserModel.pathForRow(root.contextMenuIndex)
+                    if (path) {
+                        root.createVideoRequested(path)
                     }
                 }
             }

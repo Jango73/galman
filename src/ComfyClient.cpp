@@ -23,7 +23,11 @@
 
 #include <QEventLoop>
 #include <QElapsedTimer>
+#include <QFileInfo>
+#include <QHttpMultiPart>
+#include <QHttpPart>
 #include <QJsonDocument>
+#include <QMimeDatabase>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -255,6 +259,95 @@ bool ComfyClient::downloadOutput(const QString &serverUrl,
                                  QString *error)
 {
     return downloadImage(serverUrl, filename, subfolder, type, targetPath, timeoutMs, error);
+}
+
+/**
+ * @brief Uploads a local image to the ComfyUI input folder.
+ * @param serverUrl Base URL of the ComfyUI server.
+ * @param localPath Local image file path to upload.
+ * @param timeoutMs Timeout in milliseconds for the HTTP request.
+ * @param error Optional output error message.
+ * @return Server-side filename on success, or an empty string on failure.
+ */
+QString ComfyClient::uploadImage(const QString &serverUrl,
+                                 const QString &localPath,
+                                 int timeoutMs,
+                                 QString *error)
+{
+    const QFileInfo sourceInfo(localPath);
+    if (localPath.isEmpty() || !sourceInfo.exists() || !sourceInfo.isFile()) {
+        if (error) {
+            *error = QStringLiteral("Input image not found");
+        }
+        return {};
+    }
+    QFile *sourceFile = new QFile(localPath);
+    if (!sourceFile->open(QIODevice::ReadOnly)) {
+        if (error) {
+            *error = QStringLiteral("Cannot read input image");
+        }
+        delete sourceFile;
+        return {};
+    }
+
+    const QString baseUrl = serverUrl.endsWith(QStringLiteral("/"))
+        ? serverUrl.left(serverUrl.size() - 1)
+        : serverUrl;
+    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    QHttpPart imagePart;
+    const QMimeType mimeType = QMimeDatabase().mimeTypeForFile(sourceInfo);
+    const QString mimeName = mimeType.isValid() ? mimeType.name() : QStringLiteral("image/png");
+    imagePart.setHeader(QNetworkRequest::ContentTypeHeader, mimeName);
+    imagePart.setHeader(QNetworkRequest::ContentDispositionHeader,
+                        QStringLiteral("form-data; name=\"image\"; filename=\"%1\"").arg(sourceInfo.fileName()));
+    imagePart.setBodyDevice(sourceFile);
+    sourceFile->setParent(multiPart);
+    multiPart->append(imagePart);
+
+    QHttpPart overwritePart;
+    overwritePart.setHeader(QNetworkRequest::ContentDispositionHeader,
+                            QStringLiteral("form-data; name=\"overwrite\""));
+    overwritePart.setBody("true");
+    multiPart->append(overwritePart);
+
+    QNetworkAccessManager manager;
+    QNetworkRequest request{QUrl(baseUrl + QStringLiteral("/upload/image"))};
+
+    QEventLoop loop;
+    QTimer timer;
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    QNetworkReply *reply = manager.post(request, multiPart);
+    multiPart->setParent(reply);
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    timer.start(timeoutMs);
+    loop.exec();
+
+    QString serverName;
+    if (!reply->isFinished() || timer.isActive() == false) {
+        if (error) {
+            *error = QStringLiteral("HTTP timeout while uploading image");
+        }
+    } else if (reply->error() != QNetworkReply::NoError) {
+        if (error) {
+            const QString detail = QString::fromUtf8(reply->readAll()).left(500);
+            *error = QStringLiteral("HTTP error: %1").arg(reply->errorString());
+            if (!detail.isEmpty()) {
+                *error += QStringLiteral(" - %1").arg(detail);
+            }
+        }
+    } else {
+        const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+        serverName = doc.object().value(QStringLiteral("name")).toString();
+        if (serverName.isEmpty()) {
+            if (error) {
+                *error = QStringLiteral("ComfyUI did not return an upload name");
+            }
+        }
+    }
+    reply->deleteLater();
+    return serverName;
 }
 
 /**

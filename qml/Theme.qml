@@ -41,6 +41,7 @@ QtObject {
     readonly property int rowIndexBadgePaddingVertical: spaceXs
     readonly property int rowIndexBadgeRadius: 4
     readonly property int rowIndexBadgeFontPixelSize: 12
+    readonly property int fontSizeTitle: 18
     readonly property color rowIndexBadgeBackground: Qt.rgba(0, 0, 0, 0.65)
     readonly property color rowIndexBadgeTextColor: "#f2f2f2"
     readonly property real zoomStepFactor: 1.25

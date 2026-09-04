@@ -121,7 +121,101 @@ Pane {
                 height: Theme.sectionSpacer
                 Layout.fillWidth: true
             }
+            Label {
+                text: qsTr("Video")
+                font.pixelSize: 14
+                font.bold: true
+                Layout.fillWidth: true
+            }
 
+            CheckBox {
+                text: qsTr("Video")
+                checked: comfyPilotController ? comfyPilotController.videoEnabled : false
+                enabled: !(comfyPilotController && comfyPilotController.running)
+                Layout.fillWidth: true
+                topPadding: Theme.controlPaddingV
+                bottomPadding: Theme.controlPaddingV
+                onToggled: {
+                    if (comfyPilotController) {
+                        comfyPilotController.videoEnabled = checked
+                    }
+                }
+            }
+
+            CheckBox {
+                text: qsTr("Use current image")
+                checked: comfyPilotController ? comfyPilotController.useCurrentImage : true
+                enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                Layout.fillWidth: true
+                topPadding: Theme.controlPaddingV
+                bottomPadding: Theme.controlPaddingV
+                onToggled: {
+                    if (comfyPilotController) {
+                        comfyPilotController.useCurrentImage = checked
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spaceSm
+
+                Label {
+                    text: qsTr("Duration")
+                    Layout.preferredWidth: root.fieldLabelWidth
+                }
+
+                SpinBox {
+                    Layout.fillWidth: true
+                    from: comfyPilotController.minVideoDuration
+                    to: comfyPilotController.maxVideoDuration
+                    stepSize: 1
+                    value: comfyPilotController ? comfyPilotController.videoDuration : comfyPilotController.defaultVideoDuration
+                    editable: true
+                    enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                    onValueModified: {
+                        if (!visible) {
+                            return
+                        }
+                        if (comfyPilotController) {
+                            comfyPilotController.videoDuration = value
+                        }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spaceSm
+
+                Label {
+                    text: qsTr("Frame rate")
+                    Layout.preferredWidth: root.fieldLabelWidth
+                }
+
+                SpinBox {
+                    Layout.fillWidth: true
+                    from: comfyPilotController.minVideoFrameRate
+                    to: comfyPilotController.maxVideoFrameRate
+                    stepSize: 1
+                    value: comfyPilotController ? comfyPilotController.videoFrameRate : comfyPilotController.defaultVideoFrameRate
+                    editable: true
+                    enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                    onValueModified: {
+                        if (!visible) {
+                            return
+                        }
+                        if (comfyPilotController) {
+                            comfyPilotController.videoFrameRate = value
+                        }
+                    }
+                }
+            }
+
+            Item {
+                height: Theme.sectionSpacer
+                Layout.fillWidth: true
+            }
             Label {
                 text: qsTr("Prompts")
                 font.pixelSize: 14
@@ -245,7 +339,7 @@ Pane {
             CheckBox {
                 text: qsTr("Empty refine prompt")
                 checked: comfyPilotController ? comfyPilotController.emptyRefinePrompt : false
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 Layout.fillWidth: true
                 topPadding: Theme.controlPaddingV
                 bottomPadding: Theme.controlPaddingV
@@ -276,7 +370,7 @@ Pane {
                     Layout.preferredWidth: previewButtonRow.uniformButtonWidth
                     visible: !(comfyPilotController && comfyPilotController.running
                         && comfyPilotController.runningAction === comfyPilotController.actionPreview)
-                    enabled: comfyPilotController && !comfyPilotController.running
+                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
                     onClicked: () => {
                         if (comfyPilotController) {
                             comfyPilotController.preview()
@@ -307,7 +401,7 @@ Pane {
                     Layout.preferredWidth: previewButtonRow.uniformButtonWidth
                     visible: !(comfyPilotController && comfyPilotController.running
                         && comfyPilotController.runningAction === comfyPilotController.actionNextSeed)
-                    enabled: comfyPilotController && !comfyPilotController.running
+                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
                     onClicked: () => {
                         if (comfyPilotController) {
                             comfyPilotController.previewNextSeed()
@@ -346,9 +440,14 @@ Pane {
                     Layout.preferredWidth: generateButtonRow.uniformButtonWidth
                     visible: !(comfyPilotController && comfyPilotController.running
                         && comfyPilotController.runningAction === comfyPilotController.actionGenerate)
-                    enabled: comfyPilotController && !comfyPilotController.running
+                    enabled: comfyPilotController && !comfyPilotController.running && (!comfyPilotController.videoEnabled || (comfyPilotController.useCurrentImage && root.outputBrowser && root.outputBrowser.selectedMediaPath !== ""))
                     onClicked: () => {
-                        if (comfyPilotController) {
+                        if (!comfyPilotController) {
+                            return
+                        }
+                        if (comfyPilotController.videoEnabled) {
+                            comfyPilotController.generateVideo(root.outputBrowser ? root.outputBrowser.selectedMediaPath : "")
+                        } else {
                             comfyPilotController.generate()
                         }
                     }
@@ -361,7 +460,7 @@ Pane {
                     Layout.preferredWidth: generateButtonRow.uniformButtonWidth
                     visible: !(comfyPilotController && comfyPilotController.running
                         && comfyPilotController.runningAction === comfyPilotController.actionGenerate)
-                    enabled: comfyPilotController && !comfyPilotController.running
+                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
                             onClicked: () => {
                                 if (!comfyPilotController) {
                                     return
@@ -436,7 +535,7 @@ Pane {
                 stepSize: 64
                 value: comfyPilotController ? comfyPilotController.canvasWidth : comfyPilotController.defaultCanvasWidth
                 editable: true
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onValueModified: {
                     if (!visible) {
                         return
@@ -464,13 +563,38 @@ Pane {
                 stepSize: 64
                 value: comfyPilotController ? comfyPilotController.canvasHeight : comfyPilotController.defaultCanvasHeight
                 editable: true
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onValueModified: {
                     if (!visible) {
                         return
                     }
                     if (comfyPilotController) {
                         comfyPilotController.canvasHeight = value
+                    }
+                }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spaceSm
+                Label {
+                    text: qsTr("Canvas size")
+                    Layout.preferredWidth: root.fieldLabelWidth
+                }
+                SpinBox {
+                    Layout.fillWidth: true
+                from: comfyPilotController.minVideoCanvasSize
+                to: comfyPilotController.maxVideoCanvasSize
+                stepSize: 8
+                value: comfyPilotController ? comfyPilotController.canvasSize : comfyPilotController.defaultCanvasSize
+                editable: true
+                enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                onValueModified: {
+                    if (!visible) {
+                        return
+                    }
+                    if (comfyPilotController) {
+                        comfyPilotController.canvasSize = value
                     }
                 }
                 }
@@ -504,7 +628,7 @@ Pane {
                 stepSize: 1
                 value: comfyPilotController ? comfyPilotController.refineCount : comfyPilotController.defaultRefineCount
                 editable: true
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onValueModified: {
                     if (!visible) {
                         return
@@ -526,7 +650,7 @@ Pane {
             CheckBox {
                 text: qsTr("Face detail pass")
                 checked: comfyPilotController ? comfyPilotController.faceDetail : comfyPilotController.defaultFaceDetail
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 Layout.fillWidth: true
                 topPadding: Theme.controlPaddingV
                 bottomPadding: Theme.controlPaddingV
@@ -581,7 +705,7 @@ Pane {
                 stepSize: 1
                 value: comfyPilotController ? comfyPilotController.refineSteps : comfyPilotController.defaultRefineSteps
                 editable: true
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onValueModified: {
                     if (!visible) {
                         return
@@ -626,7 +750,7 @@ Pane {
                 TextField {
                     Layout.fillWidth: true
                 text: root.floatFieldText(comfyPilotController ? comfyPilotController.refineGuidance : comfyPilotController.defaultRefineGuidance)
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onEditingFinished: {
                     if (comfyPilotController) {
                         comfyPilotController.refineGuidance = root.parseFloatField(text, comfyPilotController.refineGuidance)
@@ -668,7 +792,7 @@ Pane {
                 TextField {
                     Layout.fillWidth: true
                 text: root.floatFieldText(comfyPilotController ? comfyPilotController.refineDenoise : comfyPilotController.defaultRefineDenoise)
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onEditingFinished: {
                     if (comfyPilotController) {
                         comfyPilotController.refineDenoise = root.parseFloatField(text, comfyPilotController.refineDenoise)

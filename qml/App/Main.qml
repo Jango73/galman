@@ -412,6 +412,17 @@ ApplicationWindow {
         pushMessage(message)
     }
 
+    function createVideoFromBrowser(path) {
+        if (!path || String(path) === "") {
+            return
+        }
+        if (comfyPilotController && !comfyPilotController.videoEnabled) {
+            comfyPilotController.videoEnabled = true
+        }
+        mainTabBar.currentIndex = 1
+        comfyPilotTab.previewExternalImage(path)
+    }
+
     function pushStatus(message) {
         pushMessage(message)
     }
@@ -969,6 +980,7 @@ ApplicationWindow {
                 onMoveLeftRequested: triggerMoveRightToLeft()
                 onMoveRightRequested: triggerMoveLeftToRight()
                 onMoveOtherRequested: triggerMoveLeftToRight()
+                onCreateVideoRequested: (path) => createVideoFromBrowser(path)
                 onCreateOtherPaneFolderRequested: (folderName) => {
                     const otherModel = rightBrowser.browserModel
                     if (!otherModel || !otherModel.createFolder) {
@@ -1138,6 +1150,7 @@ ApplicationWindow {
                 onMoveLeftRequested: triggerMoveRightToLeft()
                 onMoveRightRequested: triggerMoveLeftToRight()
                 onMoveOtherRequested: triggerMoveRightToLeft()
+                onCreateVideoRequested: (path) => createVideoFromBrowser(path)
                 onCreateOtherPaneFolderRequested: (folderName) => {
                     const otherModel = leftBrowser.browserModel
                     if (!otherModel || !otherModel.createFolder) {

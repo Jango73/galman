@@ -25,6 +25,11 @@ class ComfyPilotController : public QObject
     Q_PROPERTY(double refineGuidance READ refineGuidance WRITE setRefineGuidance NOTIFY refineGuidanceChanged)
     Q_PROPERTY(double initialDenoise READ initialDenoise WRITE setInitialDenoise NOTIFY initialDenoiseChanged)
     Q_PROPERTY(double refineDenoise READ refineDenoise WRITE setRefineDenoise NOTIFY refineDenoiseChanged)
+    Q_PROPERTY(bool videoEnabled READ videoEnabled WRITE setVideoEnabled NOTIFY videoEnabledChanged)
+    Q_PROPERTY(bool useCurrentImage READ useCurrentImage WRITE setUseCurrentImage NOTIFY useCurrentImageChanged)
+    Q_PROPERTY(int videoDuration READ videoDuration WRITE setVideoDuration NOTIFY videoDurationChanged)
+    Q_PROPERTY(int videoFrameRate READ videoFrameRate WRITE setVideoFrameRate NOTIFY videoFrameRateChanged)
+    Q_PROPERTY(int canvasSize READ canvasSize WRITE setCanvasSize NOTIFY canvasSizeChanged)
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(QString runningAction READ runningAction NOTIFY runningChanged)
     Q_PROPERTY(QString defaultServerUrl READ defaultServerUrl CONSTANT)
@@ -39,6 +44,11 @@ class ComfyPilotController : public QObject
     Q_PROPERTY(double defaultRefineGuidance READ defaultRefineGuidance CONSTANT)
     Q_PROPERTY(double defaultInitialDenoise READ defaultInitialDenoise CONSTANT)
     Q_PROPERTY(double defaultRefineDenoise READ defaultRefineDenoise CONSTANT)
+    Q_PROPERTY(bool defaultVideoEnabled READ defaultVideoEnabled CONSTANT)
+    Q_PROPERTY(bool defaultUseCurrentImage READ defaultUseCurrentImage CONSTANT)
+    Q_PROPERTY(int defaultVideoDuration READ defaultVideoDuration CONSTANT)
+    Q_PROPERTY(int defaultVideoFrameRate READ defaultVideoFrameRate CONSTANT)
+    Q_PROPERTY(int defaultCanvasSize READ defaultCanvasSize CONSTANT)
     Q_PROPERTY(int minCanvasSize READ minCanvasSize CONSTANT)
     Q_PROPERTY(int maxCanvasSize READ maxCanvasSize CONSTANT)
     Q_PROPERTY(int minRefineCount READ minRefineCount CONSTANT)
@@ -51,6 +61,12 @@ class ComfyPilotController : public QObject
     Q_PROPERTY(double maxGuidance READ maxGuidance CONSTANT)
     Q_PROPERTY(double minDenoise READ minDenoise CONSTANT)
     Q_PROPERTY(double maxDenoise READ maxDenoise CONSTANT)
+    Q_PROPERTY(int minVideoDuration READ minVideoDuration CONSTANT)
+    Q_PROPERTY(int maxVideoDuration READ maxVideoDuration CONSTANT)
+    Q_PROPERTY(int minVideoFrameRate READ minVideoFrameRate CONSTANT)
+    Q_PROPERTY(int maxVideoFrameRate READ maxVideoFrameRate CONSTANT)
+    Q_PROPERTY(int minVideoCanvasSize READ minVideoCanvasSize CONSTANT)
+    Q_PROPERTY(int maxVideoCanvasSize READ maxVideoCanvasSize CONSTANT)
     Q_PROPERTY(QString actionPreview READ actionPreview CONSTANT)
     Q_PROPERTY(QString actionNextSeed READ actionNextSeed CONSTANT)
     Q_PROPERTY(QString actionGenerate READ actionGenerate CONSTANT)
@@ -78,6 +94,11 @@ public:
     double refineGuidance() const;
     double initialDenoise() const;
     double refineDenoise() const;
+    bool videoEnabled() const;
+    bool useCurrentImage() const;
+    int videoDuration() const;
+    int videoFrameRate() const;
+    int canvasSize() const;
     bool running() const;
     QString runningAction() const;
     QString defaultServerUrl() const;
@@ -92,6 +113,11 @@ public:
     double defaultRefineGuidance() const;
     double defaultInitialDenoise() const;
     double defaultRefineDenoise() const;
+    bool defaultVideoEnabled() const;
+    bool defaultUseCurrentImage() const;
+    int defaultVideoDuration() const;
+    int defaultVideoFrameRate() const;
+    int defaultCanvasSize() const;
     int minCanvasSize() const;
     int maxCanvasSize() const;
     int minRefineCount() const;
@@ -104,6 +130,12 @@ public:
     double maxGuidance() const;
     double minDenoise() const;
     double maxDenoise() const;
+    int minVideoDuration() const;
+    int maxVideoDuration() const;
+    int minVideoFrameRate() const;
+    int maxVideoFrameRate() const;
+    int minVideoCanvasSize() const;
+    int maxVideoCanvasSize() const;
     QString actionPreview() const;
     QString actionNextSeed() const;
     QString actionGenerate() const;
@@ -127,8 +159,14 @@ public:
     void setRefineGuidance(double value);
     void setInitialDenoise(double value);
     void setRefineDenoise(double value);
+    void setVideoEnabled(bool value);
+    void setUseCurrentImage(bool value);
+    void setVideoDuration(int value);
+    void setVideoFrameRate(int value);
+    void setCanvasSize(int value);
 
     Q_INVOKABLE void generate();
+    Q_INVOKABLE void generateVideo(const QString &inputPath);
     Q_INVOKABLE void preview();
     Q_INVOKABLE void previewNextSeed();
     Q_INVOKABLE void cancel();
@@ -150,6 +188,11 @@ signals:
     void refineGuidanceChanged();
     void initialDenoiseChanged();
     void refineDenoiseChanged();
+    void videoEnabledChanged();
+    void useCurrentImageChanged();
+    void videoDurationChanged();
+    void videoFrameRateChanged();
+    void canvasSizeChanged();
     void runningChanged();
     void outputPathChanged();
     void errorMessageChanged();
@@ -185,6 +228,11 @@ private:
     double m_refineGuidance = ComfyPilotDefaults::refineGuidance;
     double m_initialDenoise = ComfyPilotDefaults::initialDenoise;
     double m_refineDenoise = ComfyPilotDefaults::refineDenoise;
+    bool m_videoEnabled = ComfyPilotDefaults::videoEnabled;
+    bool m_useCurrentImage = ComfyPilotDefaults::useCurrentImage;
+    int m_videoDuration = ComfyPilotDefaults::videoDuration;
+    int m_videoFrameRate = ComfyPilotDefaults::videoFrameRate;
+    int m_canvasSize = ComfyPilotDefaults::canvasSize;
     bool m_running = false;
     QString m_runningAction;
     QString m_outputPath;

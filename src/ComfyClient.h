@@ -41,6 +41,10 @@ public:
                        int timeoutMs,
                        QString *error);
     bool interrupt(const QString &serverUrl, int timeoutMs, QString *error);
+    QString uploadImage(const QString &serverUrl,
+                        const QString &localPath,
+                        int timeoutMs,
+                        QString *error);
 
 private:
     QJsonObject postJson(const QString &url, const QJsonObject &payload, int timeoutMs, QString *error);
