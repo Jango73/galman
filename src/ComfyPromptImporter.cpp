@@ -356,6 +356,19 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
                 && clipTextIsEmpty(prompt, tiledNegativeId);
         }
     }
+    if (!emptyRefine) {
+        const QJsonObject faceNode = findFirstNode(prompt, "DZ_Face_Detailer");
+        if (!faceNode.isEmpty()) {
+            const QJsonObject faceInputs = nodeInputs(faceNode);
+            const QString facePositiveId = linkedNodeId(faceInputs, "positive");
+            const QString faceNegativeId = linkedNodeId(faceInputs, "negative");
+            if (!facePositiveId.isEmpty() && !faceNegativeId.isEmpty()
+                && (facePositiveId != positiveId || faceNegativeId != negativeId)) {
+                emptyRefine = clipTextIsEmpty(prompt, facePositiveId)
+                    && clipTextIsEmpty(prompt, faceNegativeId);
+            }
+        }
+    }
     parameters->emptyRefinePrompt = emptyRefine;
     filled.append(QStringLiteral("emptyRefinePrompt"));
 

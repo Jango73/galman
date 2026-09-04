@@ -294,14 +294,21 @@ Item {
                 Layout.fillHeight: true
                 Layout.preferredHeight: 1
                 clip: true
-                ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                    width: Theme.scrollBarThickness
+                    implicitWidth: Theme.scrollBarThickness
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                }
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                contentWidth: controlScroll.availableWidth
+                contentWidth: controlScroll.availableWidth - Theme.scrollBarThickness
                 contentHeight: controlColumn.implicitHeight
 
                 ColumnLayout {
                     id: controlColumn
-                    width: controlScroll.availableWidth
+                    width: controlScroll.availableWidth - Theme.scrollBarThickness
                     spacing: Theme.spaceSm
 
                     Label {

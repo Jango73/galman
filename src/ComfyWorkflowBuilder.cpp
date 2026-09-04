@@ -35,6 +35,7 @@ struct BuilderLimits
     static constexpr int faceDilateValue = 3;
     static constexpr int faceErodeValue = 3;
     static constexpr double videoModelShift = 8.0;
+    static constexpr double videoDenoise = 1.0;
     static constexpr int videoBatchSize = 1;
     static constexpr int videoLoopCount = 0;
     static constexpr int videoCombineCrf = 19;
@@ -315,20 +316,16 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
     negativeInputs.insert(QStringLiteral("text"), params.negativePrompt);
     insertPromptNode(prompt, negativeId, QStringLiteral("CLIPTextEncode"), negativeInputs);
 
-    QString refinePositiveId = positiveId;
-    QString refineNegativeId = negativeId;
-    if (params.emptyRefinePrompt && params.refineCount > 0) {
-        refinePositiveId = newId();
-        refineNegativeId = newId();
-        QJsonObject emptyPositiveInputs;
-        emptyPositiveInputs.insert(QStringLiteral("clip"), positiveClip);
-        emptyPositiveInputs.insert(QStringLiteral("text"), QString());
-        insertPromptNode(prompt, refinePositiveId, QStringLiteral("CLIPTextEncode"), emptyPositiveInputs);
-        QJsonObject emptyNegativeInputs;
-        emptyNegativeInputs.insert(QStringLiteral("clip"), negativeClip);
-        emptyNegativeInputs.insert(QStringLiteral("text"), QString());
-        insertPromptNode(prompt, refineNegativeId, QStringLiteral("CLIPTextEncode"), emptyNegativeInputs);
+    QString emptyClipId;
+    if (params.emptyRefinePrompt && (params.refineCount > 0 || params.faceDetail)) {
+        emptyClipId = newId();
+        QJsonObject emptyInputs;
+        emptyInputs.insert(QStringLiteral("clip"), positiveClip);
+        emptyInputs.insert(QStringLiteral("text"), QString());
+        insertPromptNode(prompt, emptyClipId, QStringLiteral("CLIPTextEncode"), emptyInputs);
     }
+    const QString refinePositiveId = emptyClipId.isEmpty() ? positiveId : emptyClipId;
+    const QString refineNegativeId = emptyClipId.isEmpty() ? negativeId : emptyClipId;
 
     QJsonObject latentInputs;
     latentInputs.insert(QStringLiteral("width"), params.canvasWidth);
@@ -407,8 +404,8 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         const QString faceId = newId();
         QJsonObject faceInputs;
         faceInputs.insert(QStringLiteral("model"), modelLink);
-        faceInputs.insert(QStringLiteral("positive"), latentLink(positiveId));
-        faceInputs.insert(QStringLiteral("negative"), latentLink(negativeId));
+        faceInputs.insert(QStringLiteral("positive"), latentLink(refinePositiveId));
+        faceInputs.insert(QStringLiteral("negative"), latentLink(refineNegativeId));
         faceInputs.insert(QStringLiteral("latent_image"), latentLink(currentLatentId));
         QJsonArray faceVae;
         faceVae.append(checkpointId);
@@ -470,23 +467,16 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
         }
         return {};
     }
-    if (params.initialSteps < ComfyPilotDefaults::minSteps || params.initialSteps > ComfyPilotDefaults::maxSteps) {
+    if (params.refineSteps < ComfyPilotDefaults::minSteps || params.refineSteps > ComfyPilotDefaults::maxSteps) {
         if (error) {
             *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid steps value");
         }
         return {};
     }
-    if (params.initialGuidance < ComfyPilotDefaults::minGuidance
-        || params.initialGuidance > ComfyPilotDefaults::maxGuidance) {
+    if (params.refineGuidance < ComfyPilotDefaults::minGuidance
+        || params.refineGuidance > ComfyPilotDefaults::maxGuidance) {
         if (error) {
             *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid guidance value");
-        }
-        return {};
-    }
-    if (params.initialDenoise < ComfyPilotDefaults::minDenoise
-        || params.initialDenoise > ComfyPilotDefaults::maxDenoise) {
-        if (error) {
-            *error = QCoreApplication::translate("ComfyWorkflowBuilder", "Invalid denoise value");
         }
         return {};
     }
@@ -634,11 +624,11 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
     samplerInputs.insert(QStringLiteral("negative"), wanNegativeLink);
     samplerInputs.insert(QStringLiteral("latent_image"), wanLatentLink);
     samplerInputs.insert(QStringLiteral("seed"), params.seed);
-    samplerInputs.insert(QStringLiteral("steps"), params.initialSteps);
-    samplerInputs.insert(QStringLiteral("cfg"), params.initialGuidance);
+    samplerInputs.insert(QStringLiteral("steps"), params.refineSteps);
+    samplerInputs.insert(QStringLiteral("cfg"), params.refineGuidance);
     samplerInputs.insert(QStringLiteral("sampler_name"), ModelConstants::videoSamplerName());
     samplerInputs.insert(QStringLiteral("scheduler"), ModelConstants::videoSchedulerName());
-    samplerInputs.insert(QStringLiteral("denoise"), params.initialDenoise);
+    samplerInputs.insert(QStringLiteral("denoise"), BuilderLimits::videoDenoise);
     insertPromptNode(prompt, samplerId, QStringLiteral("KSampler"), samplerInputs);
 
     QJsonObject decodeInputs;

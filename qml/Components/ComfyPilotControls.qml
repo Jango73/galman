@@ -677,7 +677,7 @@ Pane {
                 stepSize: 1
                 value: comfyPilotController ? comfyPilotController.initialSteps : comfyPilotController.defaultInitialSteps
                 editable: true
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onValueModified: {
                     if (!visible) {
                         return
@@ -705,7 +705,7 @@ Pane {
                 stepSize: 1
                 value: comfyPilotController ? comfyPilotController.refineSteps : comfyPilotController.defaultRefineSteps
                 editable: true
-                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
+                enabled: !(comfyPilotController && comfyPilotController.running)
                 onValueModified: {
                     if (!visible) {
                         return
@@ -729,7 +729,7 @@ Pane {
                 TextField {
                     Layout.fillWidth: true
                 text: root.floatFieldText(comfyPilotController ? comfyPilotController.initialGuidance : comfyPilotController.defaultInitialGuidance)
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onEditingFinished: {
                     if (comfyPilotController) {
                         comfyPilotController.initialGuidance = root.parseFloatField(text, comfyPilotController.initialGuidance)
@@ -750,7 +750,7 @@ Pane {
                 TextField {
                     Layout.fillWidth: true
                 text: root.floatFieldText(comfyPilotController ? comfyPilotController.refineGuidance : comfyPilotController.defaultRefineGuidance)
-                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
+                enabled: !(comfyPilotController && comfyPilotController.running)
                 onEditingFinished: {
                     if (comfyPilotController) {
                         comfyPilotController.refineGuidance = root.parseFloatField(text, comfyPilotController.refineGuidance)
@@ -771,7 +771,7 @@ Pane {
                 TextField {
                     Layout.fillWidth: true
                 text: root.floatFieldText(comfyPilotController ? comfyPilotController.initialDenoise : comfyPilotController.defaultInitialDenoise)
-                enabled: !(comfyPilotController && comfyPilotController.running)
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
                 onEditingFinished: {
                     if (comfyPilotController) {
                         comfyPilotController.initialDenoise = root.parseFloatField(text, comfyPilotController.initialDenoise)
