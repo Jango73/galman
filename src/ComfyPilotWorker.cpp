@@ -38,9 +38,9 @@ namespace
 
 struct PilotNetworkConstants
 {
-    static constexpr int requestTimeoutMs = 30000;
+    static constexpr int requestTimeoutMs = 30 * 1000;
     static constexpr int pollIntervalMs = 1000;
-    static constexpr int maxPollMs = 600000;
+    static constexpr int maxPollMs = 45 * 60 * 1000;
 };
 
 struct PilotVideoConstants
