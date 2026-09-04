@@ -53,6 +53,10 @@ Dialog {
             TabButton {
                 text: qsTr("Favorites")
             }
+
+            TabButton {
+                text: qsTr("ComfyUI")
+            }
         }
 
         StackLayout {
@@ -221,6 +225,37 @@ Dialog {
                             }
                         }
                     }
+                }
+            }
+
+            ColumnLayout {
+                spacing: Theme.spaceMd
+
+                Label {
+                    text: qsTr("ComfyUI server")
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: qsTr("Address of the ComfyUI server used for image and video generation.")
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+
+                TextField {
+                    placeholderText: comfyPilotController ? comfyPilotController.defaultServerUrl : ""
+                    text: comfyPilotController ? comfyPilotController.serverUrl : ""
+                    Layout.fillWidth: true
+                    onTextChanged: {
+                        if (comfyPilotController) {
+                            comfyPilotController.serverUrl = text
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillHeight: true
                 }
             }
         }

@@ -61,31 +61,35 @@ Pane {
             spacing: Theme.spaceSm
 
             Label {
-                text: qsTr("Server")
+                text: qsTr("Mode")
                 font.pixelSize: 14
                 font.bold: true
                 Layout.fillWidth: true
             }
 
-            Label {
-                text: qsTr("Server URL")
-                Layout.fillWidth: true
-            }
-
-            TextField {
-                Layout.fillWidth: true
-                placeholderText: comfyPilotController.defaultServerUrl
-                text: comfyPilotController ? comfyPilotController.serverUrl : ""
+            CheckBox {
+                text: qsTr("Video")
+                checked: comfyPilotController ? comfyPilotController.videoEnabled : false
                 enabled: !(comfyPilotController && comfyPilotController.running)
-                onTextChanged: {
+                Layout.fillWidth: true
+                topPadding: Theme.controlPaddingV
+                bottomPadding: Theme.controlPaddingV
+                onToggled: {
                     if (comfyPilotController) {
-                        comfyPilotController.serverUrl = text
+                        comfyPilotController.videoEnabled = checked
                     }
                 }
             }
 
             Item {
                 height: Theme.sectionSpacer
+                Layout.fillWidth: true
+            }
+
+            Label {
+                text: qsTr("Actions")
+                font.pixelSize: 14
+                font.bold: true
                 Layout.fillWidth: true
             }
 
@@ -116,106 +120,163 @@ Pane {
                 }
                 }
             }
-
-            Item {
-                height: Theme.sectionSpacer
+            RowLayout {
+                id: previewButtonRow
                 Layout.fillWidth: true
+                spacing: Theme.spaceSm
+                property real uniformButtonWidth: Math.max(previewButton.implicitWidth,
+                    previewCancelButton.implicitWidth, previewNextSeedButton.implicitWidth,
+                    nextSeedCancelButton.implicitWidth)
+
+                Button {
+                    id: previewButton
+                    text: qsTr("Preview")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
+                    visible: !(comfyPilotController && comfyPilotController.running
+                        && comfyPilotController.runningAction === comfyPilotController.actionPreview)
+                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
+                    onClicked: () => {
+                        if (comfyPilotController) {
+                            comfyPilotController.preview()
+                        }
+                    }
+                }
+
+                Button {
+                    id: previewCancelButton
+                    text: qsTr("Cancel")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
+                    Material.foreground: Theme.danger
+                    visible: comfyPilotController && comfyPilotController.running
+                        && comfyPilotController.runningAction === comfyPilotController.actionPreview
+                    enabled: comfyPilotController && comfyPilotController.running
+                    onClicked: () => {
+                        if (comfyPilotController) {
+                            comfyPilotController.cancel()
+                        }
+                    }
+                }
+
+                Button {
+                    id: previewNextSeedButton
+                    text: qsTr("Preview next seed")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
+                    visible: !(comfyPilotController && comfyPilotController.running
+                        && comfyPilotController.runningAction === comfyPilotController.actionNextSeed)
+                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
+                    onClicked: () => {
+                        if (comfyPilotController) {
+                            comfyPilotController.previewNextSeed()
+                        }
+                    }
+                }
+
+                Button {
+                    id: nextSeedCancelButton
+                    text: qsTr("Cancel")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
+                    Material.foreground: Theme.danger
+                    visible: comfyPilotController && comfyPilotController.running
+                        && comfyPilotController.runningAction === comfyPilotController.actionNextSeed
+                    enabled: comfyPilotController && comfyPilotController.running
+                    onClicked: () => {
+                        if (comfyPilotController) {
+                            comfyPilotController.cancel()
+                        }
+                    }
+                }
             }
+
+            RowLayout {
+                id: generateButtonRow
+                Layout.fillWidth: true
+                spacing: Theme.spaceSm
+                property real uniformButtonWidth: Math.max(generateButton.implicitWidth,
+                    trashPreviewNextButton.implicitWidth)
+
+                Button {
+                    id: trashPreviewNextButton
+                            text: qsTr("Trash last && preview next")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: generateButtonRow.uniformButtonWidth
+                    visible: !(comfyPilotController && comfyPilotController.running
+                        && comfyPilotController.runningAction === comfyPilotController.actionGenerate)
+                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
+                            onClicked: () => {
+                                if (!comfyPilotController) {
+                                    return
+                                }
+                                const lastOutput = comfyPilotController.outputPath
+                                if (lastOutput !== "" && outputBrowser.selectPath(lastOutput)) {
+                                    const trashResult = outputBrowser.trashSelected()
+                                    if (trashResult && trashResult.error) {
+                                        console.warn(trashResult.error)
+                                    }
+                                }
+                                comfyPilotController.previewNextSeed()
+                            }
+                }
+
+                Button {
+                    id: generateButton
+                    text: qsTr("Generate")
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: generateButtonRow.uniformButtonWidth
+                    visible: !(comfyPilotController && comfyPilotController.running
+                        && comfyPilotController.runningAction === comfyPilotController.actionGenerate)
+                    enabled: comfyPilotController && !comfyPilotController.running && (!comfyPilotController.videoEnabled || (comfyPilotController.useCurrentImage && root.outputBrowser && root.outputBrowser.selectedMediaPath !== ""))
+                    onClicked: () => {
+                        if (!comfyPilotController) {
+                            return
+                        }
+                        if (comfyPilotController.videoEnabled) {
+                            comfyPilotController.generateVideo(root.outputBrowser ? root.outputBrowser.selectedMediaPath : "")
+                        } else {
+                            comfyPilotController.generate()
+                        }
+                    }
+                }
+            }
+
+            Button {
+                text: qsTr("Cancel")
+                Layout.fillWidth: true
+                Material.foreground: Theme.danger
+                visible: comfyPilotController && comfyPilotController.running
+                    && comfyPilotController.runningAction === comfyPilotController.actionGenerate
+                enabled: comfyPilotController && comfyPilotController.running
+                onClicked: () => {
+                    if (comfyPilotController) {
+                        comfyPilotController.cancel()
+                    }
+                }
+            }
+
             Label {
-                text: qsTr("Video")
-                font.pixelSize: 14
-                font.bold: true
+                text: comfyPilotController ? comfyPilotController.statusMessage : ""
+                visible: comfyPilotController && comfyPilotController.statusMessage !== ""
+                opacity: 0.8
+                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
 
-            CheckBox {
-                text: qsTr("Video")
-                checked: comfyPilotController ? comfyPilotController.videoEnabled : false
-                enabled: !(comfyPilotController && comfyPilotController.running)
+            Label {
+                text: comfyPilotController ? comfyPilotController.errorMessage : ""
+                visible: comfyPilotController && comfyPilotController.errorMessage !== ""
+                color: Theme.danger
+                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
-                topPadding: Theme.controlPaddingV
-                bottomPadding: Theme.controlPaddingV
-                onToggled: {
-                    if (comfyPilotController) {
-                        comfyPilotController.videoEnabled = checked
-                    }
-                }
-            }
-
-            CheckBox {
-                text: qsTr("Use current image")
-                checked: comfyPilotController ? comfyPilotController.useCurrentImage : true
-                enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
-                Layout.fillWidth: true
-                topPadding: Theme.controlPaddingV
-                bottomPadding: Theme.controlPaddingV
-                onToggled: {
-                    if (comfyPilotController) {
-                        comfyPilotController.useCurrentImage = checked
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.spaceSm
-
-                Label {
-                    text: qsTr("Duration")
-                    Layout.preferredWidth: root.fieldLabelWidth
-                }
-
-                SpinBox {
-                    Layout.fillWidth: true
-                    from: comfyPilotController.minVideoDuration
-                    to: comfyPilotController.maxVideoDuration
-                    stepSize: 1
-                    value: comfyPilotController ? comfyPilotController.videoDuration : comfyPilotController.defaultVideoDuration
-                    editable: true
-                    enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
-                    onValueModified: {
-                        if (!visible) {
-                            return
-                        }
-                        if (comfyPilotController) {
-                            comfyPilotController.videoDuration = value
-                        }
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.spaceSm
-
-                Label {
-                    text: qsTr("Frame rate")
-                    Layout.preferredWidth: root.fieldLabelWidth
-                }
-
-                SpinBox {
-                    Layout.fillWidth: true
-                    from: comfyPilotController.minVideoFrameRate
-                    to: comfyPilotController.maxVideoFrameRate
-                    stepSize: 1
-                    value: comfyPilotController ? comfyPilotController.videoFrameRate : comfyPilotController.defaultVideoFrameRate
-                    editable: true
-                    enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
-                    onValueModified: {
-                        if (!visible) {
-                            return
-                        }
-                        if (comfyPilotController) {
-                            comfyPilotController.videoFrameRate = value
-                        }
-                    }
-                }
             }
 
             Item {
                 height: Theme.sectionSpacer
                 Layout.fillWidth: true
             }
+
             Label {
                 text: qsTr("Prompts")
                 font.pixelSize: 14
@@ -336,176 +397,6 @@ Pane {
                     }
                 }
             }
-            CheckBox {
-                text: qsTr("Empty refine prompt")
-                checked: comfyPilotController ? comfyPilotController.emptyRefinePrompt : false
-                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
-                Layout.fillWidth: true
-                topPadding: Theme.controlPaddingV
-                bottomPadding: Theme.controlPaddingV
-                onToggled: {
-                    if (comfyPilotController) {
-                        comfyPilotController.emptyRefinePrompt = checked
-                    }
-                }
-            }
-
-            Item {
-                height: Theme.sectionSpacer
-                Layout.fillWidth: true
-            }
-
-            RowLayout {
-                id: previewButtonRow
-                Layout.fillWidth: true
-                spacing: Theme.spaceSm
-                property real uniformButtonWidth: Math.max(previewButton.implicitWidth,
-                    previewCancelButton.implicitWidth, previewNextSeedButton.implicitWidth,
-                    nextSeedCancelButton.implicitWidth)
-
-                Button {
-                    id: previewButton
-                    text: qsTr("Preview")
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
-                    visible: !(comfyPilotController && comfyPilotController.running
-                        && comfyPilotController.runningAction === comfyPilotController.actionPreview)
-                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
-                    onClicked: () => {
-                        if (comfyPilotController) {
-                            comfyPilotController.preview()
-                        }
-                    }
-                }
-
-                Button {
-                    id: previewCancelButton
-                    text: qsTr("Cancel")
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
-                    Material.foreground: Theme.danger
-                    visible: comfyPilotController && comfyPilotController.running
-                        && comfyPilotController.runningAction === comfyPilotController.actionPreview
-                    enabled: comfyPilotController && comfyPilotController.running
-                    onClicked: () => {
-                        if (comfyPilotController) {
-                            comfyPilotController.cancel()
-                        }
-                    }
-                }
-
-                Button {
-                    id: previewNextSeedButton
-                    text: qsTr("Preview next seed")
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
-                    visible: !(comfyPilotController && comfyPilotController.running
-                        && comfyPilotController.runningAction === comfyPilotController.actionNextSeed)
-                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
-                    onClicked: () => {
-                        if (comfyPilotController) {
-                            comfyPilotController.previewNextSeed()
-                        }
-                    }
-                }
-
-                Button {
-                    id: nextSeedCancelButton
-                    text: qsTr("Cancel")
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: previewButtonRow.uniformButtonWidth
-                    Material.foreground: Theme.danger
-                    visible: comfyPilotController && comfyPilotController.running
-                        && comfyPilotController.runningAction === comfyPilotController.actionNextSeed
-                    enabled: comfyPilotController && comfyPilotController.running
-                    onClicked: () => {
-                        if (comfyPilotController) {
-                            comfyPilotController.cancel()
-                        }
-                    }
-                }
-            }
-
-            RowLayout {
-                id: generateButtonRow
-                Layout.fillWidth: true
-                spacing: Theme.spaceSm
-                property real uniformButtonWidth: Math.max(generateButton.implicitWidth,
-                    trashPreviewNextButton.implicitWidth)
-
-                Button {
-                    id: generateButton
-                    text: qsTr("Generate")
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: generateButtonRow.uniformButtonWidth
-                    visible: !(comfyPilotController && comfyPilotController.running
-                        && comfyPilotController.runningAction === comfyPilotController.actionGenerate)
-                    enabled: comfyPilotController && !comfyPilotController.running && (!comfyPilotController.videoEnabled || (comfyPilotController.useCurrentImage && root.outputBrowser && root.outputBrowser.selectedMediaPath !== ""))
-                    onClicked: () => {
-                        if (!comfyPilotController) {
-                            return
-                        }
-                        if (comfyPilotController.videoEnabled) {
-                            comfyPilotController.generateVideo(root.outputBrowser ? root.outputBrowser.selectedMediaPath : "")
-                        } else {
-                            comfyPilotController.generate()
-                        }
-                    }
-                }
-
-                Button {
-                    id: trashPreviewNextButton
-                            text: qsTr("Trash last && preview next")
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: generateButtonRow.uniformButtonWidth
-                    visible: !(comfyPilotController && comfyPilotController.running
-                        && comfyPilotController.runningAction === comfyPilotController.actionGenerate)
-                    enabled: comfyPilotController && !comfyPilotController.running && !comfyPilotController.videoEnabled
-                            onClicked: () => {
-                                if (!comfyPilotController) {
-                                    return
-                                }
-                                const lastOutput = comfyPilotController.outputPath
-                                if (lastOutput !== "" && outputBrowser.selectPath(lastOutput)) {
-                                    const trashResult = outputBrowser.trashSelected()
-                                    if (trashResult && trashResult.error) {
-                                        console.warn(trashResult.error)
-                                    }
-                                }
-                                comfyPilotController.previewNextSeed()
-                            }
-                }
-            }
-
-            Button {
-                text: qsTr("Cancel")
-                Layout.fillWidth: true
-                Material.foreground: Theme.danger
-                visible: comfyPilotController && comfyPilotController.running
-                    && comfyPilotController.runningAction === comfyPilotController.actionGenerate
-                enabled: comfyPilotController && comfyPilotController.running
-                onClicked: () => {
-                    if (comfyPilotController) {
-                        comfyPilotController.cancel()
-                    }
-                }
-            }
-
-            Label {
-                text: comfyPilotController ? comfyPilotController.statusMessage : ""
-                visible: comfyPilotController && comfyPilotController.statusMessage !== ""
-                opacity: 0.8
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
-            }
-
-            Label {
-                text: comfyPilotController ? comfyPilotController.errorMessage : ""
-                visible: comfyPilotController && comfyPilotController.errorMessage !== ""
-                color: Theme.danger
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
-            }
 
             Item {
                 height: Theme.sectionSpacer
@@ -513,7 +404,7 @@ Pane {
             }
 
             Label {
-                text: qsTr("Canvas")
+                text: qsTr("Format")
                 font.pixelSize: 14
                 font.bold: true
                 Layout.fillWidth: true
@@ -600,6 +491,76 @@ Pane {
                 }
             }
 
+            CheckBox {
+                text: qsTr("Use current image")
+                checked: comfyPilotController ? comfyPilotController.useCurrentImage : true
+                enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                Layout.fillWidth: true
+                topPadding: Theme.controlPaddingV
+                bottomPadding: Theme.controlPaddingV
+                onToggled: {
+                    if (comfyPilotController) {
+                        comfyPilotController.useCurrentImage = checked
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spaceSm
+
+                Label {
+                    text: qsTr("Duration")
+                    Layout.preferredWidth: root.fieldLabelWidth
+                }
+
+                SpinBox {
+                    Layout.fillWidth: true
+                    from: comfyPilotController.minVideoDuration
+                    to: comfyPilotController.maxVideoDuration
+                    stepSize: 1
+                    value: comfyPilotController ? comfyPilotController.videoDuration : comfyPilotController.defaultVideoDuration
+                    editable: true
+                    enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                    onValueModified: {
+                        if (!visible) {
+                            return
+                        }
+                        if (comfyPilotController) {
+                            comfyPilotController.videoDuration = value
+                        }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spaceSm
+
+                Label {
+                    text: qsTr("Frame rate")
+                    Layout.preferredWidth: root.fieldLabelWidth
+                }
+
+                SpinBox {
+                    Layout.fillWidth: true
+                    from: comfyPilotController.minVideoFrameRate
+                    to: comfyPilotController.maxVideoFrameRate
+                    stepSize: 1
+                    value: comfyPilotController ? comfyPilotController.videoFrameRate : comfyPilotController.defaultVideoFrameRate
+                    editable: true
+                    enabled: (comfyPilotController && comfyPilotController.videoEnabled) && !(comfyPilotController && comfyPilotController.running)
+                    onValueModified: {
+                        if (!visible) {
+                            return
+                        }
+                        if (comfyPilotController) {
+                            comfyPilotController.videoFrameRate = value
+                        }
+                    }
+                }
+            }
+
             Item {
                 height: Theme.sectionSpacer
                 Layout.fillWidth: true
@@ -657,6 +618,20 @@ Pane {
                 onToggled: {
                     if (comfyPilotController) {
                         comfyPilotController.faceDetail = checked
+                    }
+                }
+            }
+
+            CheckBox {
+                text: qsTr("Empty refine prompt")
+                checked: comfyPilotController ? comfyPilotController.emptyRefinePrompt : false
+                enabled: !(comfyPilotController && comfyPilotController.running) && !(comfyPilotController && comfyPilotController.videoEnabled)
+                Layout.fillWidth: true
+                topPadding: Theme.controlPaddingV
+                bottomPadding: Theme.controlPaddingV
+                onToggled: {
+                    if (comfyPilotController) {
+                        comfyPilotController.emptyRefinePrompt = checked
                     }
                 }
             }
