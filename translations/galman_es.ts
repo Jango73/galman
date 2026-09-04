@@ -119,6 +119,10 @@
         <source>%1 will be moved to the trash.</source>
         <translation>%1 se movera a la papelera.</translation>
     </message>
+    <message>
+        <source>"%1" will be moved to the trash.</source>
+        <translation>"%1" se movera a la papelera.</translation>
+    </message>
     <message numerus="yes">
         <source>%n item</source>
         <translation>
@@ -145,6 +149,10 @@
     <message>
         <source>%1 will be permanently deleted.</source>
         <translation>%1 se eliminará permanentemente.</translation>
+    </message>
+    <message>
+        <source>"%1" will be permanently deleted.</source>
+        <translation>"%1" se eliminará permanentemente.</translation>
     </message>
 </context>
 <context>
@@ -736,6 +744,17 @@
     <message>
         <source>No backup found for %1</source>
         <translation>No se encontró respaldo para %1</translation>
+    </message>
+</context>
+<context>
+    <name>ComfyPilotView</name>
+    <message>
+        <source>Refine pass count</source>
+        <translation>Número de pasadas de refinado</translation>
+    </message>
+    <message>
+        <source>Warning: each pass doubles width &amp; height of image</source>
+        <translation>Advertencia: cada pasada duplica el ancho y el alto de la imagen</translation>
     </message>
 </context>
 </TS>

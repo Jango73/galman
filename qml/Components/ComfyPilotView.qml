@@ -34,6 +34,24 @@ Item {
         return decodeURIComponent(withoutScheme)
     }
 
+    ComfyOutputBrowser {
+        id: outputBrowser
+        outputPath: comfyPilotController ? comfyPilotController.outputPath : ""
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            outputPreview.forceActiveFocus()
+        }
+    }
+
+    Connections {
+        target: outputBrowser
+        function onSelectionRestoredAfterRemoval() {
+            outputPreview.forceActiveFocus()
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: Theme.spaceLg
@@ -268,12 +286,18 @@ Item {
                     }
 
                     RowLayout {
+                        id: previewButtonRow
                         Layout.fillWidth: true
                         spacing: Theme.spaceSm
+                        property real uniformButtonWidth: Math.max(previewButton.implicitWidth,
+                            previewCancelButton.implicitWidth, previewNextSeedButton.implicitWidth,
+                            nextSeedCancelButton.implicitWidth)
 
                         Button {
+                            id: previewButton
                             text: qsTr("Preview")
                             Layout.fillWidth: true
+                            Layout.preferredWidth: previewButtonRow.uniformButtonWidth
                             visible: !(comfyPilotController && comfyPilotController.running
                                 && comfyPilotController.runningAction === comfyPilotController.actionPreview)
                             enabled: comfyPilotController && !comfyPilotController.running
@@ -285,8 +309,10 @@ Item {
                         }
 
                         Button {
+                            id: previewCancelButton
                             text: qsTr("Cancel")
                             Layout.fillWidth: true
+                            Layout.preferredWidth: previewButtonRow.uniformButtonWidth
                             Material.foreground: Theme.danger
                             visible: comfyPilotController && comfyPilotController.running
                                 && comfyPilotController.runningAction === comfyPilotController.actionPreview
@@ -299,8 +325,10 @@ Item {
                         }
 
                         Button {
+                            id: previewNextSeedButton
                             text: qsTr("Preview next seed")
                             Layout.fillWidth: true
+                            Layout.preferredWidth: previewButtonRow.uniformButtonWidth
                             visible: !(comfyPilotController && comfyPilotController.running
                                 && comfyPilotController.runningAction === comfyPilotController.actionNextSeed)
                             enabled: comfyPilotController && !comfyPilotController.running
@@ -312,8 +340,10 @@ Item {
                         }
 
                         Button {
+                            id: nextSeedCancelButton
                             text: qsTr("Cancel")
                             Layout.fillWidth: true
+                            Layout.preferredWidth: previewButtonRow.uniformButtonWidth
                             Material.foreground: Theme.danger
                             visible: comfyPilotController && comfyPilotController.running
                                 && comfyPilotController.runningAction === comfyPilotController.actionNextSeed
@@ -454,7 +484,7 @@ Item {
                         spacing: Theme.spaceSm
 
                         Label {
-                            text: qsTr("Refine count")
+                            text: qsTr("Refine pass count")
                             Layout.preferredWidth: root.fieldLabelWidth
                         }
 
@@ -475,6 +505,13 @@ Item {
                             }
                         }
                         }
+                    }
+
+                    Label {
+                        text: qsTr("Warning: each pass doubles width & height of image")
+                        color: Theme.danger
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
                     }
 
                     CheckBox {
@@ -663,22 +700,37 @@ Item {
             Item {
                 anchors.fill: parent
 
-                MediaDisplay {
-                    id: outputDisplay
+                ImagePreview {
+                    id: outputPreview
                     anchors.fill: parent
-                    visible: comfyPilotController && comfyPilotController.outputPath !== ""
+                    visible: outputBrowser.selectedMediaPath !== ""
                     panelBackground: root.panelBackground
-                    mediaPath: comfyPilotController && comfyPilotController.outputPath !== ""
-                        ? ("file://" + comfyPilotController.outputPath)
-                        : ""
-                    mediaIsVideo: comfyPilotController ? comfyPilotController.outputIsVideo : false
-                    emptyText: qsTr("No output yet")
+                    browser: outputBrowser
+                    onTrashConfirmationRequested: (count) => {
+                        outputConfirmDialog.action = "trash"
+                        outputConfirmDialog.sourcePane = outputPreview
+                        outputConfirmDialog.targetPane = null
+                        outputConfirmDialog.itemCount = count
+                        outputConfirmDialog.directionText = ""
+                        outputConfirmDialog.open()
+                    }
+                    onDeleteConfirmationRequested: (count) => {
+                        outputConfirmDialog.action = "delete"
+                        outputConfirmDialog.sourcePane = outputPreview
+                        outputConfirmDialog.targetPane = null
+                        outputConfirmDialog.itemCount = count
+                        outputConfirmDialog.directionText = ""
+                        outputConfirmDialog.open()
+                    }
+                    onSaveSucceeded: (message) => {
+                        console.info(message)
+                    }
                 }
 
                 ColumnLayout {
                     anchors.centerIn: parent
                     spacing: Theme.spaceSm
-                    visible: !(comfyPilotController && comfyPilotController.outputPath !== "")
+                    visible: outputBrowser.selectedMediaPath === ""
                         && !(comfyPilotController && comfyPilotController.running)
 
                     Label {
@@ -705,6 +757,40 @@ Item {
                         opacity: 0.8
                         Layout.alignment: Qt.AlignHCenter
                     }
+                }
+            }
+        }
+    }
+
+    Shortcut {
+        sequences: ["Delete"]
+        context: Qt.WindowShortcut
+        enabled: outputPreview.activeFocus && !outputConfirmDialog.visible
+        onActivated: outputPreview.confirmTrashSelected()
+    }
+
+    Shortcut {
+        sequences: ["Shift+Delete"]
+        context: Qt.WindowShortcut
+        enabled: outputPreview.activeFocus && !outputConfirmDialog.visible
+        onActivated: outputPreview.confirmDeleteSelectedPermanently()
+    }
+
+    ConfirmDialog {
+        id: outputConfirmDialog
+        onTrashConfirmed: (sourcePane) => {
+            if (sourcePane) {
+                const result = sourcePane.trashSelected()
+                if (result && result.error) {
+                    console.warn(result.error)
+                }
+            }
+        }
+        onDeleteConfirmed: (sourcePane) => {
+            if (sourcePane) {
+                const result = sourcePane.deleteSelectedPermanently()
+                if (result && result.error) {
+                    console.warn(result.error)
                 }
             }
         }

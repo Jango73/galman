@@ -147,6 +147,10 @@
         <source>%1 will be moved to the trash.</source>
         <translation>%1 wordt naar de prullenbak verplaatst.</translation>
     </message>
+    <message>
+        <source>"%1" will be moved to the trash.</source>
+        <translation>"%1" wordt naar de prullenbak verplaatst.</translation>
+    </message>
     <message numerus="yes">
         <source>%n item</source>
         <translation>
@@ -173,6 +177,10 @@
     <message>
         <source>%1 will be permanently deleted.</source>
         <translation>%1 wordt definitief verwijderd.</translation>
+    </message>
+    <message>
+        <source>"%1" will be permanently deleted.</source>
+        <translation>"%1" wordt definitief verwijderd.</translation>
     </message>
 </context>
 <context>
@@ -900,6 +908,17 @@
     <message>
         <source>No backup found for %1</source>
         <translation>Geen back-up gevonden voor %1</translation>
+    </message>
+</context>
+<context>
+    <name>ComfyPilotView</name>
+    <message>
+        <source>Refine pass count</source>
+        <translation>Aantal verfijningspassen</translation>
+    </message>
+    <message>
+        <source>Warning: each pass doubles width &amp; height of image</source>
+        <translation>Waarschuwing: elke pas verdubbelt de breedte en hoogte van de afbeelding</translation>
     </message>
 </context>
 </TS>

@@ -21,16 +21,64 @@
 #include "ComfyPilotController.h"
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QImageReader>
+#include <QSet>
 #include <QSettings>
 
 #include "ComfyClient.h"
 #include "ComfyPilotWorker.h"
 #include "ComfyPromptImporter.h"
+#include "PlatformUtils.h"
+#include "VideoThumbnailUtils.h"
 
 namespace
 {
 
 const char settingsGroup[] = "comfyPilot";
+const char settingsOutputPath[] = "outputPath";
+
+bool isMediaOutputInfo(const QFileInfo &info)
+{
+    if (!info.exists() || !info.isFile()) {
+        return false;
+    }
+    if (VideoThumbnailUtils::isVideoFile(info)) {
+        return true;
+    }
+    static const QSet<QString> imageFormats = []() {
+        QSet<QString> formats;
+        const QList<QByteArray> supported = QImageReader::supportedImageFormats();
+        for (const QByteArray &format : supported) {
+            formats.insert(QString::fromLatin1(format).toLower());
+        }
+        return formats;
+    }();
+    return imageFormats.contains(info.suffix().toLower());
+}
+
+QString findLatestMediaOutput(const QString &folderPath)
+{
+    const QDir folder(folderPath);
+    if (!folder.exists()) {
+        return QString();
+    }
+    const QFileInfoList entries = folder.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    QString latestPath;
+    qint64 latestModified = -1;
+    for (const QFileInfo &entry : entries) {
+        if (!isMediaOutputInfo(entry)) {
+            continue;
+        }
+        const qint64 modified = entry.lastModified().toMSecsSinceEpoch();
+        if (modified > latestModified) {
+            latestModified = modified;
+            latestPath = entry.absoluteFilePath();
+        }
+    }
+    return latestPath;
+}
 
 } // namespace
 
@@ -541,6 +589,37 @@ void ComfyPilotController::loadParameters()
     m_refineDenoise = settings.value(QStringLiteral("refineDenoise"), m_refineDenoise).toDouble();
     settings.endGroup();
     qInfo() << "ComfyPilot parameters loaded";
+    restoreOutputPath();
+}
+
+/**
+ * @brief Restores the last generated output so the view is populated at startup.
+ *
+ * Reuses the persisted output path when the file still exists, otherwise falls
+ * back to the most recently modified media file in the default ComfyUI output
+ * folder. Leaves the output empty when no media file is found.
+ */
+void ComfyPilotController::restoreOutputPath()
+{
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    settings.beginGroup(settingsGroup);
+    const QString savedPath = settings.value(QString::fromLatin1(settingsOutputPath)).toString();
+    settings.endGroup();
+    const QFileInfo savedInfo(savedPath);
+    if (isMediaOutputInfo(savedInfo)) {
+        qInfo() << "ComfyPilot restored saved output:" << savedInfo.absoluteFilePath();
+        m_outputPath = savedInfo.absoluteFilePath();
+        m_outputIsVideo = VideoThumbnailUtils::isVideoFile(savedInfo);
+        return;
+    }
+    const QString latestPath = findLatestMediaOutput(PlatformUtils::comfyDefaultOutputDir());
+    if (latestPath.isEmpty()) {
+        qInfo() << "ComfyPilot no previous output found";
+        return;
+    }
+    qInfo() << "ComfyPilot restored latest output:" << latestPath;
+    m_outputPath = latestPath;
+    m_outputIsVideo = VideoThumbnailUtils::isVideoFile(QFileInfo(latestPath));
 }
 
 /**
@@ -699,6 +778,11 @@ void ComfyPilotController::setOutputPath(const QString &value, bool isVideo)
 {
     m_outputPath = value;
     m_outputIsVideo = isVideo;
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    settings.beginGroup(settingsGroup);
+    settings.setValue(QString::fromLatin1(settingsOutputPath), m_outputPath);
+    settings.endGroup();
+    settings.sync();
     emit outputPathChanged();
 }
 

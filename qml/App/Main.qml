@@ -754,6 +754,7 @@ ApplicationWindow {
         context: Qt.ApplicationShortcut
         enabled: !(leftBrowser.textInputActive || rightBrowser.textInputActive)
             && !confirmDialog.visible
+            && !comfyPilotTab.visible
         onActivated: focusOtherBrowser()
     }
 

@@ -145,6 +145,10 @@
         <source>%1 will be moved to the trash.</source>
         <translation>%1 将被移到回收站。</translation>
     </message>
+    <message>
+        <source>"%1" will be moved to the trash.</source>
+        <translation>"%1" 将被移到回收站。</translation>
+    </message>
     <message numerus="yes">
         <location filename="../qml/Components/ConfirmDialog.qml" line="75" />
         <source>%n item</source>
@@ -171,6 +175,10 @@
     <message>
         <source>%1 will be permanently deleted.</source>
         <translation>%1 将被永久删除。</translation>
+    </message>
+    <message>
+        <source>"%1" will be permanently deleted.</source>
+        <translation>"%1" 将被永久删除。</translation>
     </message>
 </context>
 <context>
@@ -898,6 +906,17 @@
     <message>
         <source>No backup found for %1</source>
         <translation>未找到 %1 的备份</translation>
+    </message>
+</context>
+<context>
+    <name>ComfyPilotView</name>
+    <message>
+        <source>Refine pass count</source>
+        <translation>细化遍数</translation>
+    </message>
+    <message>
+        <source>Warning: each pass doubles width &amp; height of image</source>
+        <translation>警告：每次细化都会使图像的宽度和高度加倍</translation>
     </message>
 </context>
 </TS>

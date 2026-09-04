@@ -29,14 +29,41 @@ Dialog {
     property int nameConflictCount: 0
     property string directionText: ""
     property string action: "copy"
+    property string itemName: ""
     signal copyConfirmed(var sourcePane, var targetPane)
     signal moveConfirmed(var sourcePane, var targetPane)
     signal trashConfirmed(var sourcePane)
     signal deleteConfirmed(var sourcePane)
+
+    function baseNameFromPath(path) {
+        const normalized = String(path || "").replace(/\\/g, "/")
+        const index = normalized.lastIndexOf("/")
+        return index >= 0 ? normalized.slice(index + 1) : normalized
+    }
+
+    function singleSelectedBaseName() {
+        if (dialog.itemCount !== 1) {
+            return ""
+        }
+        if (dialog.action !== "trash" && dialog.action !== "delete") {
+            return ""
+        }
+        if (!dialog.sourcePane || !dialog.sourcePane.selectedPaths) {
+            return ""
+        }
+        const paths = dialog.sourcePane.selectedPaths()
+        if (!paths || paths.length !== 1) {
+            return ""
+        }
+        return baseNameFromPath(paths[0])
+    }
     x: Math.round(((dialog.parent ? dialog.parent.width : 0) - width) / 2)
     y: Math.round(((dialog.parent ? dialog.parent.height : 0) - height) / 2)
     focus: true
-    onOpened: forceActiveFocus()
+    onOpened: {
+        dialog.itemName = dialog.singleSelectedBaseName()
+        forceActiveFocus()
+    }
 
     Shortcut {
         sequences: ["Return", "Enter"]
@@ -100,15 +127,27 @@ Dialog {
                 Layout.fillWidth: true
             }
             Label {
-                visible: dialog.action === "trash"
+                visible: dialog.action === "trash" && dialog.itemName === ""
                 text: qsTr("%1 will be moved to the trash.").arg(qsTr("%n item", "", dialog.itemCount))
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
             Label {
-                visible: dialog.action === "delete"
+                visible: dialog.action === "trash" && dialog.itemName !== ""
+                text: qsTr("\"%1\" will be moved to the trash.").arg(dialog.itemName)
+                elide: Text.ElideMiddle
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: dialog.action === "delete" && dialog.itemName === ""
                 text: qsTr("%1 will be permanently deleted.").arg(qsTr("%n item", "", dialog.itemCount))
                 wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: dialog.action === "delete" && dialog.itemName !== ""
+                text: qsTr("\"%1\" will be permanently deleted.").arg(dialog.itemName)
+                elide: Text.ElideMiddle
                 Layout.fillWidth: true
             }
         }

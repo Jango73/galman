@@ -119,6 +119,10 @@
         <source>%1 will be moved to the trash.</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>"%1" will be moved to the trash.</source>
+        <translation type="unfinished" />
+    </message>
     <message numerus="yes">
         <source>%n item</source>
         <translation type="unfinished">
@@ -144,6 +148,10 @@
     </message>
     <message>
         <source>%1 will be permanently deleted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>"%1" will be permanently deleted.</source>
         <translation type="unfinished" />
     </message>
 </context>
@@ -710,6 +718,17 @@
     <message>
         <source>No backup found for %1</source>
         <translation>No backup found for %1</translation>
+    </message>
+</context>
+<context>
+    <name>ComfyPilotView</name>
+    <message>
+        <source>Refine pass count</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Warning: each pass doubles width &amp; height of image</source>
+        <translation type="unfinished" />
     </message>
 </context>
 </TS>

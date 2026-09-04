@@ -163,6 +163,7 @@ private:
     void launchJob(const ComfyPilotJob &job);
     void loadParameters();
     void saveParameters() const;
+    void restoreOutputPath();
     void setRunning(bool value);
     void setOutputPath(const QString &value, bool isVideo);
     void setErrorMessage(const QString &value);

@@ -149,6 +149,10 @@
         <source>%1 will be moved to the trash.</source>
         <translation>%1 будет перемещено в корзину.</translation>
     </message>
+    <message>
+        <source>"%1" will be moved to the trash.</source>
+        <translation>"%1" будет перемещено в корзину.</translation>
+    </message>
     <message numerus="yes">
         <source>%n item</source>
         <translation>
@@ -176,6 +180,10 @@
     <message>
         <source>%1 will be permanently deleted.</source>
         <translation>%1 будет удалено навсегда.</translation>
+    </message>
+    <message>
+        <source>"%1" will be permanently deleted.</source>
+        <translation>"%1" будет удалено навсегда.</translation>
     </message>
 </context>
 <context>
@@ -903,6 +911,17 @@
     <message>
         <source>No backup found for %1</source>
         <translation>Резервная копия для %1 не найдена</translation>
+    </message>
+</context>
+<context>
+    <name>ComfyPilotView</name>
+    <message>
+        <source>Refine pass count</source>
+        <translation>Количество проходов уточнения</translation>
+    </message>
+    <message>
+        <source>Warning: each pass doubles width &amp; height of image</source>
+        <translation>Внимание: каждый проход удваивает ширину и высоту изображения</translation>
     </message>
 </context>
 </TS>
