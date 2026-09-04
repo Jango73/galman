@@ -30,6 +30,14 @@ function scriptDefinition() {
                 min: 1,
                 max: 8,
                 default: 3
+            },
+            {
+                id: "base",
+                type: "number",
+                label: "Base",
+                min: 0,
+                max: 9999,
+                default: 1
             }
         ],
         run: function(params, selection) {
@@ -41,7 +49,8 @@ function scriptDefinition() {
             files.sort((a, b) => (a.modifiedMs || 0) - (b.modifiedMs || 0))
 
             const results = []
-            let counter = 1
+            const parsedBase = Number(params.base)
+            let counter = Number.isFinite(parsedBase) ? Math.max(0, Math.floor(parsedBase)) : 1
 
             for (const item of files) {
                 const path = item.path

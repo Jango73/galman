@@ -110,6 +110,7 @@ qt_add_qml_module(galman
         qml/Components/ShortcutsDialog.qml
         qml/Components/StatusBadge.qml
         qml/Components/ComfyPilotView.qml
+        qml/Components/ComfyPilotControls.qml
         qml/Components/ComfyOutputBrowser.qml
     RESOURCES
         qml/Assets/Galman.png

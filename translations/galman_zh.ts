@@ -918,5 +918,9 @@
         <source>Warning: each pass doubles width &amp; height of image</source>
         <translation>警告：每次细化都会使图像的宽度和高度加倍</translation>
     </message>
+    <message>
+        <source>Trash last &amp;&amp; preview next</source>
+        <translation>删除上一个并预览下一个</translation>
+    </message>
 </context>
 </TS>

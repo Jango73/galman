@@ -730,5 +730,9 @@
         <source>Warning: each pass doubles width &amp; height of image</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Trash last &amp;&amp; preview next</source>
+        <translation type="unfinished" />
+    </message>
 </context>
 </TS>

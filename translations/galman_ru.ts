@@ -923,5 +923,9 @@
         <source>Warning: each pass doubles width &amp; height of image</source>
         <translation>Внимание: каждый проход удваивает ширину и высоту изображения</translation>
     </message>
+    <message>
+        <source>Trash last &amp;&amp; preview next</source>
+        <translation>В корзину и предпросмотр</translation>
+    </message>
 </context>
 </TS>

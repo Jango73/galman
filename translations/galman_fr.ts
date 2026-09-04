@@ -754,5 +754,9 @@
         <source>Warning: each pass doubles width &amp; height of image</source>
         <translation>Attention : chaque passe double la largeur et la hauteur de l'image</translation>
     </message>
+    <message>
+        <source>Trash last &amp;&amp; preview next</source>
+        <translation>Mettre la dernière à la corbeille et prévisualiser</translation>
+    </message>
 </context>
 </TS>

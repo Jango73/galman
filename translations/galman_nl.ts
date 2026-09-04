@@ -920,5 +920,9 @@
         <source>Warning: each pass doubles width &amp; height of image</source>
         <translation>Waarschuwing: elke pas verdubbelt de breedte en hoogte van de afbeelding</translation>
     </message>
+    <message>
+        <source>Trash last &amp;&amp; preview next</source>
+        <translation>Prullenbak en voorbeeld</translation>
+    </message>
 </context>
 </TS>

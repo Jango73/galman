@@ -19,7 +19,7 @@ QtObject {
     readonly property color statusIdenticalColor: Theme.statusIdentical
     readonly property color statusDifferentColor: Theme.statusDifferent
     readonly property int syncRetryInterval: 500
-    readonly property int syncMaxAttempts: 20
+    readonly property int syncMaxAttempts: 60
     property string pendingOutputPath: ""
     property int syncAttempts: 0
     property int pendingDeletionRow: -1
@@ -39,8 +39,12 @@ QtObject {
     property var loadingWatcher: Connections {
         target: root.outputModel
         function onLoadingChanged() {
-            if (!root.outputModel.loading) {
-                root.restoreSelectionAfterRemoval()
+            if (root.outputModel.loading) {
+                return
+            }
+            root.restoreSelectionAfterRemoval()
+            if (root.pendingOutputPath !== "") {
+                root.trySelectPendingOutput()
             }
         }
     }
@@ -65,6 +69,7 @@ QtObject {
             outputModel.rootPath = currentFolder
         }
         if (!trySelectPendingOutput()) {
+            outputModel.refresh()
             syncTimer.start()
         }
     }
