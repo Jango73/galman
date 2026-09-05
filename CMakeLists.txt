@@ -32,6 +32,7 @@ qt_add_executable(galman
         src/ComfyPromptImporter.cpp
         src/ComfyPilotWorker.cpp
         src/ComfyPilotController.cpp
+        src/ComfyPrerequisites.cpp
         src/PlatformUtils.cpp
 )
 
@@ -94,6 +95,7 @@ qt_add_qml_module(galman
         src/ComfyPromptImporter.h
         src/ComfyPilotWorker.h
         src/ComfyPilotController.h
+        src/ComfyPrerequisites.h
         src/PlatformUtils.h
         src/ApplicationInfo.h
         src/ApplicationSettings.h

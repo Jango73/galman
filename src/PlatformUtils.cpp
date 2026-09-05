@@ -85,18 +85,36 @@ QString normalizePath(const QString &path)
 }
 
 /**
+ * @brief Returns the local ComfyUI base folder for the current platform.
+ * @return ComfyUI base folder path.
+ */
+QString comfyBaseFolder()
+{
+#ifdef Q_OS_WIN
+    const QString documents = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    const QString base = documents.isEmpty() ? QDir::home().filePath("Documents") : documents;
+    return QDir(base).filePath("ComfyUI");
+#else
+    return QDir::home().filePath("ComfyUI");
+#endif
+}
+
+/**
+ * @brief Returns the local ComfyUI models folder for the current platform.
+ * @return ComfyUI models folder path.
+ */
+QString comfyModelsFolder()
+{
+    return QDir(comfyBaseFolder()).filePath("models");
+}
+
+/**
  * @brief Returns the default ComfyUI output folder for the current platform.
  * @return Default output folder path.
  */
 QString comfyDefaultOutputDir()
 {
-#ifdef Q_OS_WIN
-    const QString documents = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    const QString base = documents.isEmpty() ? QDir::home().filePath("Documents") : documents;
-    return QDir(base).filePath("ComfyUI/output");
-#else
-    return QDir::home().filePath("ComfyUI/output");
-#endif
+    return QDir(comfyBaseFolder()).filePath("output");
 }
 
 /**

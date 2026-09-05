@@ -228,11 +228,19 @@ Dialog {
                 }
             }
 
-            ColumnLayout {
-                spacing: Theme.spaceMd
+            ScrollView {
+                id: comfyScroll
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                Label {
-                    text: qsTr("ComfyUI server")
+                ColumnLayout {
+                    width: comfyScroll.availableWidth
+                    spacing: Theme.spaceMd
+
+                    Label {
+                        text: qsTr("ComfyUI server")
                     font.bold: true
                     Layout.fillWidth: true
                 }
@@ -244,6 +252,7 @@ Dialog {
                 }
 
                 TextField {
+                    id: serverField
                     placeholderText: comfyPilotController ? comfyPilotController.defaultServerUrl : ""
                     text: comfyPilotController ? comfyPilotController.serverUrl : ""
                     Layout.fillWidth: true
@@ -254,10 +263,217 @@ Dialog {
                     }
                 }
 
-                Item {
-                    Layout.fillHeight: true
+                Label {
+                    text: qsTr("Prerequisites")
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: qsTr("Nodes and models required for image and video generation. Check the statuses, then install anything missing from ComfyUI Manager.")
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: qsTr("Remote server configured: node statuses are checked on the server, but model files can only be checked locally.")
+                    visible: comfyPrerequisites && !comfyPrerequisites.isLocalServer(serverField.text)
+                    color: Theme.statusDifferent
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.spaceSm
+
+                    Button {
+                        text: qsTr("Check nodes")
+                        enabled: comfyPrerequisites && !comfyPrerequisites.checking
+                        onClicked: {
+                            comfyPrerequisites.refresh(serverField.text)
+                        }
+                    }
+
+                    Button {
+                        text: qsTr("Open ComfyUI Manager")
+                        enabled: comfyPrerequisites !== null
+                        onClicked: {
+                            comfyPrerequisites.openManager(serverField.text)
+                        }
+                    }
+                }
+
+                Label {
+                    text: comfyPrerequisites ? comfyPrerequisites.statusMessage : ""
+                    visible: comfyPrerequisites && comfyPrerequisites.statusMessage !== ""
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: comfyPrerequisites ? comfyPrerequisites.errorMessage : ""
+                    visible: comfyPrerequisites && comfyPrerequisites.errorMessage !== ""
+                    color: Theme.danger
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: prerequisiteSummary()
+                    Layout.fillWidth: true
+                    font.pixelSize: 12
+                    opacity: 0.8
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.spaceXs
+
+                    Repeater {
+                        model: comfyPrerequisites ? comfyPrerequisites.nodeStatuses : []
+
+                        delegate: RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spaceSm
+
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: prerequisiteStatusColor(modelData.status)
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+
+                                Label {
+                                    text: modelData.classType
+                                    Layout.fillWidth: true
+                                    font.pixelSize: 12
+                                    elide: Text.ElideRight
+                                }
+
+                                Label {
+                                    text: modelData.packageId + " - " + formatTargets(modelData.requiredFor)
+                                    Layout.fillWidth: true
+                                    font.pixelSize: 11
+                                    opacity: 0.7
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Label {
+                    text: qsTr("Required models")
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: prerequisiteModelSummary()
+                    Layout.fillWidth: true
+                    font.pixelSize: 12
+                    opacity: 0.8
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.spaceXs
+
+                    Repeater {
+                        model: comfyPrerequisites ? comfyPrerequisites.modelRequirements : []
+
+                        delegate: RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spaceSm
+
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: prerequisiteStatusColor(modelData.status)
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+
+                                Label {
+                                    text: modelData.fileName
+                                    Layout.fillWidth: true
+                                    font.pixelSize: 12
+                                    elide: Text.ElideMiddle
+                                }
+
+                                Label {
+                                    text: "models/" + modelData.folder + " (" + formatTargets(modelData.requiredFor) + ")"
+                                    Layout.fillWidth: true
+                                    font.pixelSize: 11
+                                    opacity: 0.7
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+                    }
                 }
             }
+
         }
+    }
+    }
+
+    function prerequisiteStatusColor(status) {
+        if (!comfyPrerequisites) {
+            return Theme.statusDifferent
+        }
+        if (status === comfyPrerequisites.statusInstalled) {
+            return Theme.statusIdentical
+        }
+        if (status === comfyPrerequisites.statusMissing) {
+            return Theme.statusMissing
+        }
+        return Theme.statusDifferent
+    }
+
+    function formatTargets(targets) {
+        if (targets === undefined || targets === null || targets.length === undefined) {
+            return ""
+        }
+        return Array.prototype.join.call(targets, ", ")
+    }
+
+    function countByStatus(entries) {
+        var counts = {"installed": 0, "missing": 0}
+        if (!comfyPrerequisites || entries === undefined || entries === null) {
+            return counts
+        }
+        for (var i = 0; i < entries.length; i++) {
+            if (entries[i].status === comfyPrerequisites.statusInstalled) {
+                counts.installed++
+            } else if (entries[i].status === comfyPrerequisites.statusMissing) {
+                counts.missing++
+            }
+        }
+        return counts
+    }
+
+    function prerequisiteSummary() {
+        var counts = countByStatus(comfyPrerequisites ? comfyPrerequisites.nodeStatuses : null)
+        if (counts.installed === 0 && counts.missing === 0) {
+            return qsTr("Node statuses unknown - run a check.")
+        }
+        return qsTr("%1 installed, %2 missing").arg(counts.installed).arg(counts.missing)
+    }
+
+    function prerequisiteModelSummary() {
+        var counts = countByStatus(comfyPrerequisites ? comfyPrerequisites.modelRequirements : null)
+        if (counts.installed === 0 && counts.missing === 0) {
+            return qsTr("Model statuses unknown - run a check.")
+        }
+        return qsTr("%1 installed, %2 missing").arg(counts.installed).arg(counts.missing)
     }
 }
