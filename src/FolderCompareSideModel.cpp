@@ -239,6 +239,7 @@ void FolderCompareSideModel::setHideJunkFiles(bool enabled)
 
 void FolderCompareSideModel::setShowDirsFirst(bool enabled)
 {
+    qInfo() << "FolderCompareSideModel::setShowDirsFirst" << enabled << m_side;
     if (enabled == m_filterSettings.showFoldersFirst()) {
         return;
     }

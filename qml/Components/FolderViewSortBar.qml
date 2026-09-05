@@ -126,11 +126,11 @@ ColumnLayout {
             text: qsTr("Descending")
             KeyNavigation.backtab: sortCombo
             KeyNavigation.tab: dirsFirstBox
-            onToggled: (checked) => {
+            onToggled: {
                 if (root.browserModel) {
-                    root.browserModel.sortOrder = checked ? Qt.DescendingOrder : Qt.AscendingOrder
+                    root.browserModel.sortOrder = sortOrderBox.checked ? Qt.DescendingOrder : Qt.AscendingOrder
                 }
-                root.sortOrderChangedByUser(checked ? Qt.DescendingOrder : Qt.AscendingOrder)
+                root.sortOrderChangedByUser(sortOrderBox.checked ? Qt.DescendingOrder : Qt.AscendingOrder)
             }
         }
 
@@ -139,11 +139,11 @@ ColumnLayout {
             text: qsTr("Folders first")
             KeyNavigation.backtab: sortOrderBox
             KeyNavigation.tab: hideJunkBox
-            onToggled: (checked) => {
+            onToggled: {
                 if (root.browserModel) {
-                    root.browserModel.showDirsFirst = checked
+                    root.browserModel.showDirsFirst = dirsFirstBox.checked
                 }
-                root.dirsFirstChangedByUser(checked)
+                root.dirsFirstChangedByUser(dirsFirstBox.checked)
             }
         }
 
@@ -153,11 +153,11 @@ ColumnLayout {
             KeyNavigation.backtab: dirsFirstBox
             KeyNavigation.tab: nameFilterField
             checked: true
-            onToggled: (checked) => {
+            onToggled: {
                 if (root.browserModel) {
-                    root.browserModel.hideJunkFiles = checked
+                    root.browserModel.hideJunkFiles = hideJunkBox.checked
                 }
-                root.hideJunkFilesChangedByUser(checked)
+                root.hideJunkFilesChangedByUser(hideJunkBox.checked)
             }
         }
 

@@ -330,6 +330,7 @@ void FolderBrowserModel::setHideJunkFiles(bool enabled)
 
 void FolderBrowserModel::setShowDirsFirst(bool enabled)
 {
+    qInfo() << "FolderBrowserModel::setShowDirsFirst" << enabled;
     if (enabled == m_filterSettings.showFoldersFirst()) {
         return;
     }
