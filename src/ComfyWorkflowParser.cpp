@@ -21,6 +21,8 @@
 
 #include "ComfyWorkflowParser.h"
 
+#include "ComfyRequirements.h"
+
 #include <QCoreApplication>
 #include <QFile>
 #include <QJsonArray>
@@ -279,7 +281,8 @@ QJsonObject ComfyWorkflowParser::findLoadImageNode(QJsonObject &workflow)
             ? node.value("type").toString()
             : node.value("class_type").toString();
         const QString lowerType = type.toLower();
-        if (lowerType.contains("loadimage") || lowerType.contains("load image")) {
+        if (type.compare(ComfyRequirements::loadImageClassType(), Qt::CaseInsensitive) == 0
+            || lowerType.contains("loadimage") || lowerType.contains("load image")) {
             return node;
         }
         QJsonValue inputsVal = node.value("inputs");
@@ -313,22 +316,22 @@ QJsonObject ComfyWorkflowParser::buildWidgetMap(const QString &classType, const 
     }
 
     const QMap<QString, QStringList> sequences = {
-        {"KSampler", {"seed", "seed_mode", "steps", "cfg", "sampler_name", "scheduler", "denoise"}},
-        {"BNK_TiledKSampler", {"seed", "seed_mode", "tile_width", "tile_height", "tiling_strategy", "steps", "cfg", "sampler_name", "scheduler", "denoise"}},
-        {"DZ_Face_Detailer", {"seed", "seed_mode", "steps", "cfg", "sampler_name", "scheduler", "denoise", "mask_blur", "mask_type", "mask_control", "dilate_mask_value", "erode_mask_value"}},
-        {"ImageScale", {"upscale_method", "width", "height", "crop"}},
-        {"ImageScaleBy", {"upscale_method", "scale_by"}},
-        {"PrimitiveInt", {"value"}},
-        {"PrimitiveFloat", {"value"}},
-        {"PrimitiveBoolean", {"value"}},
-        {"CheckpointLoaderSimple", {"ckpt_name"}},
-        {"UpscaleModelLoader", {"model_name"}},
-        {"LoadImage", {"image", "upload"}},
-        {"SaveImage", {"filename_prefix"}},
-        {"ImpactCompare", {"cmp"}},
-        {"ImpactLogicalOperators", {"operator"}},
-        {"EmptyLatentImage", {"width", "height", "batch_size"}},
-        {"CLIPTextEncode", {"text"}},
+        {ComfyRequirements::samplerClassType(), {"seed", "seed_mode", "steps", "cfg", "sampler_name", "scheduler", "denoise"}},
+        {ComfyRequirements::tiledSamplerClassType(), {"seed", "seed_mode", "tile_width", "tile_height", "tiling_strategy", "steps", "cfg", "sampler_name", "scheduler", "denoise"}},
+        {ComfyRequirements::faceDetailerClassType(), {"seed", "seed_mode", "steps", "cfg", "sampler_name", "scheduler", "denoise", "mask_blur", "mask_type", "mask_control", "dilate_mask_value", "erode_mask_value"}},
+        {ComfyRequirements::imageScaleClassType(), {"upscale_method", "width", "height", "crop"}},
+        {QStringLiteral("ImageScaleBy"), {"upscale_method", "scale_by"}},
+        {QStringLiteral("PrimitiveInt"), {"value"}},
+        {QStringLiteral("PrimitiveFloat"), {"value"}},
+        {QStringLiteral("PrimitiveBoolean"), {"value"}},
+        {ComfyRequirements::checkpointLoaderClassType(), {"ckpt_name"}},
+        {ComfyRequirements::upscaleModelLoaderClassType(), {"model_name"}},
+        {ComfyRequirements::loadImageClassType(), {"image", "upload"}},
+        {ComfyRequirements::saveImageClassType(), {"filename_prefix"}},
+        {QStringLiteral("ImpactCompare"), {"cmp"}},
+        {QStringLiteral("ImpactLogicalOperators"), {"operator"}},
+        {ComfyRequirements::emptyLatentImageClassType(), {"width", "height", "batch_size"}},
+        {ComfyRequirements::clipTextEncodeClassType(), {"text"}},
     };
 
     if (!sequences.contains(classType)) {

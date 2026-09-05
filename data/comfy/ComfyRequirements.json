@@ -1,0 +1,170 @@
+{
+    "version": 1,
+    "readme": "ComfyUI nodes and models required by Galman image and video generation. Edit file names, folders, package ids and repository urls here. Empty downloadUrl or repositoryUrl values are placeholders to be filled before the install buttons are implemented.",
+    "nodes": {
+        "checkpointLoader": {
+            "classType": "CheckpointLoaderSimple",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image"]
+        },
+        "upscaleModelLoader": {
+            "classType": "UpscaleModelLoader",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image"]
+        },
+        "clipTextEncode": {
+            "classType": "CLIPTextEncode",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image", "video"]
+        },
+        "emptyLatentImage": {
+            "classType": "EmptyLatentImage",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image"]
+        },
+        "sampler": {
+            "classType": "KSampler",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image", "video"]
+        },
+        "vaeDecode": {
+            "classType": "VAEDecode",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image", "video"]
+        },
+        "imageUpscaleWithModel": {
+            "classType": "ImageUpscaleWithModel",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image"]
+        },
+        "vaeEncode": {
+            "classType": "VAEEncode",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image"]
+        },
+        "tiledSampler": {
+            "classType": "BNK_TiledKSampler",
+            "packageId": "ComfyUI_TiledKSampler",
+            "repositoryUrl": "https://github.com/BlenderNeko/ComfyUI_TiledKSampler",
+            "requiredFor": ["image"]
+        },
+        "faceDetailer": {
+            "classType": "DZ_Face_Detailer",
+            "packageId": "DZ-FaceDetailer",
+            "repositoryUrl": "https://github.com/nicofdga/DZ-FaceDetailer",
+            "requiredFor": ["image"]
+        },
+        "saveImage": {
+            "classType": "SaveImage",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["image"]
+        },
+        "unetLoader": {
+            "classType": "UNETLoader",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "modelSampling": {
+            "classType": "ModelSamplingSD3",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "clipLoader": {
+            "classType": "CLIPLoader",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "clipVisionLoader": {
+            "classType": "CLIPVisionLoader",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "vaeLoader": {
+            "classType": "VAELoader",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "loadImage": {
+            "classType": "LoadImage",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "imageScale": {
+            "classType": "ImageScale",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "clipVisionEncode": {
+            "classType": "CLIPVisionEncode",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "wanImageToVideo": {
+            "classType": "WanImageToVideo",
+            "packageId": "comfy-core",
+            "repositoryUrl": "",
+            "requiredFor": ["video"]
+        },
+        "videoCombine": {
+            "classType": "VHS_VideoCombine",
+            "packageId": "ComfyUI-VideoHelperSuite",
+            "repositoryUrl": "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite",
+            "requiredFor": ["video"]
+        }
+    },
+    "models": {
+        "checkpoint": {
+            "fileName": "realisticVisionV60B1_v51HyperVAE.safetensors",
+            "folder": "checkpoints",
+            "downloadUrl": "",
+            "requiredFor": ["image"]
+        },
+        "upscale": {
+            "fileName": "RealESRGAN_x2plus.pth",
+            "folder": "upscale_models",
+            "downloadUrl": "",
+            "requiredFor": ["image"]
+        },
+        "videoUnet": {
+            "fileName": "wan2.1_i2v_480p_14B_fp8_scaled.safetensors",
+            "folder": "diffusion_models",
+            "downloadUrl": "",
+            "requiredFor": ["video"]
+        },
+        "videoClip": {
+            "fileName": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "folder": "text_encoders",
+            "downloadUrl": "",
+            "requiredFor": ["video"]
+        },
+        "videoClipVision": {
+            "fileName": "clip_vision_h.safetensors",
+            "folder": "clip_vision",
+            "downloadUrl": "",
+            "requiredFor": ["video"]
+        },
+        "videoVae": {
+            "fileName": "wan_2.1_vae.safetensors",
+            "folder": "vae",
+            "downloadUrl": "",
+            "requiredFor": ["video"]
+        }
+    }
+}

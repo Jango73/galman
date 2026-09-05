@@ -26,6 +26,7 @@ qt_add_executable(galman
         src/LanguageManager.cpp
         src/FavoritePairsManager.cpp
         src/ComfyClient.cpp
+        src/ComfyRequirements.cpp
         src/ComfyWorkflowParser.cpp
         src/ComfyWorkflowBuilder.cpp
         src/ComfyPromptImporter.cpp
@@ -87,6 +88,7 @@ qt_add_qml_module(galman
         src/LanguageManager.h
         src/FavoritePairsManager.h
         src/ComfyClient.h
+        src/ComfyRequirements.h
         src/ComfyWorkflowParser.h
         src/ComfyWorkflowBuilder.h
         src/ComfyPromptImporter.h
@@ -156,6 +158,12 @@ install(DIRECTORY data/scripts/
     DESTINATION "${CMAKE_INSTALL_DATADIR}/galman/scripts"
     FILES_MATCHING
     PATTERN "*.js"
+    PATTERN "*.json"
+)
+
+install(DIRECTORY data/comfy/
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/galman/comfy"
+    FILES_MATCHING
     PATTERN "*.json"
 )
 

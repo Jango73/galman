@@ -27,6 +27,7 @@
 #include <QJsonDocument>
 #include <QJsonValue>
 
+#include "ComfyRequirements.h"
 #include "ComfyWorkflowParser.h"
 
 namespace
@@ -36,9 +37,9 @@ const char promptChunkKey[] = "prompt";
 const char workflowChunkKey[] = "workflow";
 const int maxResolveDepth = 4;
 
-bool nodeHasClass(const QJsonObject &node, const char *classType)
+bool nodeHasClass(const QJsonObject &node, const QString &classType)
 {
-    return node.value(QStringLiteral("class_type")).toString() == QString::fromLatin1(classType);
+    return node.value(QStringLiteral("class_type")).toString() == classType;
 }
 
 QJsonObject nodeInputs(const QJsonObject &node)
@@ -56,7 +57,7 @@ QString linkedNodeId(const QJsonObject &inputs, const char *key)
     return link.toArray().first().toVariant().toString();
 }
 
-QJsonObject findFirstNode(const QJsonObject &prompt, const char *classType)
+QJsonObject findFirstNode(const QJsonObject &prompt, const QString &classType)
 {
     for (auto it = prompt.begin(); it != prompt.end(); ++it) {
         if (!it.value().isObject()) {
@@ -70,7 +71,7 @@ QJsonObject findFirstNode(const QJsonObject &prompt, const char *classType)
     return {};
 }
 
-QList<QJsonObject> findAllNodes(const QJsonObject &prompt, const char *classType)
+QList<QJsonObject> findAllNodes(const QJsonObject &prompt, const QString &classType)
 {
     QList<QJsonObject> matches;
     for (auto it = prompt.begin(); it != prompt.end(); ++it) {
@@ -154,7 +155,7 @@ bool clipTextIsEmpty(const QJsonObject &prompt, const QString &nodeId)
         return false;
     }
     const QJsonObject node = prompt.value(nodeId).toObject();
-    if (!nodeHasClass(node, "CLIPTextEncode")) {
+    if (!nodeHasClass(node, ComfyRequirements::clipTextEncodeClassType())) {
         return false;
     }
     QString text;
@@ -237,7 +238,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
         return filled;
     }
 
-    const QJsonObject sampler = findFirstNode(prompt, "KSampler");
+    const QJsonObject sampler = findFirstNode(prompt, ComfyRequirements::samplerClassType());
     if (sampler.isEmpty()) {
         if (error) {
             *error = QCoreApplication::translate("ComfyPromptImporter", "Unsupported workflow: KSampler not found");
@@ -287,7 +288,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
     const QString latentId = linkedNodeId(samplerInputs, "latent_image");
     if (!latentId.isEmpty() && prompt.value(latentId).isObject()) {
         const QJsonObject latentNode = prompt.value(latentId).toObject();
-        if (nodeHasClass(latentNode, "EmptyLatentImage")) {
+        if (nodeHasClass(latentNode, ComfyRequirements::emptyLatentImageClassType())) {
             const QJsonObject latentInputs = nodeInputs(latentNode);
             if (readInt(prompt, latentInputs, "width", &intValue)) {
                 parameters->canvasWidth = intValue;
@@ -300,7 +301,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
         }
     }
     if (!filled.contains(QStringLiteral("canvasWidth"))) {
-        const QJsonObject latent = findFirstNode(prompt, "EmptyLatentImage");
+        const QJsonObject latent = findFirstNode(prompt, ComfyRequirements::emptyLatentImageClassType());
         if (!latent.isEmpty()) {
             const QJsonObject latentInputs = nodeInputs(latent);
             if (readInt(prompt, latentInputs, "width", &intValue)) {
@@ -314,7 +315,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
         }
     }
 
-    const QList<QJsonObject> tiledSamplers = findAllNodes(prompt, "BNK_TiledKSampler");
+    const QList<QJsonObject> tiledSamplers = findAllNodes(prompt, ComfyRequirements::tiledSamplerClassType());
     parameters->refineCount = tiledSamplers.size();
     filled.append(QStringLiteral("refineCount"));
 
@@ -322,7 +323,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
     if (!tiledSamplers.isEmpty()) {
         refineSource = nodeInputs(tiledSamplers.first());
     } else {
-        const QJsonObject faceNode = findFirstNode(prompt, "DZ_Face_Detailer");
+        const QJsonObject faceNode = findFirstNode(prompt, ComfyRequirements::faceDetailerClassType());
         if (!faceNode.isEmpty()) {
             refineSource = nodeInputs(faceNode);
         }
@@ -342,7 +343,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
         }
     }
 
-    parameters->faceDetail = !findFirstNode(prompt, "DZ_Face_Detailer").isEmpty();
+    parameters->faceDetail = !findFirstNode(prompt, ComfyRequirements::faceDetailerClassType()).isEmpty();
     filled.append(QStringLiteral("faceDetail"));
 
     bool emptyRefine = false;
@@ -357,7 +358,7 @@ QStringList ComfyPromptImporter::extractParameters(const QJsonObject &prompt,
         }
     }
     if (!emptyRefine) {
-        const QJsonObject faceNode = findFirstNode(prompt, "DZ_Face_Detailer");
+        const QJsonObject faceNode = findFirstNode(prompt, ComfyRequirements::faceDetailerClassType());
         if (!faceNode.isEmpty()) {
             const QJsonObject faceInputs = nodeInputs(faceNode);
             const QString facePositiveId = linkedNodeId(faceInputs, "positive");

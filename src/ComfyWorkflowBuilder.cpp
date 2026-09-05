@@ -20,6 +20,7 @@
 
 #include "ComfyWorkflowBuilder.h"
 #include "ApplicationInfo.h"
+#include "ComfyRequirements.h"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -86,12 +87,12 @@ QString ComfyPilotDefaults::actionGenerate()
 
 QString ComfyWorkflowBuilder::ModelConstants::checkpointName()
 {
-    return QStringLiteral("realisticVisionV60B1_v51HyperVAE.safetensors");
+    return ComfyRequirements::checkpointFileName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::upscaleModelName()
 {
-    return QStringLiteral("RealESRGAN_x2plus.pth");
+    return ComfyRequirements::upscaleFileName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::samplerName()
@@ -126,22 +127,22 @@ QString ComfyWorkflowBuilder::ModelConstants::savePrefix()
 
 QString ComfyWorkflowBuilder::ModelConstants::videoUnetName()
 {
-    return QStringLiteral("wan2.1_i2v_480p_14B_fp8_scaled.safetensors");
+    return ComfyRequirements::videoUnetFileName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::videoClipName()
 {
-    return QStringLiteral("umt5_xxl_fp8_e4m3fn_scaled.safetensors");
+    return ComfyRequirements::videoClipFileName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::videoClipVisionName()
 {
-    return QStringLiteral("clip_vision_h.safetensors");
+    return ComfyRequirements::videoClipVisionFileName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::videoVaeName()
 {
-    return QStringLiteral("wan_2.1_vae.safetensors");
+    return ComfyRequirements::videoVaeFileName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::videoWeightDtype()
@@ -295,11 +296,11 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
 
     QJsonObject checkpointInputs;
     checkpointInputs.insert(QStringLiteral("ckpt_name"), ModelConstants::checkpointName());
-    insertPromptNode(prompt, checkpointId, QStringLiteral("CheckpointLoaderSimple"), checkpointInputs);
+    insertPromptNode(prompt, checkpointId, ComfyRequirements::checkpointLoaderClassType(), checkpointInputs);
 
     QJsonObject upscaleLoaderInputs;
     upscaleLoaderInputs.insert(QStringLiteral("model_name"), ModelConstants::upscaleModelName());
-    insertPromptNode(prompt, upscaleLoaderId, QStringLiteral("UpscaleModelLoader"), upscaleLoaderInputs);
+    insertPromptNode(prompt, upscaleLoaderId, ComfyRequirements::upscaleModelLoaderClassType(), upscaleLoaderInputs);
 
     QJsonObject positiveInputs;
     QJsonArray positiveClip;
@@ -307,7 +308,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
     positiveClip.append(1);
     positiveInputs.insert(QStringLiteral("clip"), positiveClip);
     positiveInputs.insert(QStringLiteral("text"), params.positivePrompt);
-    insertPromptNode(prompt, positiveId, QStringLiteral("CLIPTextEncode"), positiveInputs);
+    insertPromptNode(prompt, positiveId, ComfyRequirements::clipTextEncodeClassType(), positiveInputs);
 
     QJsonObject negativeInputs;
     QJsonArray negativeClip;
@@ -315,7 +316,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
     negativeClip.append(1);
     negativeInputs.insert(QStringLiteral("clip"), negativeClip);
     negativeInputs.insert(QStringLiteral("text"), params.negativePrompt);
-    insertPromptNode(prompt, negativeId, QStringLiteral("CLIPTextEncode"), negativeInputs);
+    insertPromptNode(prompt, negativeId, ComfyRequirements::clipTextEncodeClassType(), negativeInputs);
 
     QString emptyClipId;
     if (params.emptyRefinePrompt && (params.refineCount > 0 || params.faceDetail)) {
@@ -323,7 +324,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         QJsonObject emptyInputs;
         emptyInputs.insert(QStringLiteral("clip"), positiveClip);
         emptyInputs.insert(QStringLiteral("text"), QString());
-        insertPromptNode(prompt, emptyClipId, QStringLiteral("CLIPTextEncode"), emptyInputs);
+        insertPromptNode(prompt, emptyClipId, ComfyRequirements::clipTextEncodeClassType(), emptyInputs);
     }
     const QString refinePositiveId = emptyClipId.isEmpty() ? positiveId : emptyClipId;
     const QString refineNegativeId = emptyClipId.isEmpty() ? negativeId : emptyClipId;
@@ -332,7 +333,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
     latentInputs.insert(QStringLiteral("width"), params.canvasWidth);
     latentInputs.insert(QStringLiteral("height"), params.canvasHeight);
     latentInputs.insert(QStringLiteral("batch_size"), BuilderLimits::latentBatchSize);
-    insertPromptNode(prompt, latentId, QStringLiteral("EmptyLatentImage"), latentInputs);
+    insertPromptNode(prompt, latentId, ComfyRequirements::emptyLatentImageClassType(), latentInputs);
 
     QJsonObject samplerInputs;
     QJsonArray modelLink;
@@ -348,7 +349,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
     samplerInputs.insert(QStringLiteral("sampler_name"), ModelConstants::samplerName());
     samplerInputs.insert(QStringLiteral("scheduler"), ModelConstants::schedulerName());
     samplerInputs.insert(QStringLiteral("denoise"), params.initialDenoise);
-    insertPromptNode(prompt, samplerId, QStringLiteral("KSampler"), samplerInputs);
+    insertPromptNode(prompt, samplerId, ComfyRequirements::samplerClassType(), samplerInputs);
 
     QString currentLatentId = samplerId;
 
@@ -364,7 +365,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         decodeVae.append(checkpointId);
         decodeVae.append(2);
         decodeInputs.insert(QStringLiteral("vae"), decodeVae);
-        insertPromptNode(prompt, decodeId, QStringLiteral("VAEDecode"), decodeInputs);
+        insertPromptNode(prompt, decodeId, ComfyRequirements::vaeDecodeClassType(), decodeInputs);
 
         QJsonObject upscaleInputs;
         QJsonArray upscaleModelLink;
@@ -372,7 +373,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         upscaleModelLink.append(0);
         upscaleInputs.insert(QStringLiteral("upscale_model"), upscaleModelLink);
         upscaleInputs.insert(QStringLiteral("image"), latentLink(decodeId));
-        insertPromptNode(prompt, upscaleId, QStringLiteral("ImageUpscaleWithModel"), upscaleInputs);
+        insertPromptNode(prompt, upscaleId, ComfyRequirements::imageUpscaleWithModelClassType(), upscaleInputs);
 
         QJsonObject encodeInputs;
         encodeInputs.insert(QStringLiteral("pixels"), latentLink(upscaleId));
@@ -380,7 +381,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         encodeVae.append(checkpointId);
         encodeVae.append(2);
         encodeInputs.insert(QStringLiteral("vae"), encodeVae);
-        insertPromptNode(prompt, encodeId, QStringLiteral("VAEEncode"), encodeInputs);
+        insertPromptNode(prompt, encodeId, ComfyRequirements::vaeEncodeClassType(), encodeInputs);
 
         QJsonObject tiledInputs;
         tiledInputs.insert(QStringLiteral("model"), modelLink);
@@ -396,7 +397,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         tiledInputs.insert(QStringLiteral("sampler_name"), ModelConstants::samplerName());
         tiledInputs.insert(QStringLiteral("scheduler"), ModelConstants::schedulerName());
         tiledInputs.insert(QStringLiteral("denoise"), params.refineDenoise);
-        insertPromptNode(prompt, tiledId, QStringLiteral("BNK_TiledKSampler"), tiledInputs);
+        insertPromptNode(prompt, tiledId, ComfyRequirements::tiledSamplerClassType(), tiledInputs);
 
         currentLatentId = tiledId;
     }
@@ -423,7 +424,7 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
         faceInputs.insert(QStringLiteral("mask_control"), ModelConstants::faceMaskControl());
         faceInputs.insert(QStringLiteral("dilate_mask_value"), BuilderLimits::faceDilateValue);
         faceInputs.insert(QStringLiteral("erode_mask_value"), BuilderLimits::faceErodeValue);
-        insertPromptNode(prompt, faceId, QStringLiteral("DZ_Face_Detailer"), faceInputs);
+        insertPromptNode(prompt, faceId, ComfyRequirements::faceDetailerClassType(), faceInputs);
         currentLatentId = faceId;
     }
 
@@ -434,14 +435,14 @@ QJsonObject ComfyWorkflowBuilder::buildPrompt(const ComfyPilotParameters &params
     finalVae.append(checkpointId);
     finalVae.append(2);
     finalDecodeInputs.insert(QStringLiteral("vae"), finalVae);
-    insertPromptNode(prompt, finalDecodeId, QStringLiteral("VAEDecode"), finalDecodeInputs);
+    insertPromptNode(prompt, finalDecodeId, ComfyRequirements::vaeDecodeClassType(), finalDecodeInputs);
 
     const QString saveId = newId();
     QJsonObject saveInputs;
     saveInputs.insert(QStringLiteral("images"), latentLink(finalDecodeId));
     saveInputs.insert(QStringLiteral("filename_prefix"),
                       savePrefixOverride.isEmpty() ? ModelConstants::savePrefix() : savePrefixOverride);
-    insertPromptNode(prompt, saveId, QStringLiteral("SaveImage"), saveInputs);
+    insertPromptNode(prompt, saveId, ComfyRequirements::saveImageClassType(), saveInputs);
 
     qInfo() << "ComfyWorkflowBuilder build done: nodes=" << prompt.count()
             << "refines=" << params.refineCount << "face=" << params.faceDetail;
@@ -549,40 +550,40 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
     QJsonObject unetInputs;
     unetInputs.insert(QStringLiteral("unet_name"), ModelConstants::videoUnetName());
     unetInputs.insert(QStringLiteral("weight_dtype"), ModelConstants::videoWeightDtype());
-    insertPromptNode(prompt, unetId, QStringLiteral("UNETLoader"), unetInputs);
+    insertPromptNode(prompt, unetId, ComfyRequirements::unetLoaderClassType(), unetInputs);
 
     QJsonObject samplingInputs;
     samplingInputs.insert(QStringLiteral("model"), latentLink(unetId));
     samplingInputs.insert(QStringLiteral("shift"), BuilderLimits::videoModelShift);
-    insertPromptNode(prompt, samplingId, QStringLiteral("ModelSamplingSD3"), samplingInputs);
+    insertPromptNode(prompt, samplingId, ComfyRequirements::modelSamplingClassType(), samplingInputs);
 
     QJsonObject clipInputs;
     clipInputs.insert(QStringLiteral("clip_name"), ModelConstants::videoClipName());
     clipInputs.insert(QStringLiteral("type"), ModelConstants::videoClipType());
     clipInputs.insert(QStringLiteral("device"), ModelConstants::videoClipDevice());
-    insertPromptNode(prompt, clipId, QStringLiteral("CLIPLoader"), clipInputs);
+    insertPromptNode(prompt, clipId, ComfyRequirements::clipLoaderClassType(), clipInputs);
 
     QJsonObject clipVisionLoaderInputs;
     clipVisionLoaderInputs.insert(QStringLiteral("clip_name"), ModelConstants::videoClipVisionName());
-    insertPromptNode(prompt, clipVisionLoaderId, QStringLiteral("CLIPVisionLoader"), clipVisionLoaderInputs);
+    insertPromptNode(prompt, clipVisionLoaderId, ComfyRequirements::clipVisionLoaderClassType(), clipVisionLoaderInputs);
 
     QJsonObject vaeInputs;
     vaeInputs.insert(QStringLiteral("vae_name"), ModelConstants::videoVaeName());
-    insertPromptNode(prompt, vaeId, QStringLiteral("VAELoader"), vaeInputs);
+    insertPromptNode(prompt, vaeId, ComfyRequirements::vaeLoaderClassType(), vaeInputs);
 
     QJsonObject positiveInputs;
     positiveInputs.insert(QStringLiteral("clip"), latentLink(clipId));
     positiveInputs.insert(QStringLiteral("text"), params.positivePrompt);
-    insertPromptNode(prompt, positiveId, QStringLiteral("CLIPTextEncode"), positiveInputs);
+    insertPromptNode(prompt, positiveId, ComfyRequirements::clipTextEncodeClassType(), positiveInputs);
 
     QJsonObject negativeInputs;
     negativeInputs.insert(QStringLiteral("clip"), latentLink(clipId));
     negativeInputs.insert(QStringLiteral("text"), params.negativePrompt);
-    insertPromptNode(prompt, negativeId, QStringLiteral("CLIPTextEncode"), negativeInputs);
+    insertPromptNode(prompt, negativeId, ComfyRequirements::clipTextEncodeClassType(), negativeInputs);
 
     QJsonObject loadImageInputs;
     loadImageInputs.insert(QStringLiteral("image"), params.videoInputFileName.trimmed());
-    insertPromptNode(prompt, loadImageId, QStringLiteral("LoadImage"), loadImageInputs);
+    insertPromptNode(prompt, loadImageId, ComfyRequirements::loadImageClassType(), loadImageInputs);
 
     QJsonObject scaleImageInputs;
     scaleImageInputs.insert(QStringLiteral("image"), latentLink(loadImageId));
@@ -590,13 +591,13 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
     scaleImageInputs.insert(QStringLiteral("width"), params.canvasWidth);
     scaleImageInputs.insert(QStringLiteral("height"), params.canvasHeight);
     scaleImageInputs.insert(QStringLiteral("crop"), ModelConstants::videoUpscaleCrop());
-    insertPromptNode(prompt, scaleImageId, QStringLiteral("ImageScale"), scaleImageInputs);
+    insertPromptNode(prompt, scaleImageId, ComfyRequirements::imageScaleClassType(), scaleImageInputs);
 
     QJsonObject clipVisionEncodeInputs;
     clipVisionEncodeInputs.insert(QStringLiteral("clip_vision"), latentLink(clipVisionLoaderId));
     clipVisionEncodeInputs.insert(QStringLiteral("image"), latentLink(scaleImageId));
     clipVisionEncodeInputs.insert(QStringLiteral("crop"), ModelConstants::videoVisionCrop());
-    insertPromptNode(prompt, clipVisionEncodeId, QStringLiteral("CLIPVisionEncode"), clipVisionEncodeInputs);
+    insertPromptNode(prompt, clipVisionEncodeId, ComfyRequirements::clipVisionEncodeClassType(), clipVisionEncodeInputs);
 
     QJsonObject wanInputs;
     wanInputs.insert(QStringLiteral("positive"), latentLink(positiveId));
@@ -608,7 +609,7 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
     wanInputs.insert(QStringLiteral("height"), params.canvasHeight);
     wanInputs.insert(QStringLiteral("length"), frameCount);
     wanInputs.insert(QStringLiteral("batch_size"), BuilderLimits::videoBatchSize);
-    insertPromptNode(prompt, wanId, QStringLiteral("WanImageToVideo"), wanInputs);
+    insertPromptNode(prompt, wanId, ComfyRequirements::wanImageToVideoClassType(), wanInputs);
 
     QJsonArray wanPositiveLink;
     wanPositiveLink.append(wanId);
@@ -630,12 +631,12 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
     samplerInputs.insert(QStringLiteral("sampler_name"), ModelConstants::videoSamplerName());
     samplerInputs.insert(QStringLiteral("scheduler"), ModelConstants::videoSchedulerName());
     samplerInputs.insert(QStringLiteral("denoise"), BuilderLimits::videoDenoise);
-    insertPromptNode(prompt, samplerId, QStringLiteral("KSampler"), samplerInputs);
+    insertPromptNode(prompt, samplerId, ComfyRequirements::samplerClassType(), samplerInputs);
 
     QJsonObject decodeInputs;
     decodeInputs.insert(QStringLiteral("samples"), latentLink(samplerId));
     decodeInputs.insert(QStringLiteral("vae"), latentLink(vaeId));
-    insertPromptNode(prompt, decodeId, QStringLiteral("VAEDecode"), decodeInputs);
+    insertPromptNode(prompt, decodeId, ComfyRequirements::vaeDecodeClassType(), decodeInputs);
 
     QJsonObject combineInputs;
     combineInputs.insert(QStringLiteral("images"), latentLink(decodeId));
@@ -651,7 +652,7 @@ QJsonObject ComfyWorkflowBuilder::buildVideoPrompt(const ComfyPilotParameters &p
     combineInputs.insert(QStringLiteral("crf"), BuilderLimits::videoCombineCrf);
     combineInputs.insert(QStringLiteral("save_metadata"), true);
     combineInputs.insert(QStringLiteral("trim_to_audio"), false);
-    insertPromptNode(prompt, combineId, QStringLiteral("VHS_VideoCombine"), combineInputs);
+    insertPromptNode(prompt, combineId, ComfyRequirements::videoCombineClassType(), combineInputs);
 
     qInfo() << "ComfyWorkflowBuilder video build done: nodes=" << prompt.count()
             << "frames=" << frameCount;
