@@ -256,6 +256,17 @@ QVariantMap ComfyPilotWorker::submitPrompt(const QString &serverUrl, const QJson
 
     QJsonObject payload;
     payload.insert(QStringLiteral("prompt"), prompt);
+    if (m_job.parameters.videoEnabled) {
+        QJsonObject videoHelperOptions;
+        videoHelperOptions.insert(QStringLiteral("VHS_MetadataImage"), false);
+        QJsonObject workflowInfo;
+        workflowInfo.insert(QStringLiteral("extra"), videoHelperOptions);
+        QJsonObject extraPngInfo;
+        extraPngInfo.insert(QStringLiteral("workflow"), workflowInfo);
+        QJsonObject extraData;
+        extraData.insert(QStringLiteral("extra_pnginfo"), extraPngInfo);
+        payload.insert(QStringLiteral("extra_data"), extraData);
+    }
     qInfo() << "ComfyPilot prompt payload:"
             << QString::fromUtf8(QJsonDocument(prompt).toJson(QJsonDocument::Compact));
 
