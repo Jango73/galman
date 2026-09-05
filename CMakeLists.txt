@@ -58,6 +58,18 @@ qt_add_qml_module(galman
         src/FileOperationUtils.h
         src/FileOperationUtils.cpp
         src/RowMatchUtils.h
+        src/FolderEntryView.h
+        src/FolderEntryView.cpp
+        src/FolderFilterSettings.h
+        src/FolderFilterSettings.cpp
+        src/FolderFilterSortUtils.h
+        src/FolderFilterSortUtils.cpp
+        src/FolderSelectionManager.h
+        src/FolderSelectionManager.cpp
+        src/FileAttributeCache.h
+        src/FileAttributeCache.cpp
+        src/FolderTransferController.h
+        src/FolderTransferController.cpp
         src/FolderBrowserModel.h
         src/FolderBrowserModel.cpp
         src/FolderCompareModel.h

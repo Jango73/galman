@@ -3,18 +3,16 @@
 #include <QAbstractListModel>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
-#include <QHash>
-#include <QSet>
-#include <QSize>
 #include <QTimer>
 #include <QVector>
 #include <QVariantList>
 
 #include <QtQml/qqml.h>
 
-class QThread;
-class CopyWorker;
-class TrashWorker;
+#include "FileAttributeCache.h"
+#include "FolderFilterSettings.h"
+#include "FolderSelectionManager.h"
+#include "FolderTransferController.h"
 
 class FolderBrowserModel : public QAbstractListModel
 {
@@ -132,7 +130,7 @@ public:
     Q_INVOKABLE QString pathForRow(int row) const;
     Q_INVOKABLE int rowForPrefix(const QString &prefix, int startRow) const;
     Q_INVOKABLE QString modifiedForRow(int row) const;
-    Q_INVOKABLE int copyNameConflictCount(const QString &targetDir) const;
+    Q_INVOKABLE int copyNameConflictCount(const QString &targetFolder) const;
     Q_INVOKABLE void clearSelection();
     Q_INVOKABLE void goUp();
     Q_INVOKABLE void refreshFiles(const QStringList &paths);
@@ -146,9 +144,9 @@ public:
     Q_INVOKABLE bool selectedIsGhost() const;
     Q_INVOKABLE bool selectedIsNewer() const;
     Q_INVOKABLE QVariantMap selectionStats() const;
-    Q_INVOKABLE QVariantMap copySelectedTo(const QString &targetDir);
-    Q_INVOKABLE void startCopySelectedTo(const QString &targetDir);
-    Q_INVOKABLE void startMoveSelectedTo(const QString &targetDir);
+    Q_INVOKABLE QVariantMap copySelectedTo(const QString &targetFolder);
+    Q_INVOKABLE void startCopySelectedTo(const QString &targetFolder);
+    Q_INVOKABLE void startMoveSelectedTo(const QString &targetFolder);
     Q_INVOKABLE void cancelCopy();
     Q_INVOKABLE QVariantMap moveSelectedToTrash();
     Q_INVOKABLE void startMoveSelectedToTrash();
@@ -191,10 +189,6 @@ signals:
 
 private:
     void setLoading(bool loading);
-    void setCopyInProgress(bool inProgress);
-    void updateCopyProgress(int completed, int total);
-    void setTrashInProgress(bool inProgress);
-    void updateTrashProgress(int completed, int total);
     void scheduleRefresh();
     void updateFileWatchers(const QVector<QFileInfo> &entries);
     void applyEntriesIncremental(const QVector<QFileInfo> &entries);
@@ -207,61 +201,29 @@ private:
     bool byteSizeFiltersActive() const;
     bool imageSizeFiltersActive() const;
     bool signatureSortActive() const;
-    void startTransferSelectedTo(const QString &targetDir, bool moveItems);
+    void startTransferSelectedTo(const QString &targetFolder, bool moveItems);
     QVariantMap requestRemoval(bool moveToTrash);
     void startRemoval(bool moveToTrash);
     void notifySelectionChanged();
     void updateSelectionTotalsAsync();
     void setSelectionTotals(int fileCount, qint64 totalBytes);
+    QString keyForRow(int row) const;
 
     QString m_rootPath;
     QString m_settingsKey;
-    QString m_nameFilter;
-    SortKey m_sortKey = Name;
-    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
-    bool m_showDirsFirst = true;
-    bool m_hideJunkFiles = true;
-    qint64 m_minimumByteSize = -1;
-    qint64 m_maximumByteSize = -1;
-    int m_minimumImageWidth = -1;
-    int m_maximumImageWidth = -1;
-    int m_minimumImageHeight = -1;
-    int m_maximumImageHeight = -1;
+    FolderFilterSettings m_filterSettings;
     bool m_loading = false;
     QString m_pendingSelectionPath;
-    QStringList m_selectedPaths;
+    FolderSelectionManager m_selectionManager;
     bool m_selectedIsImage = false;
     bool m_selectedIsVideo = false;
     int m_selectedFileCount = 0;
     qint64 m_selectedTotalBytes = 0;
     int m_selectionTotalsGeneration = 0;
-    bool m_copyInProgress = false;
-    int m_copyCompleted = 0;
-    int m_copyTotal = 0;
-    qreal m_copyProgress = 0.0;
-    QThread *m_copyThread = nullptr;
-    CopyWorker *m_copyWorker = nullptr;
-    bool m_trashInProgress = false;
-    int m_trashCompleted = 0;
-    int m_trashTotal = 0;
-    qreal m_trashProgress = 0.0;
-    QThread *m_trashThread = nullptr;
-    TrashWorker *m_trashWorker = nullptr;
-
+    FolderTransferController m_transferController;
     QVector<QFileInfo> m_baseEntries;
     QVector<QFileInfo> m_entries;
-    QHash<QString, QSize> m_imageSizeCache;
-    QSet<QString> m_imageSizeAttempted;
-    bool m_imageSizeLoading = false;
-    int m_imageSizeGeneration = 0;
-    QHash<QString, quint64> m_signatureHashCache;
-    QSet<QString> m_signatureHashAttempted;
-    bool m_signatureHashLoading = false;
-    int m_signatureHashGeneration = 0;
-    QHash<QString, QString> m_videoThumbnailCache;
-    QSet<QString> m_videoThumbnailAttempted;
-    bool m_videoThumbnailLoading = false;
-    int m_videoThumbnailGeneration = 0;
+    FileAttributeCache m_attributeCache;
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;
     int m_generation = 0;

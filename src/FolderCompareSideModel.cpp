@@ -1,4 +1,3 @@
-
 /************************************************************************\
 
     Galman - Picture gallery manager
@@ -21,23 +20,21 @@
 
 #include "FolderCompareSideModel.h"
 
-#include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
-#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QLocale>
-#include <QMetaObject>
-#include <QThread>
 #include <QtConcurrent>
-#include <algorithm>
+#include <QDebug>
+#include <QThread>
 
-#include "CopyWorker.h"
 #include "ApplicationSettings.h"
-#include "FileOperationUtils.h"
+#include "CopyWorker.h"
 #include "FolderCompareModel.h"
+#include "FolderEntryView.h"
+#include "FolderFilterSortUtils.h"
 #include "ImageMetadataUtils.h"
 #include "PlatformUtils.h"
 #include "RowMatchUtils.h"
@@ -47,51 +44,22 @@
 
 namespace {
 
-struct FolderCompareTrashConstants {
-    static constexpr int emptyCount = 0;
-    static constexpr qreal zeroProgress = 0.0;
-    static constexpr bool pendingTrue = true;
-};
-
-struct FolderCompareFilterConstants {
-    static constexpr qint64 unsetByteSize = -1;
-    static constexpr int unsetDimension = -1;
-    static constexpr int signatureDimension = 32;
-};
-
-struct VideoThumbnailBatchResult {
-    QHash<QString, QString> thumbnails;
-    QStringList attempted;
-};
-
-/**
- * @brief Compares two compare entries for equality.
- * @param left First entry to compare.
- * @param right Second entry to compare.
- * @return True when entries are equivalent, false otherwise.
- */
 bool compareEntryEquivalent(const FolderCompareSideModel::CompareEntry &left,
                             const FolderCompareSideModel::CompareEntry &right)
 {
-    return left.id == right.id
-        && left.fileName == right.fileName
-        && left.filePath == right.filePath
-        && left.otherSidePath == right.otherSidePath
-        && left.created == right.created
-        && left.modified == right.modified
-        && left.isDir == right.isDir
-        && left.isImage == right.isImage
-        && left.isVideo == right.isVideo
-        && left.isGhost == right.isGhost
-        && left.isNewer == right.isNewer
+    return left.id == right.id && left.fileName == right.fileName && left.filePath == right.filePath
+        && left.otherSidePath == right.otherSidePath && left.created == right.created
+        && left.modified == right.modified && left.isDir == right.isDir && left.isImage == right.isImage
+        && left.isVideo == right.isVideo && left.isGhost == right.isGhost && left.isNewer == right.isNewer
         && left.status == right.status;
 }
 
 QString previewPathForEntry(const FolderCompareSideModel::CompareEntry &entry)
 {
-    return entry.isGhost && !entry.otherSidePath.isEmpty()
-        ? entry.otherSidePath
-        : entry.filePath;
+    if (entry.isGhost && !entry.otherSidePath.isEmpty()) {
+        return entry.otherSidePath;
+    }
+    return entry.filePath;
 }
 
 QString thumbnailRevisionForEntry(const FolderCompareSideModel::CompareEntry &entry)
@@ -100,79 +68,92 @@ QString thumbnailRevisionForEntry(const FolderCompareSideModel::CompareEntry &en
     if (previewPath.isEmpty() || entry.isDir) {
         return QString();
     }
+    return QStringLiteral("%1:%2").arg(QString::number(entry.modified.toMSecsSinceEpoch())).arg(previewPath);
+}
 
-    return QStringLiteral("%1:%2")
-        .arg(QString::number(entry.modified.toMSecsSinceEpoch()))
-        .arg(previewPath);
+FolderEntryView::EntryView viewForCompareEntry(const FolderCompareSideModel::CompareEntry &entry)
+{
+    FolderEntryView::EntryView view;
+    view.fileName = entry.fileName;
+    view.filePath = entry.filePath;
+    view.isFolder = entry.isDir;
+    view.isGhost = entry.isGhost;
+    view.createdTime = entry.created;
+    view.modifiedTime = entry.modified;
+    view.isImageFlag = entry.isImage;
+    view.isVideoFlag = entry.isVideo;
+    if (entry.isDir || entry.isGhost || entry.filePath.isEmpty()) {
+        view.byteSize = -1;
+    } else {
+        view.byteSize = QFileInfo(entry.filePath).size();
+    }
+    return view;
+}
+
+const FolderCompareSideModel::CompareEntry *findEntryById(const QVector<FolderCompareSideModel::CompareEntry> &entries,
+                                                          const QString &id)
+{
+    for (const auto &entry : entries) {
+        if (entry.id == id) {
+            return &entry;
+        }
+    }
+    return nullptr;
 }
 
 } // namespace
 
-/**
- * @brief Constructs a side model bound to a compare model and side index.
- * @param compareModel Parent compare model instance.
- * @param side Side index for left or right.
- * @param parent Parent QObject for ownership.
- */
 FolderCompareSideModel::FolderCompareSideModel(FolderCompareModel *compareModel, int side, QObject *parent)
     : QAbstractListModel(parent)
     , m_compareModel(compareModel)
     , m_side(side)
+    , m_transferController(this)
+    , m_attributeCache(this)
 {
+    qInfo() << "FolderCompareSideModel::FolderCompareSideModel" << side;
     if (m_compareModel) {
-        connect(m_compareModel, &FolderCompareModel::loadingChanged, this, [this]() {
-            setLoading(m_compareModel->loading());
-        });
+        connect(m_compareModel, &FolderCompareModel::loadingChanged, this,
+                [this]() { setLoading(m_compareModel->loading()); });
     }
+    connect(&m_transferController, &FolderTransferController::copyInProgressChanged, this,
+            [this]() { emit copyInProgressChanged(); });
+    connect(&m_transferController, &FolderTransferController::copyProgressChanged, this,
+            [this]() { emit copyProgressChanged(); });
+    connect(&m_transferController, &FolderTransferController::trashInProgressChanged, this,
+            [this]() { emit trashInProgressChanged(); });
+    connect(&m_transferController, &FolderTransferController::trashProgressChanged, this,
+            [this]() { emit trashProgressChanged(); });
 }
 
-/**
- * @brief Returns the current root path for this side.
- * @return Root folder path.
- */
 QString FolderCompareSideModel::rootPath() const
 {
     return m_rootPath;
 }
 
-/**
- * @brief Sets the root path for this side and refreshes entries.
- * @param path Root folder path to set.
- */
 void FolderCompareSideModel::setRootPath(const QString &path)
 {
+    qInfo() << "FolderCompareSideModel::setRootPath" << path;
     if (path.isEmpty() || path == m_rootPath) {
         return;
     }
     m_rootPath = path;
     emit rootPathChanged();
-
     if (!m_settingsKey.isEmpty()) {
         ApplicationSettings settings;
         settings.setValue(m_settingsKey, m_rootPath);
     }
-
     if (m_compareModel) {
         m_compareModel->setSidePath(static_cast<FolderCompareModel::Side>(m_side), m_rootPath);
     }
-
     refresh();
     clearSelection();
 }
 
-/**
- * @brief Returns the settings key used to persist the root path.
- * @return Settings key string.
- */
 QString FolderCompareSideModel::settingsKey() const
 {
     return m_settingsKey;
 }
 
-/**
- * @brief Sets the settings key and restores a stored root path if present.
- * @param key Settings key string to use for persistence.
- */
 void FolderCompareSideModel::setSettingsKey(const QString &key)
 {
     if (key == m_settingsKey) {
@@ -190,290 +171,177 @@ void FolderCompareSideModel::setSettingsKey(const QString &key)
     }
 }
 
-/**
- * @brief Returns the current name filter string.
- * @return Name filter string.
- */
 QString FolderCompareSideModel::nameFilter() const
 {
-    return m_nameFilter;
+    return m_filterSettings.nameFilter();
 }
 
-/**
- * @brief Sets the name filter and rebuilds entries.
- * @param filter Filter string applied to file names.
- */
 void FolderCompareSideModel::setNameFilter(const QString &filter)
 {
-    if (filter == m_nameFilter) {
+    qInfo() << "FolderCompareSideModel::setNameFilter" << filter;
+    if (filter == m_filterSettings.nameFilter()) {
         return;
     }
-    m_nameFilter = filter;
+    m_filterSettings.setNameFilter(filter);
     emit nameFilterChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the active sort key.
- * @return Sort key enum value.
- */
 FolderCompareSideModel::SortKey FolderCompareSideModel::sortKey() const
 {
-    return m_sortKey;
+    return static_cast<SortKey>(m_filterSettings.sortKeyValue());
 }
 
-/**
- * @brief Sets the sort key and rebuilds entries.
- * @param key Sort key enum value.
- */
 void FolderCompareSideModel::setSortKey(FolderCompareSideModel::SortKey key)
 {
-    if (key == m_sortKey) {
+    if (static_cast<int>(key) == m_filterSettings.sortKeyValue()) {
         return;
     }
-    m_sortKey = key;
+    m_filterSettings.setSortKeyValue(static_cast<int>(key));
     emit sortKeyChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the current sort order.
- * @return Sort order value.
- */
 Qt::SortOrder FolderCompareSideModel::sortOrder() const
 {
-    return m_sortOrder;
+    return m_filterSettings.sortOrder();
 }
 
-/**
- * @brief Sets the sort order and rebuilds entries.
- * @param order Sort order value.
- */
 void FolderCompareSideModel::setSortOrder(Qt::SortOrder order)
 {
-    if (order == m_sortOrder) {
+    if (order == m_filterSettings.sortOrder()) {
         return;
     }
-    m_sortOrder = order;
+    m_filterSettings.setSortOrder(order);
     emit sortOrderChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the list of junk file extensions from persistent settings.
- * @return List of junk extensions (with leading dots).
- */
-static QStringList junkExtensions()
-{
-    ApplicationSettings settings;
-    return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
-        .toString().split(',', Qt::SkipEmptyParts);
-}
-
-/**
- * @brief Returns whether folders are shown before files.
- * @return True when folders are listed first, false otherwise.
- */
 bool FolderCompareSideModel::showDirsFirst() const
 {
-    return m_showDirsFirst;
+    return m_filterSettings.showFoldersFirst();
 }
 
-/**
- * @brief Returns whether junk files are hidden.
- * @return True when junk files are hidden, false otherwise.
- */
 bool FolderCompareSideModel::hideJunkFiles() const
 {
-    return m_hideJunkFiles;
+    return m_filterSettings.hideJunkFiles();
 }
 
-/**
- * @brief Sets whether junk files are hidden and rebuilds entries.
- * @param enabled True to hide junk files, false to show them.
- */
 void FolderCompareSideModel::setHideJunkFiles(bool enabled)
 {
-    if (enabled == m_hideJunkFiles) {
+    if (enabled == m_filterSettings.hideJunkFiles()) {
         return;
     }
-
-    m_hideJunkFiles = enabled;
+    m_filterSettings.setHideJunkFiles(enabled);
     emit hideJunkFilesChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Sets whether folders are shown before files and rebuilds entries.
- * @param enabled True to list folders first, false otherwise.
- */
 void FolderCompareSideModel::setShowDirsFirst(bool enabled)
 {
-    if (enabled == m_showDirsFirst) {
+    if (enabled == m_filterSettings.showFoldersFirst()) {
         return;
     }
-    m_showDirsFirst = enabled;
+    m_filterSettings.setShowFoldersFirst(enabled);
     emit showDirsFirstChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the minimum file size filter in bytes.
- * @return Minimum byte size or -1 when unset.
- */
 qint64 FolderCompareSideModel::minimumByteSize() const
 {
-    return m_minimumByteSize;
+    return m_filterSettings.minimumByteSize();
 }
 
-/**
- * @brief Sets the minimum file size filter in bytes.
- * @param value Minimum byte size, or -1 to clear.
- */
 void FolderCompareSideModel::setMinimumByteSize(qint64 value)
 {
-    const qint64 normalized = value < 0 ? FolderCompareFilterConstants::unsetByteSize : value;
-    if (normalized == m_minimumByteSize) {
+    if (FolderFilterSettings::normalizedByteSize(value) == m_filterSettings.minimumByteSize()) {
         return;
     }
-    m_minimumByteSize = normalized;
+    m_filterSettings.setMinimumByteSize(value);
     emit minimumByteSizeChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the maximum file size filter in bytes.
- * @return Maximum byte size or -1 when unset.
- */
 qint64 FolderCompareSideModel::maximumByteSize() const
 {
-    return m_maximumByteSize;
+    return m_filterSettings.maximumByteSize();
 }
 
-/**
- * @brief Sets the maximum file size filter in bytes.
- * @param value Maximum byte size, or -1 to clear.
- */
 void FolderCompareSideModel::setMaximumByteSize(qint64 value)
 {
-    const qint64 normalized = value < 0 ? FolderCompareFilterConstants::unsetByteSize : value;
-    if (normalized == m_maximumByteSize) {
+    if (FolderFilterSettings::normalizedByteSize(value) == m_filterSettings.maximumByteSize()) {
         return;
     }
-    m_maximumByteSize = normalized;
+    m_filterSettings.setMaximumByteSize(value);
     emit maximumByteSizeChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the minimum image width filter in pixels.
- * @return Minimum width or -1 when unset.
- */
 int FolderCompareSideModel::minimumImageWidth() const
 {
-    return m_minimumImageWidth;
+    return m_filterSettings.minimumImageWidth();
 }
 
-/**
- * @brief Sets the minimum image width filter in pixels.
- * @param value Minimum width, or -1 to clear.
- */
 void FolderCompareSideModel::setMinimumImageWidth(int value)
 {
-    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
-    if (normalized == m_minimumImageWidth) {
+    if (FolderFilterSettings::normalizedDimension(value) == m_filterSettings.minimumImageWidth()) {
         return;
     }
-    m_minimumImageWidth = normalized;
+    m_filterSettings.setMinimumImageWidth(value);
     emit minimumImageWidthChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the maximum image width filter in pixels.
- * @return Maximum width or -1 when unset.
- */
 int FolderCompareSideModel::maximumImageWidth() const
 {
-    return m_maximumImageWidth;
+    return m_filterSettings.maximumImageWidth();
 }
 
-/**
- * @brief Sets the maximum image width filter in pixels.
- * @param value Maximum width, or -1 to clear.
- */
 void FolderCompareSideModel::setMaximumImageWidth(int value)
 {
-    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
-    if (normalized == m_maximumImageWidth) {
+    if (FolderFilterSettings::normalizedDimension(value) == m_filterSettings.maximumImageWidth()) {
         return;
     }
-    m_maximumImageWidth = normalized;
+    m_filterSettings.setMaximumImageWidth(value);
     emit maximumImageWidthChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the minimum image height filter in pixels.
- * @return Minimum height or -1 when unset.
- */
 int FolderCompareSideModel::minimumImageHeight() const
 {
-    return m_minimumImageHeight;
+    return m_filterSettings.minimumImageHeight();
 }
 
-/**
- * @brief Sets the minimum image height filter in pixels.
- * @param value Minimum height, or -1 to clear.
- */
 void FolderCompareSideModel::setMinimumImageHeight(int value)
 {
-    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
-    if (normalized == m_minimumImageHeight) {
+    if (FolderFilterSettings::normalizedDimension(value) == m_filterSettings.minimumImageHeight()) {
         return;
     }
-    m_minimumImageHeight = normalized;
+    m_filterSettings.setMinimumImageHeight(value);
     emit minimumImageHeightChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns the maximum image height filter in pixels.
- * @return Maximum height or -1 when unset.
- */
 int FolderCompareSideModel::maximumImageHeight() const
 {
-    return m_maximumImageHeight;
+    return m_filterSettings.maximumImageHeight();
 }
 
-/**
- * @brief Sets the maximum image height filter in pixels.
- * @param value Maximum height, or -1 to clear.
- */
 void FolderCompareSideModel::setMaximumImageHeight(int value)
 {
-    const int normalized = value < 0 ? FolderCompareFilterConstants::unsetDimension : value;
-    if (normalized == m_maximumImageHeight) {
+    if (FolderFilterSettings::normalizedDimension(value) == m_filterSettings.maximumImageHeight()) {
         return;
     }
-    m_maximumImageHeight = normalized;
+    m_filterSettings.setMaximumImageHeight(value);
     emit maximumImageHeightChanged();
     rebuildEntries();
 }
 
-/**
- * @brief Returns whether the compare model is loading entries.
- * @return True when loading is in progress, false otherwise.
- */
 bool FolderCompareSideModel::loading() const
 {
     return m_loading;
 }
 
-/**
- * @brief Sets whether identical items are hidden.
- * @param hide True to hide identical items, false otherwise.
- */
 void FolderCompareSideModel::setHideIdentical(bool hide)
 {
     if (m_hideIdentical == hide) {
@@ -483,92 +351,51 @@ void FolderCompareSideModel::setHideIdentical(bool hide)
     rebuildEntries();
 }
 
-/**
- * @brief Returns the list of selected paths for this side.
- * @return List of selected file or folder paths.
- */
 QStringList FolderCompareSideModel::selectedPaths() const
 {
     return m_selectedPaths;
 }
 
-/**
- * @brief Returns whether the selection is a single image.
- * @return True if the selection is one image file, false otherwise.
- */
 bool FolderCompareSideModel::selectedIsImage() const
 {
     return m_selectedIsImage;
 }
 
-/**
- * @brief Returns whether the selection is a single video.
- * @return True if the selection is one video file, false otherwise.
- */
 bool FolderCompareSideModel::selectedIsVideo() const
 {
     return m_selectedIsVideo;
 }
 
-/**
- * @brief Returns the number of selected files (recursive).
- * @return File count for the current selection.
- */
 int FolderCompareSideModel::selectedFileCount() const
 {
     return m_selectedFileCount;
 }
 
-/**
- * @brief Returns the total bytes for selected files (recursive).
- * @return Total byte size of the current selection.
- */
 qint64 FolderCompareSideModel::selectedTotalBytes() const
 {
     return m_selectedTotalBytes;
 }
 
-/**
- * @brief Returns whether a copy operation is in progress.
- * @return True when copying is active, false otherwise.
- */
 bool FolderCompareSideModel::copyInProgress() const
 {
-    return m_copyInProgress;
+    return m_transferController.copyInProgress();
 }
 
-/**
- * @brief Returns the current copy progress ratio.
- * @return Copy progress in the range 0.0 to 1.0.
- */
 qreal FolderCompareSideModel::copyProgress() const
 {
-    return m_copyProgress;
+    return m_transferController.copyProgress();
 }
 
-/**
- * @brief Returns whether a trash operation is in progress.
- * @return True when trashing is active, false otherwise.
- */
 bool FolderCompareSideModel::trashInProgress() const
 {
-    return m_trashInProgress;
+    return m_transferController.trashInProgress();
 }
 
-/**
- * @brief Returns the current trash progress ratio.
- * @return Trash progress in the range 0.0 to 1.0.
- */
 qreal FolderCompareSideModel::trashProgress() const
 {
-    return m_trashProgress;
+    return m_transferController.trashProgress();
 }
 
-/**
- * @brief Returns the number of rows for the model.
- * @param parent Parent index (unused for list model).
- * @return Number of rows.
- */
 int FolderCompareSideModel::rowCount(const QModelIndex &parent) const
 {
     if (parent.isValid()) {
@@ -577,12 +404,6 @@ int FolderCompareSideModel::rowCount(const QModelIndex &parent) const
     return m_entries.size();
 }
 
-/**
- * @brief Returns data for a given model index and role.
- * @param index Model index to read.
- * @param role Data role identifier.
- * @return Role-specific data for the index.
- */
 QVariant FolderCompareSideModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() < 0 || index.row() >= m_entries.size()) {
@@ -611,22 +432,20 @@ QVariant FolderCompareSideModel::data(const QModelIndex &index, int role) const
             return previewPath;
         }
         if (entry.isVideo) {
-            return m_videoThumbnailCache.value(previewPath);
+            return m_attributeCache.videoThumbnails().value(previewPath);
         }
         return QString();
     }
     case ThumbnailRevisionRole:
         return thumbnailRevisionForEntry(entry);
-    case SuffixRole: {
-        const int dot = entry.fileName.lastIndexOf('.');
-        return dot >= 0 ? entry.fileName.mid(dot + 1) : QString();
-    }
+    case SuffixRole:
+        return FolderEntryView::suffixForFileName(entry.fileName);
     case CreatedRole:
         return entry.created;
     case ModifiedRole:
         return entry.modified;
     case SelectedRole:
-        return m_selectedIds.contains(entry.id);
+        return m_selectionManager.isSelected(entry.id);
     case CompareStatusRole:
         return static_cast<int>(entry.status);
     case GhostRole:
@@ -638,47 +457,61 @@ QVariant FolderCompareSideModel::data(const QModelIndex &index, int role) const
     }
 }
 
-/**
- * @brief Returns the role names exposed to QML.
- * @return Mapping from role ids to role names.
- */
 QHash<int, QByteArray> FolderCompareSideModel::roleNames() const
 {
-    return {
-        {FileNameRole, "fileName"},
-        {FilePathRole, "filePath"},
-        {OtherSidePathRole, "otherSidePath"},
-        {IsDirRole, "isDir"},
-        {IsImageRole, "isImage"},
-        {IsVideoRole, "isVideo"},
-        {ThumbnailPathRole, "thumbnailPath"},
-        {ThumbnailRevisionRole, "thumbnailRevision"},
-        {SuffixRole, "suffix"},
-        {CreatedRole, "created"},
-        {ModifiedRole, "modified"},
-        {SelectedRole, "selected"},
-        {CompareStatusRole, "compareStatus"},
-        {GhostRole, "isGhost"},
-        {IsNewerRole, "isNewer"},
-    };
+    return {{FileNameRole, "fileName"},
+            {FilePathRole, "filePath"},
+            {OtherSidePathRole, "otherSidePath"},
+            {IsDirRole, "isDir"},
+            {IsImageRole, "isImage"},
+            {IsVideoRole, "isVideo"},
+            {ThumbnailPathRole, "thumbnailPath"},
+            {ThumbnailRevisionRole, "thumbnailRevision"},
+            {SuffixRole, "suffix"},
+            {CreatedRole, "created"},
+            {ModifiedRole, "modified"},
+            {SelectedRole, "selected"},
+            {CompareStatusRole, "compareStatus"},
+            {GhostRole, "isGhost"},
+            {IsNewerRole, "isNewer"}};
 }
 
-/**
- * @brief Requests a refresh of the compare model.
- */
 void FolderCompareSideModel::refresh()
 {
+    qInfo() << "FolderCompareSideModel::refresh";
     if (m_compareModel) {
         m_compareModel->requestRefresh();
     }
 }
 
-/**
- * @brief Activates the entry at the given row.
- * @param row Row index to activate.
- */
+const FolderCompareSideModel::CompareEntry *FolderCompareSideModel::entryForRow(int row) const
+{
+    if (row < 0 || row >= m_entries.size()) {
+        return nullptr;
+    }
+    return &m_entries.at(row);
+}
+
+FolderCompareSideModel::CompareEntry *FolderCompareSideModel::entryForRow(int row)
+{
+    if (row < 0 || row >= m_entries.size()) {
+        return nullptr;
+    }
+    return &m_entries[row];
+}
+
+QString FolderCompareSideModel::keyForRow(int row) const
+{
+    const CompareEntry *entry = entryForRow(row);
+    if (!entry) {
+        return QString();
+    }
+    return entry->id;
+}
+
 void FolderCompareSideModel::activate(int row)
 {
+    qInfo() << "FolderCompareSideModel::activate" << row;
     const CompareEntry *entry = entryForRow(row);
     if (!entry || entry->isGhost) {
         return;
@@ -690,93 +523,41 @@ void FolderCompareSideModel::activate(int row)
     }
 }
 
-/**
- * @brief Selects or toggles the entry at the given row.
- * @param row Row index to select.
- * @param multi True to toggle selection, false to replace it.
- */
 void FolderCompareSideModel::select(int row, bool multi)
 {
-    const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
+    const QString key = keyForRow(row);
+    if (key.isEmpty()) {
         return;
     }
-    const QString id = entry->id;
-    if (!multi) {
-        if (m_selectedIds.size() == 1 && m_selectedIds.first() == id) {
-            return;
-        }
-        m_selectedIds = {id};
+    bool changed = multi ? m_selectionManager.toggleKey(key) : m_selectionManager.selectSingle(key);
+    if (changed) {
         notifySelectionChanged();
-        return;
     }
-    if (m_selectedIds.contains(id)) {
-        m_selectedIds.removeAll(id);
-    } else {
-        m_selectedIds.append(id);
-    }
-    notifySelectionChanged();
 }
 
-/**
- * @brief Checks whether the entry at the given row is selected.
- * @param row Row index to inspect.
- * @return True if the row is selected, false otherwise.
- */
 bool FolderCompareSideModel::isSelected(int row) const
 {
-    const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
-        return false;
-    }
-    return m_selectedIds.contains(entry->id);
+    return m_selectionManager.isSelected(keyForRow(row));
 }
 
-/**
- * @brief Checks whether the entry at the given row is a folder.
- * @param row Row index to inspect.
- * @return True if the row is a folder, false otherwise.
- */
 bool FolderCompareSideModel::isDir(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
-        return false;
-    }
-    return entry->isDir;
+    return entry && entry->isDir;
 }
 
-/**
- * @brief Returns the absolute path for a row.
- * @param row Row index to inspect.
- * @return Absolute path for the row.
- */
 QString FolderCompareSideModel::pathForRow(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
-        return {};
-    }
-    return entry->filePath;
+    return entry ? entry->filePath : QString();
 }
 
-/**
- * @brief Finds the next row whose name starts with a prefix.
- * @param prefix Search prefix (case-insensitive).
- * @param startRow Row index to start searching from.
- * @return Matching row index, or -1 if none found.
- */
 int FolderCompareSideModel::rowForPrefix(const QString &prefix, int startRow) const
 {
-    return RowMatchUtils::rowForPrefix(prefix, startRow, m_entries.size(),
-        [this](int row) { return m_entries.at(row).fileName; });
+    return RowMatchUtils::rowForPrefix(
+        prefix, startRow, m_entries.size(), [this](int row) { return m_entries.at(row).fileName; });
 }
 
-/**
- * @brief Formats the last modified time for a row.
- * @param row Row index to inspect.
- * @return Localized short format timestamp string.
- */
 QString FolderCompareSideModel::modifiedForRow(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
@@ -786,431 +567,202 @@ QString FolderCompareSideModel::modifiedForRow(int row) const
     return QLocale().toString(entry->modified, QLocale::ShortFormat);
 }
 
-/**
- * @brief Counts selected items that already exist in a target folder.
- * @param targetDir Target folder path.
- * @return Number of conflicting items.
- */
-int FolderCompareSideModel::copyNameConflictCount(const QString &targetDir) const
+int FolderCompareSideModel::copyNameConflictCount(const QString &targetFolder) const
 {
-    return SelectionStatisticsUtils::countNameConflicts(m_selectedPaths, targetDir);
+    return FolderTransferController::countNameConflicts(m_selectedPaths, targetFolder);
 }
 
-/**
- * @brief Clears the current selection.
- */
 void FolderCompareSideModel::clearSelection()
 {
-    if (m_selectedIds.isEmpty()) {
-        return;
+    if (m_selectionManager.clearSelection()) {
+        notifySelectionChanged();
     }
-    m_selectedIds.clear();
-    notifySelectionChanged();
 }
 
-/**
- * @brief Navigates to the parent folder of the current root path.
- */
 void FolderCompareSideModel::goUp()
 {
+    qInfo() << "FolderCompareSideModel::goUp" << m_rootPath;
     if (m_rootPath.isEmpty()) {
         return;
     }
-    QDir dir(m_rootPath);
-    if (dir.isRoot()) {
+    QDir folder(m_rootPath);
+    if (folder.isRoot()) {
         return;
     }
     m_pendingSelectionId = m_rootPath;
-    dir.cdUp();
-    setRootPath(dir.absolutePath());
+    folder.cdUp();
+    setRootPath(folder.absolutePath());
 }
 
-/**
- * @brief Sets the selection from a list of row indices.
- * @param rows List of row indices to select.
- * @param additive True to add to current selection, false to replace it.
- */
 void FolderCompareSideModel::setSelection(const QVariantList &rows, bool additive)
 {
-    QStringList next;
-    if (additive) {
-        next = m_selectedIds;
+    if (m_selectionManager.setFromRowsGeneric(
+            rows, additive, m_entries.size(), [this](int row) { return keyForRow(row); })) {
+        notifySelectionChanged();
     }
-    for (const QVariant &value : rows) {
-        const int row = value.toInt();
-        const CompareEntry *entry = entryForRow(row);
-        if (!entry) {
-            continue;
-        }
-        if (!next.contains(entry->id)) {
-            next.append(entry->id);
-        }
-    }
-    if (next == m_selectedIds) {
-        return;
-    }
-    m_selectedIds = next;
-    notifySelectionChanged();
 }
 
-/**
- * @brief Sets the selection for a continuous row range.
- * @param start Start row index.
- * @param end End row index.
- * @param additive True to add to current selection, false to replace it.
- */
 void FolderCompareSideModel::setSelectionRange(int start, int end, bool additive)
 {
     if (m_entries.isEmpty()) {
         return;
     }
-    int from = std::min(start, end);
-    int to = std::max(start, end);
-    from = std::max(0, from);
-    to = std::min(to, static_cast<int>(m_entries.size()) - 1);
-
+    const int lower = std::max(0, std::min(start, end));
+    const int upper = std::min(std::max(start, end), static_cast<int>(m_entries.size()) - 1);
     QVariantList rows;
-    rows.reserve(to - from + 1);
-    for (int i = from; i <= to; ++i) {
-        rows.append(i);
+    rows.reserve(upper - lower + 1);
+    for (int row = lower; row <= upper; ++row) {
+        rows.append(row);
     }
     setSelection(rows, additive);
 }
 
-/**
- * @brief Checks whether all entries are selected.
- * @return True if all entries are selected, false otherwise.
- */
 bool FolderCompareSideModel::allSelected() const
 {
-    if (m_entries.isEmpty()) {
-        return false;
-    }
-    return m_selectedIds.size() == m_entries.size();
+    return m_selectionManager.allSelected(m_entries.size());
 }
 
-/**
- * @brief Returns the row indices of selected entries.
- * @return List of selected row indices.
- */
 QVariantList FolderCompareSideModel::selectedRows() const
 {
-    QVariantList rows;
-    if (m_entries.isEmpty() || m_selectedIds.isEmpty()) {
-        return rows;
-    }
-    rows.reserve(m_selectedIds.size());
-    for (int i = 0; i < m_entries.size(); ++i) {
-        if (m_selectedIds.contains(m_entries.at(i).id)) {
-            rows.append(i);
-        }
-    }
-    return rows;
+    return m_selectionManager.selectedRows(m_entries.size(),
+                                           [this](int row) { return keyForRow(row); });
 }
 
-/**
- * @brief Checks whether the entry at the given row is an image file.
- * @param row Row index to inspect.
- * @return True if the row is an image file, false otherwise.
- */
 bool FolderCompareSideModel::isImage(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
-        return false;
-    }
-    return entry->isImage && !entry->isDir;
+    return entry && entry->isImage && !entry->isDir;
 }
 
-/**
- * @brief Checks whether the entry at the given row is a video file.
- * @param row Row index to inspect.
- * @return True if the row is a video file, false otherwise.
- */
 bool FolderCompareSideModel::isVideo(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
-        return false;
-    }
-    return entry->isVideo && !entry->isDir && !entry->isGhost;
+    return entry && entry->isVideo && !entry->isDir && !entry->isGhost;
 }
 
-/**
- * @brief Checks whether the entry at the given row is a ghost item.
- * @param row Row index to inspect.
- * @return True if the row is a ghost item, false otherwise.
- */
 bool FolderCompareSideModel::isGhost(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
-    if (!entry) {
-        return false;
-    }
-    return entry->isGhost;
+    return entry && entry->isGhost;
 }
 
-/**
- * @brief Returns the compare status for the current selection.
- * @return Compare status value.
- */
 int FolderCompareSideModel::selectedCompareStatus() const
 {
-    if (m_selectedIds.isEmpty()) {
+    if (m_selectionManager.selectedKeys().isEmpty()) {
         return StatusNone;
     }
-    const QString id = m_selectedIds.first();
-    auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-        return entry.id == id;
-    });
-    if (it == m_entries.end()) {
-        return StatusNone;
-    }
-    return it->status;
+    const CompareEntry *entry = findEntryById(m_entries, m_selectionManager.selectedKeys().first());
+    return entry ? entry->status : StatusNone;
 }
 
-/**
- * @brief Returns whether the current selection is a ghost item.
- * @return True if the selection is ghost, false otherwise.
- */
 bool FolderCompareSideModel::selectedIsGhost() const
 {
-    if (m_selectedIds.isEmpty()) {
+    if (m_selectionManager.selectedKeys().isEmpty()) {
         return false;
     }
-    const QString id = m_selectedIds.first();
-    auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-        return entry.id == id;
-    });
-    if (it == m_entries.end()) {
-        return false;
-    }
-    return it->isGhost;
+    const CompareEntry *entry = findEntryById(m_entries, m_selectionManager.selectedKeys().first());
+    return entry && entry->isGhost;
 }
 
-/**
- * @brief Returns whether the current selection is newer than its counterpart.
- * @return True if the selection is newer, false otherwise.
- */
 bool FolderCompareSideModel::selectedIsNewer() const
 {
-    if (m_selectedIds.isEmpty()) {
+    if (m_selectionManager.selectedKeys().isEmpty()) {
         return false;
     }
-    const QString id = m_selectedIds.first();
-    auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-        return entry.id == id;
-    });
-    if (it == m_entries.end()) {
-        return false;
-    }
-    return it->isNewer;
+    const CompareEntry *entry = findEntryById(m_entries, m_selectionManager.selectedKeys().first());
+    return entry && entry->isNewer;
 }
 
-/**
- * @brief Computes counts of selected folders and files.
- * @return Map with "dirs" and "files" counts.
- */
+QStringList FolderCompareSideModel::validSelectedPaths() const
+{
+    QStringList paths;
+    for (const QString &id : m_selectionManager.selectedKeys()) {
+        const CompareEntry *entry = findEntryById(m_entries, id);
+        if (!entry || entry->isGhost || entry->filePath.isEmpty()) {
+            continue;
+        }
+        paths.append(entry->filePath);
+    }
+    return paths;
+}
+
 QVariantMap FolderCompareSideModel::selectionStats() const
 {
     QVariantMap result;
-    QStringList paths;
-    paths.reserve(m_selectedIds.size());
-    for (const QString &id : m_selectedIds) {
-        auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == id;
-        });
-        if (it == m_entries.end()) {
-            continue;
-        }
-        const CompareEntry &entry = *it;
-        if (entry.isGhost || entry.filePath.isEmpty()) {
-            continue;
-        }
-        paths.append(entry.filePath);
-    }
-    const SelectionStatisticsUtils::SelectionStatisticsResult stats
-        = SelectionStatisticsUtils::computeStatistics(paths);
+    const auto stats = SelectionStatisticsUtils::computeStatistics(validSelectedPaths());
     result.insert("dirs", stats.folderCount);
     result.insert("files", stats.fileCount);
     return result;
 }
 
-/**
- * @brief Copies selected items to a target folder synchronously.
- * @param targetDir Target folder path.
- * @return Result map including ok, copied, failed, and error fields.
- */
-QVariantMap FolderCompareSideModel::copySelectedTo(const QString &targetDir)
+QVariantMap FolderCompareSideModel::copySelectedTo(const QString &targetFolder)
 {
-    QVariantMap result;
-    result.insert("ok", false);
-    if (targetDir.isEmpty() || !QDir(targetDir).exists()) {
-        result.insert("error", tr("Target folder not found"));
-        return result;
+    qInfo() << "FolderCompareSideModel::copySelectedTo" << targetFolder;
+    if (targetFolder.isEmpty() || !QDir(targetFolder).exists()) {
+        return FolderTransferController::targetFolderError();
     }
-
-    const int total = m_selectedIds.size();
-    int processed = 0;
-    setCopyInProgress(true);
-    updateCopyProgress(0, total);
-
-    int copied = 0;
-    int failed = 0;
-    QString firstError;
-    const QDir dir(targetDir);
-    auto finishItem = [&]() {
-        processed += 1;
-        updateCopyProgress(processed, total);
-        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-    };
-
-    for (const QString &id : m_selectedIds) {
-        auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == id;
-        });
-        if (it == m_entries.end()) {
-            finishItem();
+    int ghostFailed = 0;
+    QString ghostError;
+    QStringList validPaths;
+    for (const QString &id : m_selectionManager.selectedKeys()) {
+        const CompareEntry *entry = findEntryById(m_entries, id);
+        if (!entry || entry->isGhost) {
+            ghostFailed += 1;
+            if (ghostError.isEmpty()) {
+                ghostError = tr("Cannot copy ghost items");
+            }
             continue;
         }
-        const CompareEntry &entry = *it;
-        if (entry.isGhost) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = tr("Cannot copy ghost items");
+        if (entry->filePath.isEmpty() || !QFileInfo::exists(entry->filePath)) {
+            ghostFailed += 1;
+            if (ghostError.isEmpty()) {
+                ghostError = tr("Source not found");
             }
-            finishItem();
             continue;
         }
-        if (entry.filePath.isEmpty()) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = tr("Source not found");
-            }
-            finishItem();
-            continue;
-        }
-        const QFileInfo info(entry.filePath);
-        if (!info.exists()) {
-            failed += 1;
-            if (firstError.isEmpty()) {
-                firstError = tr("Source not found");
-            }
-            finishItem();
-            continue;
-        }
-        const QString targetPath = dir.filePath(info.fileName());
-        if (QFileInfo::exists(targetPath)) {
-            QString error;
-            if (!PlatformUtils::moveToTrashOrDelete(targetPath, &error)) {
-                failed += 1;
-                if (firstError.isEmpty()) {
-                    firstError = error.isEmpty() ? tr("Failed to move target to trash") : error;
-                }
-                finishItem();
-                continue;
-            }
-        }
-        if (entry.isDir) {
-            QString error;
-            if (!FileOperationUtils::copyFolderRecursive(entry.filePath, targetPath, "FolderCompareSideModel", &error)) {
-                failed += 1;
-                if (firstError.isEmpty()) {
-                    firstError = error.isEmpty() ? tr("Copy failed") : error;
-                }
-                finishItem();
-                continue;
-            }
-            copied += 1;
-        } else {
-            if (!QFile::copy(entry.filePath, targetPath)) {
-                failed += 1;
-                if (firstError.isEmpty()) {
-                    firstError = tr("Copy failed");
-                }
-                finishItem();
-                continue;
-            }
-            const QFileInfo sourceInfo(entry.filePath);
-            FileOperationUtils::applyFileTimes(sourceInfo, targetPath);
-            copied += 1;
-        }
-        finishItem();
+        validPaths.append(entry->filePath);
     }
-
-    result.insert("copied", copied);
-    result.insert("failed", failed);
-    if (!firstError.isEmpty()) {
-        result.insert("error", firstError);
+    QVariantMap result =
+        m_transferController.copySelectedPaths(validPaths, targetFolder, "FolderCompareSideModel");
+    if (ghostFailed > 0) {
+        result.insert("failed", result.value("failed").toInt() + ghostFailed);
+        result.insert("ok", false);
+        if (!ghostError.isEmpty() && !result.contains("error")) {
+            result.insert("error", ghostError);
+        }
     }
-    result.insert("ok", failed == 0);
-    setCopyInProgress(false);
     return result;
 }
 
-/**
- * @brief Starts an asynchronous copy of selected items to a target folder.
- * @param targetDir Target folder path.
- */
-void FolderCompareSideModel::startTransferSelectedTo(const QString &targetDir, bool moveItems)
+void FolderCompareSideModel::startTransferSelectedTo(const QString &targetFolder, bool moveItems)
 {
-    if (m_copyInProgress) {
+    qInfo() << "FolderCompareSideModel::startTransferSelectedTo" << targetFolder << moveItems;
+    if (m_transferController.copyInProgress()) {
         return;
     }
-    if (targetDir.isEmpty() || !QDir(targetDir).exists()) {
-        QVariantMap result;
-        result.insert("ok", false);
-        result.insert("error", tr("Target folder not found"));
-        emit copyFinished(result);
+    if (targetFolder.isEmpty() || !QDir(targetFolder).exists()) {
+        emit copyFinished(FolderTransferController::targetFolderError());
         return;
     }
-    if (m_selectedIds.isEmpty()) {
-        QVariantMap result;
-        result.insert("ok", false);
-        result.insert("error", tr("No items selected"));
-        emit copyFinished(result);
+    if (m_selectionManager.selectedKeys().isEmpty()) {
+        emit copyFinished(FolderTransferController::noSelectionError());
         return;
     }
-
-    QList<CopyItem> items;
     m_copyExtraFailed = 0;
     m_copyExtraError.clear();
-    const QDir dir(targetDir);
-    const CopyWorker::OperationMode mode = moveItems
-        ? CopyWorker::OperationMode::Move
-        : CopyWorker::OperationMode::Copy;
-    const QString ghostError = moveItems
-        ? tr("Cannot move ghost items")
-        : tr("Cannot copy ghost items");
-
-    for (const QString &id : m_selectedIds) {
-        auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == id;
-        });
-        if (it == m_entries.end()) {
-            m_copyExtraFailed += 1;
-            if (m_copyExtraError.isEmpty()) {
-                m_copyExtraError = tr("Source not found");
-            }
-            continue;
-        }
-        const CompareEntry &entry = *it;
-        if (entry.isGhost) {
+    QList<CopyItem> items;
+    const QDir folder(targetFolder);
+    const QString ghostError = moveItems ? tr("Cannot move ghost items") : tr("Cannot copy ghost items");
+    for (const QString &id : m_selectionManager.selectedKeys()) {
+        const CompareEntry *entry = findEntryById(m_entries, id);
+        if (!entry || entry->isGhost) {
             m_copyExtraFailed += 1;
             if (m_copyExtraError.isEmpty()) {
                 m_copyExtraError = ghostError;
             }
             continue;
         }
-        if (entry.filePath.isEmpty()) {
-            m_copyExtraFailed += 1;
-            if (m_copyExtraError.isEmpty()) {
-                m_copyExtraError = tr("Source not found");
-            }
-            continue;
-        }
-        const QFileInfo info(entry.filePath);
-        if (!info.exists()) {
+        if (entry->filePath.isEmpty() || !QFileInfo::exists(entry->filePath)) {
             m_copyExtraFailed += 1;
             if (m_copyExtraError.isEmpty()) {
                 m_copyExtraError = tr("Source not found");
@@ -1218,12 +770,11 @@ void FolderCompareSideModel::startTransferSelectedTo(const QString &targetDir, b
             continue;
         }
         CopyItem item;
-        item.sourcePath = entry.filePath;
-        item.targetPath = dir.filePath(info.fileName());
-        item.isDir = entry.isDir;
+        item.sourcePath = entry->filePath;
+        item.targetPath = folder.filePath(QFileInfo(entry->filePath).fileName());
+        item.isDir = entry->isDir;
         items.append(item);
     }
-
     if (items.isEmpty()) {
         QVariantMap result;
         result.insert("ok", false);
@@ -1237,155 +788,91 @@ void FolderCompareSideModel::startTransferSelectedTo(const QString &targetDir, b
         m_copyExtraError.clear();
         return;
     }
-
-    auto *thread = new QThread(this);
-    auto *worker = new CopyWorker(items, mode);
-    worker->moveToThread(thread);
-
-    m_copyThread = thread;
-    m_copyWorker = worker;
-    setCopyInProgress(true);
-    updateCopyProgress(0, 0);
-
-    connect(thread, &QThread::started, worker, &CopyWorker::start);
-    connect(worker, &CopyWorker::progress, this, &FolderCompareSideModel::updateCopyProgress);
-    connect(worker, &CopyWorker::finished, this, [this, thread, worker](QVariantMap result) {
-        int failed = result.value("failed").toInt();
-        failed += m_copyExtraFailed;
-        result.insert("failed", failed);
-        if (!m_copyExtraError.isEmpty() && !result.contains("error")) {
-            result.insert("error", m_copyExtraError);
-        }
-        if (failed > 0 || result.value("cancelled").toBool()) {
-            result.insert("ok", false);
-        }
-        setCopyInProgress(false);
-        updateCopyProgress(0, 0);
-        emit copyFinished(result);
-        m_copyExtraFailed = 0;
-        m_copyExtraError.clear();
-        m_copyWorker = nullptr;
-        m_copyThread = nullptr;
-        thread->quit();
-    });
-    connect(thread, &QThread::finished, worker, &QObject::deleteLater);
-    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->start();
+    Q_UNUSED(items);
+    QStringList validPaths;
+    validPaths.reserve(items.size());
+    for (const CopyItem &item : items) {
+        validPaths.append(item.sourcePath);
+    }
+    auto *guard = new QObject(this);
+    connect(&m_transferController, &FolderTransferController::copyFinished, guard,
+            [this, guard](QVariantMap result) {
+                guard->deleteLater();
+                result.insert("failed", result.value("failed").toInt() + m_copyExtraFailed);
+                if (!m_copyExtraError.isEmpty() && !result.contains("error")) {
+                    result.insert("error", m_copyExtraError);
+                }
+                if (result.value("failed").toInt() > 0 || result.value("cancelled").toBool()) {
+                    result.insert("ok", false);
+                }
+                m_copyExtraFailed = 0;
+                m_copyExtraError.clear();
+                emit copyFinished(result);
+            });
+    m_transferController.startTransferPaths(validPaths, targetFolder, moveItems, 0, {});
 }
 
-void FolderCompareSideModel::startCopySelectedTo(const QString &targetDir)
+void FolderCompareSideModel::startCopySelectedTo(const QString &targetFolder)
 {
-    startTransferSelectedTo(targetDir, false);
+    startTransferSelectedTo(targetFolder, false);
 }
 
-void FolderCompareSideModel::startMoveSelectedTo(const QString &targetDir)
+void FolderCompareSideModel::startMoveSelectedTo(const QString &targetFolder)
 {
-    startTransferSelectedTo(targetDir, true);
+    startTransferSelectedTo(targetFolder, true);
 }
 
-/**
- * @brief Requests cancellation of the current copy operation.
- */
 void FolderCompareSideModel::cancelCopy()
 {
-    if (!m_copyWorker) {
-        return;
-    }
-    QMetaObject::invokeMethod(m_copyWorker, "cancel", Qt::QueuedConnection);
+    m_transferController.cancelCopy();
 }
 
-/**
- * @brief Starts an asynchronous move of selected items to trash.
- * @return Result map indicating the operation was started.
- */
 QVariantMap FolderCompareSideModel::moveSelectedToTrash()
 {
+    qInfo() << "FolderCompareSideModel::moveSelectedToTrash";
     return requestRemoval(true);
 }
 
-/**
- * @brief Starts an asynchronous trash operation for selected items.
- */
 void FolderCompareSideModel::startMoveSelectedToTrash()
 {
     startRemoval(true);
 }
 
-/**
- * @brief Starts an asynchronous permanent delete of selected items.
- * @return Result map indicating the operation was started.
- */
 QVariantMap FolderCompareSideModel::deleteSelectedPermanently()
 {
     return requestRemoval(false);
 }
 
-/**
- * @brief Starts an asynchronous permanent delete operation for selected items.
- */
 void FolderCompareSideModel::startDeleteSelectedPermanently()
 {
     startRemoval(false);
 }
 
-/**
- * @brief Starts an asynchronous removal of selected items.
- * @param moveToTrash True to move to trash when supported, false to delete permanently.
- * @return Result map indicating the operation was started.
- */
 QVariantMap FolderCompareSideModel::requestRemoval(bool moveToTrash)
 {
-    QVariantMap result;
-    if (m_selectedIds.isEmpty()) {
-        result.insert("ok", false);
-        result.insert("error", tr("Nothing to delete"));
-        return result;
+    if (m_selectionManager.selectedKeys().isEmpty()) {
+        return FolderTransferController::nothingToDeleteError();
     }
     startRemoval(moveToTrash);
+    QVariantMap result;
     result.insert("ok", true);
-    result.insert("pending", FolderCompareTrashConstants::pendingTrue);
+    result.insert("pending", true);
     return result;
 }
 
-/**
- * @brief Starts an asynchronous removal operation for selected items.
- * @param moveToTrash True to move to trash when supported, false to delete permanently.
- */
 void FolderCompareSideModel::startRemoval(bool moveToTrash)
 {
-    if (m_trashInProgress) {
+    qInfo() << "FolderCompareSideModel::startRemoval" << moveToTrash;
+    if (m_transferController.trashInProgress()) {
         return;
     }
-
-    QStringList paths;
-    paths.reserve(m_selectedIds.size());
-    int preFailed = FolderCompareTrashConstants::emptyCount;
+    QStringList paths = validSelectedPaths();
+    int preFailed = 0;
     QString preError;
-    for (const QString &id : m_selectedIds) {
-        auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == id;
-        });
-        if (it == m_entries.end()) {
-            continue;
-        }
-        const CompareEntry &entry = *it;
-        if (entry.isGhost) {
-            preFailed += 1;
-            if (preError.isEmpty()) {
-                preError = moveToTrash ? tr("Cannot trash ghost items") : tr("Cannot delete ghost items");
-            }
-            continue;
-        }
-        if (entry.filePath.isEmpty() || !QFileInfo::exists(entry.filePath)) {
-            preFailed += 1;
-            if (preError.isEmpty()) {
-                preError = tr("Source not found");
-            }
-            continue;
-        }
-        paths.append(entry.filePath);
+    if (paths.size() != m_selectionManager.selectedKeys().size()) {
+        preFailed = m_selectionManager.selectedKeys().size() - paths.size();
+        preError = moveToTrash ? tr("Cannot trash ghost items") : tr("Cannot delete ghost items");
     }
-
     if (paths.isEmpty()) {
         QVariantMap result;
         result.insert("ok", false);
@@ -1397,102 +884,70 @@ void FolderCompareSideModel::startRemoval(bool moveToTrash)
         clearSelection();
         return;
     }
-
-    auto *thread = new QThread(this);
-    const TrashWorker::RemovalMode mode = moveToTrash ? TrashWorker::MoveToTrash : TrashWorker::DeletePermanently;
-    auto *worker = new TrashWorker(paths, mode);
-    worker->moveToThread(thread);
-
-    m_trashThread = thread;
-    m_trashWorker = worker;
-    setTrashInProgress(true);
-    updateTrashProgress(FolderCompareTrashConstants::emptyCount, paths.size());
-
-    connect(thread, &QThread::started, worker, &TrashWorker::start);
-    connect(worker, &TrashWorker::progress, this, &FolderCompareSideModel::updateTrashProgress);
-    connect(worker, &TrashWorker::finished, this, [this, thread, preFailed, preError](QVariantMap result) {
-        int failed = result.value("failed").toInt();
-        failed += preFailed;
-        result.insert("failed", failed);
-        if (!preError.isEmpty() && !result.contains("error")) {
-            result.insert("error", preError);
-        }
-        if (failed > FolderCompareTrashConstants::emptyCount || result.value("cancelled").toBool()) {
-            result.insert("ok", false);
-        }
-
-        setTrashInProgress(false);
-        updateTrashProgress(FolderCompareTrashConstants::emptyCount, FolderCompareTrashConstants::emptyCount);
-        emit trashFinished(result);
-
-        const int moved = result.value("moved").toInt();
-        const QStringList touchedPaths = result.value("touchedPaths").toStringList();
-        if (moved > FolderCompareTrashConstants::emptyCount && m_compareModel) {
-            if (m_side == FolderCompareModel::Left) {
-                m_compareModel->refreshFiles(touchedPaths, {});
-            } else {
-                m_compareModel->refreshFiles({}, touchedPaths);
-            }
-        }
-        clearSelection();
-
-        m_trashWorker = nullptr;
-        m_trashThread = nullptr;
-        thread->quit();
-    });
-    connect(thread, &QThread::finished, worker, &QObject::deleteLater);
-    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->start();
+    auto *guard = new QObject(this);
+    connect(&m_transferController, &FolderTransferController::trashFinished, guard,
+            [this, guard, preFailed, preError](QVariantMap result) {
+                guard->deleteLater();
+                result.insert("failed", result.value("failed").toInt() + preFailed);
+                if (!preError.isEmpty() && !result.contains("error")) {
+                    result.insert("error", preError);
+                }
+                if (result.value("failed").toInt() > 0 || result.value("cancelled").toBool()) {
+                    result.insert("ok", false);
+                }
+                emit trashFinished(result);
+                const int moved = result.value("moved").toInt();
+                const QStringList touched = result.value("touchedPaths").toStringList();
+                if (moved > 0 && m_compareModel) {
+                    if (m_side == FolderCompareModel::Left) {
+                        m_compareModel->refreshFiles(touched, {});
+                    } else {
+                        m_compareModel->refreshFiles({}, touched);
+                    }
+                }
+                clearSelection();
+            });
+    m_transferController.startRemovalPaths(paths, moveToTrash);
 }
 
-/**
- * @brief Requests cancellation of the current trash operation.
- */
 void FolderCompareSideModel::cancelTrash()
 {
-    if (!m_trashWorker) {
-        return;
-    }
-    QMetaObject::invokeMethod(m_trashWorker, "cancel", Qt::QueuedConnection);
+    m_transferController.cancelTrash();
 }
 
-/**
- * @brief Renames a file or folder within the current compare side.
- * @param path Full path to rename.
- * @param newName New file or folder name (without path).
- * @return Result map including ok, newPath, and error fields.
- */
 QVariantMap FolderCompareSideModel::renamePath(const QString &path, const QString &newName)
 {
+    qInfo() << "FolderCompareSideModel::renamePath" << path << newName;
     QVariantMap result;
     result.insert("ok", false);
-
     if (path.isEmpty()) {
         result.insert("error", tr("Source not found"));
         return result;
     }
-
-    auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-        return entry.filePath == path;
-    });
-    if (it != m_entries.end() && it->isGhost) {
-        result.insert("error", tr("Cannot rename ghost items"));
-        return result;
+    for (const CompareEntry &entry : m_entries) {
+        if (entry.filePath == path && entry.isGhost) {
+            result.insert("error", tr("Cannot rename ghost items"));
+            return result;
+        }
     }
-
     QString targetPath;
     QString error;
     if (!PlatformUtils::renamePath(path, newName, &targetPath, &error)) {
         result.insert("error", error.isEmpty() ? tr("Rename failed") : error);
         return result;
     }
-
-    const int selectedIndex = m_selectedIds.indexOf(path);
-    if (selectedIndex >= 0) {
-        m_selectedIds[selectedIndex] = targetPath;
+    QStringList keys = m_selectionManager.selectedKeys();
+    bool selectionChanged = false;
+    for (const CompareEntry &entry : m_entries) {
+        if (entry.filePath == path && keys.contains(entry.id)) {
+            keys.removeAll(entry.id);
+            selectionChanged = true;
+        }
     }
-    notifySelectionChanged();
-
+    if (selectionChanged) {
+        m_selectionManager.setSelectedKeys(keys);
+        notifySelectionChanged();
+    }
     if (m_compareModel) {
         if (m_side == FolderCompareModel::Left) {
             m_compareModel->refreshFiles({path, targetPath}, {});
@@ -1500,29 +955,20 @@ QVariantMap FolderCompareSideModel::renamePath(const QString &path, const QStrin
             m_compareModel->refreshFiles({}, {path, targetPath});
         }
     }
-
     result.insert("ok", true);
     result.insert("newPath", targetPath);
     return result;
 }
 
-/**
- * @brief Checks whether the entry at the given row has a ghost on the other compare side.
- * @param row Row index to inspect.
- * @return True if the other side contains a ghost directory with the same name.
- */
 bool FolderCompareSideModel::hasGhostOnOtherSide(int row) const
 {
     const CompareEntry *entry = entryForRow(row);
-    if (!entry || !entry->isDir || entry->isGhost) {
+    if (!entry || !entry->isDir || entry->isGhost || !m_compareModel) {
         return false;
     }
-    if (!m_compareModel) {
-        return false;
-    }
-    FolderCompareSideModel *otherModel = (m_side == FolderCompareModel::Left)
-        ? qobject_cast<FolderCompareSideModel*>(m_compareModel->rightModel())
-        : qobject_cast<FolderCompareSideModel*>(m_compareModel->leftModel());
+    auto *otherModel = (m_side == FolderCompareModel::Left)
+        ? qobject_cast<FolderCompareSideModel *>(m_compareModel->rightModel())
+        : qobject_cast<FolderCompareSideModel *>(m_compareModel->leftModel());
     if (!otherModel) {
         return false;
     }
@@ -1534,28 +980,16 @@ bool FolderCompareSideModel::hasGhostOnOtherSide(int row) const
     return false;
 }
 
-/**
- * @brief Creates a folder inside a parent path.
- * @param parentPath Parent directory path.
- * @param folderName Name of the folder to create.
- * @return True when the folder was created successfully.
- */
 bool FolderCompareSideModel::createFolder(const QString &parentPath, const QString &folderName)
 {
+    qInfo() << "FolderCompareSideModel::createFolder" << parentPath << folderName;
     if (parentPath.isEmpty() || folderName.isEmpty()) {
         return false;
     }
-    QDir dir(parentPath);
-    if (!dir.exists()) {
-        return false;
-    }
-    return dir.mkdir(folderName);
+    QDir folder(parentPath);
+    return folder.exists() && folder.mkdir(folderName);
 }
 
-/**
- * @brief Updates the loading state and emits change notification.
- * @param loading True when loading is active, false otherwise.
- */
 void FolderCompareSideModel::setLoading(bool loading)
 {
     if (loading == m_loading) {
@@ -1565,72 +999,6 @@ void FolderCompareSideModel::setLoading(bool loading)
     emit loadingChanged();
 }
 
-/**
- * @brief Updates the copy-in-progress state and emits change notification.
- * @param inProgress True when copy is active, false otherwise.
- */
-void FolderCompareSideModel::setCopyInProgress(bool inProgress)
-{
-    if (m_copyInProgress == inProgress) {
-        return;
-    }
-    m_copyInProgress = inProgress;
-    emit copyInProgressChanged();
-}
-
-/**
- * @brief Updates copy counters and emits progress when it changes.
- * @param completed Number of completed entries.
- * @param total Total number of entries to copy.
- */
-void FolderCompareSideModel::updateCopyProgress(int completed, int total)
-{
-    m_copyCompleted = completed;
-    m_copyTotal = total;
-    const qreal nextProgress = total > 0
-        ? static_cast<qreal>(completed) / static_cast<qreal>(total)
-        : FolderCompareTrashConstants::zeroProgress;
-    if (!qFuzzyCompare(m_copyProgress, nextProgress)) {
-        m_copyProgress = nextProgress;
-        emit copyProgressChanged();
-    }
-}
-
-/**
- * @brief Updates the trash-in-progress state and emits change notification.
- * @param inProgress True when trash is active, false otherwise.
- */
-void FolderCompareSideModel::setTrashInProgress(bool inProgress)
-{
-    if (m_trashInProgress == inProgress) {
-        return;
-    }
-    m_trashInProgress = inProgress;
-    emit trashInProgressChanged();
-}
-
-/**
- * @brief Updates trash counters and emits progress when it changes.
- * @param completed Number of completed entries.
- * @param total Total number of entries to trash.
- */
-void FolderCompareSideModel::updateTrashProgress(int completed, int total)
-{
-    m_trashCompleted = completed;
-    m_trashTotal = total;
-    const qreal nextProgress = total > FolderCompareTrashConstants::emptyCount
-        ? static_cast<qreal>(completed) / static_cast<qreal>(total)
-        : FolderCompareTrashConstants::zeroProgress;
-    if (!qFuzzyCompare(m_trashProgress, nextProgress)) {
-        m_trashProgress = nextProgress;
-        emit trashProgressChanged();
-    }
-}
-
-/**
- * @brief Sets the base entries and rebuilds the filtered model.
- * @param entries Base compare entries to set.
- */
 void FolderCompareSideModel::setBaseEntries(const QVector<CompareEntry> &entries)
 {
     m_baseEntries = entries;
@@ -1638,12 +1006,6 @@ void FolderCompareSideModel::setBaseEntries(const QVector<CompareEntry> &entries
     rebuildEntries();
 }
 
-/**
- * @brief Updates base entries for affected names and paths only.
- * @param entries Updated compare entries.
- * @param affectedNames Set of affected names.
- * @param affectedPaths Set of affected paths.
- */
 void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry> &entries,
                                                       const QSet<QString> &affectedNames,
                                                       const QSet<QString> &affectedPaths)
@@ -1651,10 +1013,8 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
     if (affectedNames.isEmpty() && affectedPaths.isEmpty()) {
         return;
     }
-
     QVector<CompareEntry> nextBase;
     nextBase.reserve(m_baseEntries.size() + entries.size());
-
     for (const CompareEntry &entry : m_baseEntries) {
         const bool affected = (!entry.filePath.isEmpty() && affectedPaths.contains(entry.filePath))
             || (!entry.fileName.isEmpty() && affectedNames.contains(entry.fileName));
@@ -1662,7 +1022,6 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
             nextBase.append(entry);
         }
     }
-
     for (const CompareEntry &entry : entries) {
         const bool affected = (!entry.filePath.isEmpty() && affectedPaths.contains(entry.filePath))
             || (!entry.fileName.isEmpty() && affectedNames.contains(entry.fileName));
@@ -1670,7 +1029,6 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
             nextBase.append(entry);
         }
     }
-
     m_baseEntries = std::move(nextBase);
     pruneCaches(m_baseEntries);
     QVector<CompareEntry> filtered = m_baseEntries;
@@ -1679,9 +1037,6 @@ void FolderCompareSideModel::updateBaseEntriesPartial(const QVector<CompareEntry
     requestVideoThumbnailRefresh();
 }
 
-/**
- * @brief Rebuilds entries using current filters and sorting.
- */
 void FolderCompareSideModel::rebuildEntries()
 {
     if (imageSizeFiltersActive()) {
@@ -1691,150 +1046,94 @@ void FolderCompareSideModel::rebuildEntries()
         requestSignatureHashRefresh();
     }
     requestVideoThumbnailRefresh();
-
     QVector<CompareEntry> filtered = m_baseEntries;
     applyFilterAndSort(filtered);
-
     applyEntriesIncremental(filtered);
 }
 
-/**
- * @brief Applies an incremental update of entries to the model.
- * @param entries New entries to apply.
- */
 void FolderCompareSideModel::applyEntriesIncremental(const QVector<CompareEntry> &entries)
 {
-    const QVector<int> dataRoles = {
-        FileNameRole,
-        FilePathRole,
-        OtherSidePathRole,
-        IsDirRole,
-        IsImageRole,
-        IsVideoRole,
-        ThumbnailPathRole,
-        ThumbnailRevisionRole,
-        SuffixRole,
-        CreatedRole,
-        ModifiedRole,
-        CompareStatusRole,
-        GhostRole,
-        IsNewerRole,
-    };
-
-    int i = 0;
-    while (i < entries.size()) {
-        const QString &nextId = entries.at(i).id;
-        if (i < m_entries.size() && m_entries.at(i).id == nextId) {
-            if (!compareEntryEquivalent(m_entries.at(i), entries.at(i))) {
-                m_entries[i] = entries.at(i);
-                emit dataChanged(index(i, 0), index(i, 0), dataRoles);
-            } else {
-                m_entries[i] = entries.at(i);
-            }
-            i += 1;
+    const QVector<int> dataRoles = {FileNameRole,  FilePathRole, OtherSidePathRole, IsDirRole,
+                                    IsImageRole,   IsVideoRole,  ThumbnailPathRole,  SuffixRole,
+                                    CreatedRole,   ModifiedRole, CompareStatusRole,  GhostRole,
+                                    IsNewerRole,   ThumbnailRevisionRole};
+    int position = 0;
+    while (position < entries.size()) {
+        const QString &nextId = entries.at(position).id;
+        if (position < m_entries.size() && m_entries.at(position).id == nextId) {
+            m_entries[position] = entries.at(position);
+            emit dataChanged(index(position, 0), index(position, 0), dataRoles);
+            position += 1;
             continue;
         }
-
         int existing = -1;
-        for (int j = i + 1; j < m_entries.size(); j += 1) {
-            if (m_entries.at(j).id == nextId) {
-                existing = j;
+        for (int search = position + 1; search < m_entries.size(); ++search) {
+            if (m_entries.at(search).id == nextId) {
+                existing = search;
                 break;
             }
         }
-
         if (existing >= 0) {
-            beginMoveRows(QModelIndex(), existing, existing, QModelIndex(), i);
+            beginMoveRows(QModelIndex(), existing, existing, QModelIndex(), position);
             const CompareEntry moved = m_entries.takeAt(existing);
-            m_entries.insert(i, moved);
+            m_entries.insert(position, moved);
             endMoveRows();
-            if (!compareEntryEquivalent(m_entries.at(i), entries.at(i))) {
-                m_entries[i] = entries.at(i);
-                emit dataChanged(index(i, 0), index(i, 0), dataRoles);
-            } else {
-                m_entries[i] = entries.at(i);
-            }
-            i += 1;
+            m_entries[position] = entries.at(position);
+            emit dataChanged(index(position, 0), index(position, 0), dataRoles);
+            position += 1;
             continue;
         }
-
-        beginInsertRows(QModelIndex(), i, i);
-        m_entries.insert(i, entries.at(i));
+        beginInsertRows(QModelIndex(), position, position);
+        m_entries.insert(position, entries.at(position));
         endInsertRows();
-        i += 1;
+        position += 1;
     }
-
     if (m_entries.size() > entries.size()) {
         beginRemoveRows(QModelIndex(), entries.size(), m_entries.size() - 1);
         m_entries.remove(entries.size(), m_entries.size() - entries.size());
         endRemoveRows();
     }
-
     QStringList nextSelection;
     if (!m_pendingSelectionId.isEmpty()) {
-        auto it = std::find_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == m_pendingSelectionId;
-        });
-        if (it != entries.end()) {
-            nextSelection.append(m_pendingSelectionId);
+        for (const CompareEntry &entry : entries) {
+            if (entry.id == m_pendingSelectionId) {
+                nextSelection.append(m_pendingSelectionId);
+                break;
+            }
         }
         m_pendingSelectionId.clear();
     } else {
-        nextSelection.reserve(m_selectedIds.size());
-        for (const QString &id : m_selectedIds) {
-            auto it = std::find_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
-                return entry.id == id;
-            });
-            if (it != entries.end()) {
+        for (const QString &id : m_selectionManager.selectedKeys()) {
+            if (findEntryById(entries, id)) {
                 nextSelection.append(id);
             }
         }
     }
-    if (nextSelection != m_selectedIds) {
-        m_selectedIds = nextSelection;
+    if (nextSelection != m_selectionManager.selectedKeys()) {
+        m_selectionManager.setSelectedKeys(nextSelection);
     }
     notifySelectionChanged();
 }
 
-/**
- * @brief Returns whether byte size filters are active.
- * @return True when any byte size filter is set.
- */
 bool FolderCompareSideModel::byteSizeFiltersActive() const
 {
-    return m_minimumByteSize > FolderCompareFilterConstants::unsetByteSize
-        || m_maximumByteSize > FolderCompareFilterConstants::unsetByteSize;
+    return m_filterSettings.byteSizeFiltersActive();
 }
 
-/**
- * @brief Returns whether image size filters are active.
- * @return True when any image dimension filter is set.
- */
 bool FolderCompareSideModel::imageSizeFiltersActive() const
 {
-    return m_minimumImageWidth > FolderCompareFilterConstants::unsetDimension
-        || m_maximumImageWidth > FolderCompareFilterConstants::unsetDimension
-        || m_minimumImageHeight > FolderCompareFilterConstants::unsetDimension
-        || m_maximumImageHeight > FolderCompareFilterConstants::unsetDimension;
+    return m_filterSettings.imageSizeFiltersActive();
 }
 
-/**
- * @brief Returns whether signature-based sorting is active.
- * @return True when sorting by signature.
- */
 bool FolderCompareSideModel::signatureSortActive() const
 {
-    return m_sortKey == Signature;
+    return m_filterSettings.sortKeyValue() == FolderFilterSettings::SortBySignature;
 }
 
-/**
- * @brief Removes cached entries that are no longer present.
- * @param entries Current base entries to keep.
- */
 void FolderCompareSideModel::pruneCaches(const QVector<CompareEntry> &entries)
 {
     QSet<QString> currentPaths;
-    currentPaths.reserve(entries.size());
+    currentPaths.reserve(entries.size() * 2);
     for (const CompareEntry &entry : entries) {
         if (!entry.filePath.isEmpty()) {
             currentPaths.insert(entry.filePath);
@@ -1843,410 +1142,186 @@ void FolderCompareSideModel::pruneCaches(const QVector<CompareEntry> &entries)
             currentPaths.insert(entry.otherSidePath);
         }
     }
-
-    for (auto it = m_imageSizeCache.begin(); it != m_imageSizeCache.end();) {
-        if (!currentPaths.contains(it.key())) {
-            it = m_imageSizeCache.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = m_imageSizeAttempted.begin(); it != m_imageSizeAttempted.end();) {
-        if (!currentPaths.contains(*it)) {
-            it = m_imageSizeAttempted.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = m_signatureHashCache.begin(); it != m_signatureHashCache.end();) {
-        if (!currentPaths.contains(it.key())) {
-            it = m_signatureHashCache.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = m_signatureHashAttempted.begin(); it != m_signatureHashAttempted.end();) {
-        if (!currentPaths.contains(*it)) {
-            it = m_signatureHashAttempted.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = m_videoThumbnailCache.begin(); it != m_videoThumbnailCache.end();) {
-        if (!currentPaths.contains(it.key())) {
-            it = m_videoThumbnailCache.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (auto it = m_videoThumbnailAttempted.begin(); it != m_videoThumbnailAttempted.end();) {
-        if (!currentPaths.contains(*it)) {
-            it = m_videoThumbnailAttempted.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    m_attributeCache.pruneCaches(currentPaths);
 }
 
-/**
- * @brief Starts asynchronous image size reads when needed.
- */
 void FolderCompareSideModel::requestImageSizeRefresh()
 {
-    if (m_imageSizeLoading) {
+    if (m_attributeCache.imageSizeLoading() || !imageSizeFiltersActive()) {
         return;
     }
-    if (!imageSizeFiltersActive()) {
-        return;
-    }
-
     QStringList pending;
-    pending.reserve(m_baseEntries.size());
     for (const CompareEntry &entry : m_baseEntries) {
-        if (entry.isDir || !entry.isImage || entry.filePath.isEmpty()) {
-            continue;
-        }
-        if (m_imageSizeAttempted.contains(entry.filePath)) {
+        if (entry.isDir || !entry.isImage || entry.filePath.isEmpty()
+            || m_attributeCache.imageSizeAttempted(entry.filePath)) {
             continue;
         }
         pending.append(entry.filePath);
     }
-
     if (pending.isEmpty()) {
         return;
     }
-
-    m_imageSizeLoading = true;
-    const int token = ++m_imageSizeGeneration;
-
-    auto future = QtConcurrent::run([pending]() {
-        return ImageMetadataUtils::readImageSizes(pending);
-    });
-
+    m_attributeCache.setImageSizeLoading(true);
+    m_attributeCache.setImageSizeGeneration(m_attributeCache.imageSizeGeneration() + 1);
+    const int token = m_attributeCache.imageSizeGeneration();
+    auto future = QtConcurrent::run([pending]() { return ImageMetadataUtils::readImageSizes(pending); });
     auto *watcher = new QFutureWatcher<ImageMetadataUtils::ImageSizeBatchResult>(this);
-    connect(watcher, &QFutureWatcher<ImageMetadataUtils::ImageSizeBatchResult>::finished, this, [this, watcher, token]() {
-        const auto result = watcher->result();
-        watcher->deleteLater();
-
-        if (token != m_imageSizeGeneration) {
-            return;
-        }
-
-        for (auto it = result.sizes.constBegin(); it != result.sizes.constEnd(); ++it) {
-            m_imageSizeCache.insert(it.key(), it.value());
-        }
-        for (const QString &path : result.attempted) {
-            m_imageSizeAttempted.insert(path);
-        }
-        m_imageSizeLoading = false;
-        rebuildEntries();
-    });
-
+    connect(watcher, &QFutureWatcher<ImageMetadataUtils::ImageSizeBatchResult>::finished, this,
+            [this, watcher, token]() {
+                const auto result = watcher->result();
+                watcher->deleteLater();
+                if (token != m_attributeCache.imageSizeGeneration()) {
+                    return;
+                }
+                for (auto iterator = result.sizes.constBegin(); iterator != result.sizes.constEnd();
+                     ++iterator) {
+                    m_attributeCache.setImageSize(iterator.key(), iterator.value());
+                }
+                for (const QString &path : result.attempted) {
+                    m_attributeCache.markImageSizeAttempted(path);
+                }
+                m_attributeCache.setImageSizeLoading(false);
+                rebuildEntries();
+            });
     watcher->setFuture(future);
 }
 
-/**
- * @brief Starts asynchronous signature hash reads when needed.
- */
 void FolderCompareSideModel::requestSignatureHashRefresh()
 {
-    if (m_signatureHashLoading) {
+    if (m_attributeCache.signatureLoading() || !signatureSortActive()) {
         return;
     }
-    if (!signatureSortActive()) {
-        return;
-    }
-
     QStringList pending;
-    pending.reserve(m_baseEntries.size());
     for (const CompareEntry &entry : m_baseEntries) {
-        if (entry.isDir || !entry.isImage || entry.filePath.isEmpty()) {
-            continue;
-        }
-        if (m_signatureHashAttempted.contains(entry.filePath)) {
+        if (entry.isDir || !entry.isImage || entry.filePath.isEmpty()
+            || m_attributeCache.signatureAttempted(entry.filePath)) {
             continue;
         }
         pending.append(entry.filePath);
     }
-
     if (pending.isEmpty()) {
         return;
     }
-
-    m_signatureHashLoading = true;
-    const int token = ++m_signatureHashGeneration;
-
+    m_attributeCache.setSignatureLoading(true);
+    m_attributeCache.setSignatureGeneration(m_attributeCache.signatureGeneration() + 1);
+    const int token = m_attributeCache.signatureGeneration();
     auto future = QtConcurrent::run([pending]() {
-        return ImageMetadataUtils::readSignatureHashes(pending, FolderCompareFilterConstants::signatureDimension);
+        return ImageMetadataUtils::readSignatureHashes(pending, FolderFilterSettings::signatureDimension);
     });
-
     auto *watcher = new QFutureWatcher<ImageMetadataUtils::SignatureHashBatchResult>(this);
-    connect(watcher, &QFutureWatcher<ImageMetadataUtils::SignatureHashBatchResult>::finished, this, [this, watcher, token]() {
-        const auto result = watcher->result();
-        watcher->deleteLater();
-
-        if (token != m_signatureHashGeneration) {
-            return;
-        }
-
-        for (auto it = result.hashes.constBegin(); it != result.hashes.constEnd(); ++it) {
-            m_signatureHashCache.insert(it.key(), it.value());
-        }
-        for (const QString &path : result.attempted) {
-            m_signatureHashAttempted.insert(path);
-        }
-        m_signatureHashLoading = false;
-        rebuildEntries();
-    });
-
+    connect(watcher, &QFutureWatcher<ImageMetadataUtils::SignatureHashBatchResult>::finished, this,
+            [this, watcher, token]() {
+                const auto result = watcher->result();
+                watcher->deleteLater();
+                if (token != m_attributeCache.signatureGeneration()) {
+                    return;
+                }
+                for (auto iterator = result.hashes.constBegin(); iterator != result.hashes.constEnd();
+                     ++iterator) {
+                    m_attributeCache.setSignatureHash(iterator.key(), iterator.value());
+                }
+                for (const QString &path : result.attempted) {
+                    m_attributeCache.markSignatureAttempted(path);
+                }
+                m_attributeCache.setSignatureLoading(false);
+                rebuildEntries();
+            });
     watcher->setFuture(future);
 }
 
-/**
- * @brief Starts asynchronous video thumbnail generation when needed.
- */
 void FolderCompareSideModel::requestVideoThumbnailRefresh()
 {
-    if (m_videoThumbnailLoading) {
+    if (m_attributeCache.videoThumbnailLoading()) {
         return;
     }
-
     QStringList pending;
-    pending.reserve(m_baseEntries.size());
     for (const CompareEntry &entry : m_baseEntries) {
         if (entry.isDir || !entry.isVideo) {
             continue;
         }
         const QString path = previewPathForEntry(entry);
-        if (path.isEmpty()) {
+        if (path.isEmpty() || m_attributeCache.videoThumbnailAttempted(path)) {
             continue;
         }
-        const QString expectedThumbnailPath = VideoThumbnailUtils::thumbnailPathForSource(path);
-        if (m_videoThumbnailCache.contains(path)) {
-            const QString cachedThumbnailPath = m_videoThumbnailCache.value(path);
-            if (cachedThumbnailPath == expectedThumbnailPath && QFileInfo::exists(cachedThumbnailPath)) {
+        const QString expected = VideoThumbnailUtils::thumbnailPathForSource(path);
+        if (m_attributeCache.videoThumbnails().contains(path)) {
+            const QString cached = m_attributeCache.videoThumbnails().value(path);
+            if (cached == expected && QFileInfo::exists(cached)) {
                 continue;
             }
-            if (!cachedThumbnailPath.isEmpty()) {
-                QFile::remove(cachedThumbnailPath);
+            if (!cached.isEmpty()) {
+                QFile::remove(cached);
             }
-            m_videoThumbnailCache.remove(path);
-            m_videoThumbnailAttempted.remove(path);
-        }
-        if (m_videoThumbnailAttempted.contains(path)) {
-            continue;
         }
         pending.append(path);
     }
-
     if (pending.isEmpty()) {
         return;
     }
-
-    m_videoThumbnailLoading = true;
-    const int token = ++m_videoThumbnailGeneration;
-
+    m_attributeCache.setVideoThumbnailLoading(true);
+    m_attributeCache.setVideoThumbnailGeneration(m_attributeCache.videoThumbnailGeneration() + 1);
+    const int token = m_attributeCache.videoThumbnailGeneration();
     auto future = QtConcurrent::run([pending]() {
-        VideoThumbnailBatchResult result;
+        QHash<QString, QString> thumbnails;
+        QStringList attempted;
         for (const QString &path : pending) {
-            result.attempted.append(path);
+            attempted.append(path);
             QString thumbnailPath;
             if (VideoThumbnailUtils::generateThumbnail(path, &thumbnailPath)) {
-                result.thumbnails.insert(path, thumbnailPath);
+                thumbnails.insert(path, thumbnailPath);
             }
         }
-        return result;
+        return qMakePair(thumbnails, attempted);
     });
-
-    auto *watcher = new QFutureWatcher<VideoThumbnailBatchResult>(this);
-    connect(watcher, &QFutureWatcher<VideoThumbnailBatchResult>::finished, this, [this, watcher, token]() {
-        const VideoThumbnailBatchResult result = watcher->result();
-        watcher->deleteLater();
-
-        if (token != m_videoThumbnailGeneration) {
-            return;
-        }
-
-        for (auto it = result.thumbnails.constBegin(); it != result.thumbnails.constEnd(); ++it) {
-            m_videoThumbnailCache.insert(it.key(), it.value());
-        }
-        for (const QString &path : result.attempted) {
-            m_videoThumbnailAttempted.insert(path);
-        }
-
-        m_videoThumbnailLoading = false;
-        if (!m_entries.isEmpty()) {
-            const QModelIndex first = index(0, 0);
-            const QModelIndex last = index(m_entries.size() - 1, 0);
-            emit dataChanged(first, last, {ThumbnailPathRole});
-        }
-    });
-
+    auto *watcher = new QFutureWatcher<QPair<QHash<QString, QString>, QStringList>>(this);
+    connect(watcher, &QFutureWatcher<QPair<QHash<QString, QString>, QStringList>>::finished, this,
+            [this, watcher, token]() {
+                const auto result = watcher->result();
+                watcher->deleteLater();
+                if (token != m_attributeCache.videoThumbnailGeneration()) {
+                    return;
+                }
+                for (auto iterator = result.first.constBegin(); iterator != result.first.constEnd();
+                     ++iterator) {
+                    m_attributeCache.setVideoThumbnail(iterator.key(), iterator.value());
+                }
+                for (const QString &path : result.second) {
+                    m_attributeCache.markVideoThumbnailAttempted(path);
+                }
+                m_attributeCache.setVideoThumbnailLoading(false);
+                if (!m_entries.isEmpty()) {
+                    emit dataChanged(index(0, 0), index(m_entries.size() - 1, 0), {ThumbnailPathRole});
+                }
+            });
     watcher->setFuture(future);
 }
 
-/**
- * @brief Filters and sorts entries based on current settings.
- * @param entries Entries to filter and sort in place.
- */
 void FolderCompareSideModel::applyFilterAndSort(QVector<CompareEntry> &entries) const
 {
     if (m_hideIdentical) {
-        entries.erase(std::remove_if(entries.begin(), entries.end(), [](const CompareEntry &entry) {
-            return entry.status == StatusIdentical;
-        }), entries.end());
+        entries.erase(std::remove_if(entries.begin(), entries.end(),
+                                     [](const CompareEntry &entry) {
+                                         return entry.status == StatusIdentical;
+                                     }),
+                      entries.end());
     }
-
-    const QString trimmed = m_nameFilter.trimmed();
-    const bool nameFilterActive = !trimmed.isEmpty();
-    const bool byteSizeActive = byteSizeFiltersActive();
-    const bool imageSizeActive = imageSizeFiltersActive();
-    const QString needle = trimmed.toLower();
-
-    const bool junkFilterActive = m_hideJunkFiles;
-    const QStringList junkExts = junkExtensions();
-
-    if (nameFilterActive || byteSizeActive || imageSizeActive || junkFilterActive) {
-        entries.erase(std::remove_if(entries.begin(), entries.end(), [&](const CompareEntry &entry) {
-            if (junkFilterActive && !entry.isDir) {
-                const int dot = entry.fileName.lastIndexOf('.');
-                if (dot >= 0) {
-                    const QString suffix = entry.fileName.mid(dot + 1);
-                    for (const QString &ext : junkExts) {
-                        QString normalized = ext;
-                        if (normalized.startsWith(QLatin1Char('.')))
-                            normalized = normalized.mid(1);
-                        if (suffix.compare(normalized, Qt::CaseInsensitive) == 0)
-                            return true;
-                    }
-                }
-            }
-
-            if (nameFilterActive && !entry.fileName.toLower().contains(needle)) {
-                return true;
-            }
-
-            if (byteSizeActive) {
-                if (entry.isGhost || entry.filePath.isEmpty()) {
-                    return true;
-                }
-                if (!entry.isDir) {
-                    const QFileInfo info(entry.filePath);
-                    const qint64 byteSize = info.size();
-                    if (m_minimumByteSize > FolderCompareFilterConstants::unsetByteSize
-                        && byteSize < m_minimumByteSize) {
-                        return true;
-                    }
-                    if (m_maximumByteSize > FolderCompareFilterConstants::unsetByteSize
-                        && byteSize > m_maximumByteSize) {
-                        return true;
-                    }
-                }
-            }
-
-            if (imageSizeActive) {
-                if (!entry.isImage || entry.isDir || entry.isGhost || entry.filePath.isEmpty()) {
-                    return true;
-                }
-                const bool hasSize = m_imageSizeCache.contains(entry.filePath);
-                if (!hasSize) {
-                    return true;
-                }
-                const QSize size = m_imageSizeCache.value(entry.filePath);
-                if (!size.isValid()) {
-                    return true;
-                }
-                if (m_minimumImageWidth > FolderCompareFilterConstants::unsetDimension
-                    && size.width() < m_minimumImageWidth) {
-                    return true;
-                }
-                if (m_maximumImageWidth > FolderCompareFilterConstants::unsetDimension
-                    && size.width() > m_maximumImageWidth) {
-                    return true;
-                }
-                if (m_minimumImageHeight > FolderCompareFilterConstants::unsetDimension
-                    && size.height() < m_minimumImageHeight) {
-                    return true;
-                }
-                if (m_maximumImageHeight > FolderCompareFilterConstants::unsetDimension
-                    && size.height() > m_maximumImageHeight) {
-                    return true;
-                }
-            }
-
-            return false;
-        }), entries.end());
-    }
-
-    QCollator collator;
-    collator.setCaseSensitivity(Qt::CaseInsensitive);
-
-    auto compare = [&](const CompareEntry &left, const CompareEntry &right) {
-        if (m_showDirsFirst && left.isDir != right.isDir) {
-            return left.isDir;
-        }
-
-        bool result = false;
-        switch (m_sortKey) {
-        case Extension: {
-            const QString leftSuffix = QFileInfo(left.fileName).suffix();
-            const QString rightSuffix = QFileInfo(right.fileName).suffix();
-            result = collator.compare(leftSuffix, rightSuffix) < 0;
-            break;
-        }
-        case Created:
-            result = left.created < right.created;
-            break;
-        case Modified:
-            result = left.modified < right.modified;
-            break;
-        case Signature: {
-            if (!left.isDir && !right.isDir) {
-                const bool leftHasSignature = m_signatureHashCache.contains(left.filePath);
-                const bool rightHasSignature = m_signatureHashCache.contains(right.filePath);
-                if (leftHasSignature && rightHasSignature) {
-                    result = m_signatureHashCache.value(left.filePath)
-                        < m_signatureHashCache.value(right.filePath);
-                } else if (leftHasSignature != rightHasSignature) {
-                    result = leftHasSignature;
-                } else {
-                    result = collator.compare(left.fileName, right.fileName) < 0;
-                }
-            } else {
-                result = collator.compare(left.fileName, right.fileName) < 0;
-            }
-            break;
-        }
-        case Name:
-        default:
-            result = collator.compare(left.fileName, right.fileName) < 0;
-            break;
-        }
-
-        return m_sortOrder == Qt::AscendingOrder ? result : !result;
-    };
-
-    std::sort(entries.begin(), entries.end(), compare);
+    FolderFilterSortUtils::applyNameJunkSizeFilter<CompareEntry>(
+        entries, m_filterSettings, m_attributeCache.imageSizes(),
+        [](const CompareEntry &entry) { return viewForCompareEntry(entry); });
+    FolderFilterSortUtils::sortEntries<CompareEntry>(
+        entries, m_filterSettings, [](const CompareEntry &entry) { return viewForCompareEntry(entry); },
+        [this](const QString &path, quint64 *value) {
+            return m_attributeCache.signatureHashForPath(path, value);
+        });
 }
 
-/**
- * @brief Emits selection change signals and updates selection-dependent roles.
- */
 void FolderCompareSideModel::notifySelectionChanged()
 {
     rebuildSelectedPaths();
     emit selectedPathsChanged();
-
-    const CompareEntry *entry = nullptr;
-    if (m_selectedIds.size() == 1) {
-        const QString &id = m_selectedIds.first();
-        for (const CompareEntry &item : m_entries) {
-            if (item.id == id) {
-                entry = &item;
-                break;
-            }
-        }
-    }
+    const CompareEntry *entry = m_selectionManager.selectedKeys().size() == 1
+        ? findEntryById(m_entries, m_selectionManager.selectedKeys().first())
+        : nullptr;
     const bool nextIsImage = entry && entry->isImage && !entry->isGhost;
     const bool nextIsVideo = entry && entry->isVideo && !entry->isGhost;
     if (nextIsImage != m_selectedIsImage) {
@@ -2258,96 +1333,39 @@ void FolderCompareSideModel::notifySelectionChanged()
         emit selectedIsVideoChanged();
     }
     updateSelectionTotalsAsync();
-
-    if (m_entries.isEmpty()) {
-        return;
+    if (!m_entries.isEmpty()) {
+        emit dataChanged(index(0, 0), index(m_entries.size() - 1, 0), {SelectedRole});
     }
-    const QModelIndex first = index(0, 0);
-    const QModelIndex last = index(m_entries.size() - 1, 0);
-    emit dataChanged(first, last, {SelectedRole});
 }
 
-/**
- * @brief Updates cached selection totals asynchronously.
- */
 void FolderCompareSideModel::updateSelectionTotalsAsync()
 {
-    SelectionStatisticsUtils::updateSelectionTotalsAsync(this,
-        m_selectedPaths,
-        &m_selectionTotalsGeneration,
-        [this](int fileCount, qint64 totalBytes) {
-            setSelectionTotals(fileCount, totalBytes);
-        });
+    SelectionStatisticsUtils::updateSelectionTotalsAsync(
+        this, m_selectedPaths, &m_selectionTotalsGeneration,
+        [this](int fileCount, qint64 totalBytes) { setSelectionTotals(fileCount, totalBytes); });
 }
 
-/**
- * @brief Sets selection totals and emits change signals if needed.
- * @param fileCount Selected file count.
- * @param totalBytes Selected total byte size.
- */
 void FolderCompareSideModel::setSelectionTotals(int fileCount, qint64 totalBytes)
 {
-    bool countChanged = false;
-    bool bytesChanged = false;
     if (m_selectedFileCount != fileCount) {
         m_selectedFileCount = fileCount;
-        countChanged = true;
+        emit selectedFileCountChanged();
     }
     if (m_selectedTotalBytes != totalBytes) {
         m_selectedTotalBytes = totalBytes;
-        bytesChanged = true;
-    }
-    if (countChanged) {
-        emit selectedFileCountChanged();
-    }
-    if (bytesChanged) {
         emit selectedTotalBytesChanged();
     }
 }
 
-/**
- * @brief Rebuilds selected paths from selected entry identifiers.
- */
 void FolderCompareSideModel::rebuildSelectedPaths()
 {
     QStringList nextPaths;
-    nextPaths.reserve(m_selectedIds.size());
-    for (const QString &id : m_selectedIds) {
-        auto it = std::find_if(m_entries.begin(), m_entries.end(), [&](const CompareEntry &entry) {
-            return entry.id == id;
-        });
-        if (it == m_entries.end()) {
-            continue;
-        }
-        if (!it->filePath.isEmpty() && !it->isGhost) {
-            nextPaths.append(it->filePath);
+    nextPaths.reserve(m_selectionManager.selectedKeys().size());
+    for (const QString &id : m_selectionManager.selectedKeys()) {
+        const CompareEntry *entry = findEntryById(m_entries, id);
+        if (entry && !entry->filePath.isEmpty() && !entry->isGhost) {
+            nextPaths.append(entry->filePath);
         }
     }
     m_selectedPaths = nextPaths;
-}
-
-/**
- * @brief Returns the compare entry for a given row.
- * @param row Row index to inspect.
- * @return Pointer to the entry, or null when out of range.
- */
-const FolderCompareSideModel::CompareEntry *FolderCompareSideModel::entryForRow(int row) const
-{
-    if (row < 0 || row >= m_entries.size()) {
-        return nullptr;
-    }
-    return &m_entries.at(row);
-}
-
-/**
- * @brief Returns a mutable compare entry for a given row.
- * @param row Row index to inspect.
- * @return Pointer to the entry, or null when out of range.
- */
-FolderCompareSideModel::CompareEntry *FolderCompareSideModel::entryForRow(int row)
-{
-    if (row < 0 || row >= m_entries.size()) {
-        return nullptr;
-    }
-    return &m_entries[row];
 }
