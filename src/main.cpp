@@ -31,6 +31,7 @@
 
 #include "ApplicationVersion.h"
 #include "AppLogger.h"
+#include "ApplicationInfo.h"
 #include "BackupSystem.h"
 #include "ComfyPilotController.h"
 #include "FavoritePairsManager.h"
@@ -44,7 +45,8 @@ namespace
 void processCommandLineOptions(int argc, char *argv[])
 {
     QCoreApplication application(argc, argv);
-    application.setApplicationName(QStringLiteral("galman"));
+    application.setOrganizationName(ApplicationInfo::organizationName());
+    application.setApplicationName(ApplicationInfo::applicationName());
     application.setApplicationVersion(QStringLiteral(GALMAN_APPLICATION_VERSION));
 
     QCommandLineParser commandLineParser;
@@ -61,11 +63,12 @@ int main(int argc, char *argv[])
     processCommandLineOptions(argc, argv);
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName(QStringLiteral("galman"));
+    app.setOrganizationName(ApplicationInfo::organizationName());
+    app.setApplicationName(ApplicationInfo::applicationName());
     app.setApplicationVersion(QStringLiteral(GALMAN_APPLICATION_VERSION));
-    app.setApplicationDisplayName(QStringLiteral("Galman"));
+    app.setApplicationDisplayName(ApplicationInfo::applicationName());
 
-    qInfo() << "Galman startup";
+    qInfo() << ApplicationInfo::applicationName() << "startup";
     app.setWindowIcon(QIcon(":/Galman/qml/Assets/Galman.png"));
     AppLogger &appLogger = AppLogger::instance();
     appLogger.initialize();
@@ -101,7 +104,7 @@ int main(int argc, char *argv[])
     qInfo() << "QML load complete. Root objects:" << engine->rootObjects().size();
 
     const int exitCode = app.exec();
-    qInfo() << "Galman shutdown";
+    qInfo() << ApplicationInfo::applicationName() << "shutdown";
     // Destroy QML before the context objects it binds to, otherwise bindings
     // re-evaluate on destroyed controllers and flood the log with warnings.
     engine.reset();

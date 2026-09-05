@@ -9,7 +9,6 @@
 #include <QTimer>
 #include <QVector>
 #include <QVariantList>
-#include <QSettings>
 
 #include <QtQml/qqml.h>
 

@@ -19,6 +19,7 @@
 \************************************************************************/
 
 #include "BackupSystem.h"
+#include "ApplicationSettings.h"
 #include "PlatformUtils.h"
 
 #include <QDebug>
@@ -27,12 +28,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
-#include <QSettings>
 
 BackupSystem::BackupSystem(QObject *parent)
     : QObject(parent)
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     m_maxBackupsPerFile = settings.value("backup/maxBackupsPerFile", 20).toInt();
 }
 
@@ -47,7 +47,7 @@ void BackupSystem::setMaxBackupsPerFile(int max)
         return;
     }
     m_maxBackupsPerFile = max;
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.setValue("backup/maxBackupsPerFile", m_maxBackupsPerFile);
     emit maxBackupsPerFileChanged();
 }

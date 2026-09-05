@@ -30,12 +30,12 @@
 #include <QFutureWatcher>
 #include <QLocale>
 #include <QMetaObject>
-#include <QSettings>
 #include <QThread>
 #include <QtConcurrent>
 #include <algorithm>
 
 #include "CopyWorker.h"
+#include "ApplicationSettings.h"
 #include "FileOperationUtils.h"
 #include "FolderCompareModel.h"
 #include "ImageMetadataUtils.h"
@@ -148,7 +148,7 @@ void FolderCompareSideModel::setRootPath(const QString &path)
     emit rootPathChanged();
 
     if (!m_settingsKey.isEmpty()) {
-        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+        ApplicationSettings settings;
         settings.setValue(m_settingsKey, m_rootPath);
     }
 
@@ -183,7 +183,7 @@ void FolderCompareSideModel::setSettingsKey(const QString &key)
     if (m_settingsKey.isEmpty()) {
         return;
     }
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     const QString storedPath = settings.value(m_settingsKey).toString();
     if (!storedPath.isEmpty() && QDir(storedPath).exists() && storedPath != m_rootPath) {
         setRootPath(storedPath);
@@ -265,7 +265,7 @@ void FolderCompareSideModel::setSortOrder(Qt::SortOrder order)
  */
 static QStringList junkExtensions()
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
         .toString().split(',', Qt::SkipEmptyParts);
 }

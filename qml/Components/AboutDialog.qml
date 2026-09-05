@@ -18,7 +18,7 @@ Dialog {
     y: Math.round(((dialog.parent ? dialog.parent.height : 0) - height) / 2)
     onOpened: forceActiveFocus()
 
-    property string applicationName: "Galman"
+    property string applicationName: ""
     property string applicationVersion: ""
     property string applicationDescription: qsTr("Image gallery manager for fast browsing, comparison, and file operations.")
 

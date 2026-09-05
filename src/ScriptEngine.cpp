@@ -21,6 +21,8 @@
 
 #include "ScriptEngine.h"
 
+#include "ApplicationInfo.h"
+#include "ApplicationSettings.h"
 #include "ComfyClient.h"
 #include "ComfyWorkflowParser.h"
 #include "PlatformUtils.h"
@@ -37,7 +39,6 @@
 #include <QMetaType>
 #include <QProcess>
 #include <QRegularExpression>
-#include <QSettings>
 #include <QTransform>
 #include <QVariantMap>
 #include <algorithm>
@@ -123,7 +124,7 @@ QString ScriptEngine::processStatusMessage() const
  */
 QString ScriptEngine::lastScriptPath() const
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     return settings.value("scripts/lastScriptPath", QString()).toString();
 }
 
@@ -136,7 +137,7 @@ void ScriptEngine::setLastScriptPath(const QString &path)
     if (lastScriptPath() == path) {
         return;
     }
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.setValue("scripts/lastScriptPath", path);
     settings.sync();
     emit lastScriptPathChanged();
@@ -667,7 +668,7 @@ QVariantMap ScriptEngine::runComfyWorkflow(const QString &workflowPath,
     QVariantMap comfyResult = client.runWorkflow(
         resolvedServer,
         payload,
-        "galman",
+        ApplicationInfo::applicationName().toLower(),
         30000,
         1000,
         180000
@@ -932,7 +933,7 @@ QVariantMap ScriptEngine::loadScriptParams(const QString &scriptPath)
 
     const QFileInfo info(scriptPath);
     const QString scriptKey = info.completeBaseName();
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup("scripts");
     settings.beginGroup(scriptKey);
 
@@ -958,7 +959,7 @@ void ScriptEngine::saveScriptParams(const QString &scriptPath, const QVariantMap
     }
     const QFileInfo info(scriptPath);
     const QString scriptKey = info.completeBaseName();
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup("scripts");
     settings.beginGroup(scriptKey);
 

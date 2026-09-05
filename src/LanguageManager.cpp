@@ -20,10 +20,10 @@
 \************************************************************************/
 
 #include "LanguageManager.h"
+#include "ApplicationSettings.h"
 
 #include <QCoreApplication>
 #include <QLocale>
-#include <QSettings>
 
 namespace
 {
@@ -152,14 +152,14 @@ void LanguageManager::retranslateQml()
 
 void LanguageManager::saveCurrentLanguage()
 {
-    QSettings settings;
+    ApplicationSettings settings;
     settings.beginGroup(QLatin1String(settingsGroup));
     settings.setValue(QLatin1String(settingsKey), m_currentLanguage);
 }
 
 QString LanguageManager::loadSavedLanguage() const
 {
-    QSettings settings;
+    ApplicationSettings settings;
     settings.beginGroup(QLatin1String(settingsGroup));
     return settings.value(QLatin1String(settingsKey)).toString();
 }

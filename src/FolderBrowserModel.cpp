@@ -37,6 +37,7 @@
 #include <QThread>
 
 #include "CopyWorker.h"
+#include "ApplicationSettings.h"
 #include "FileOperationUtils.h"
 #include "ImageMetadataUtils.h"
 #include "PlatformUtils.h"
@@ -223,7 +224,7 @@ void FolderBrowserModel::setRootPath(const QString &path)
     m_rootPath = path;
     emit rootPathChanged();
     if (!m_settingsKey.isEmpty()) {
-        QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+        ApplicationSettings settings;
         settings.setValue(m_settingsKey, m_rootPath);
     }
 
@@ -266,7 +267,7 @@ void FolderBrowserModel::setSettingsKey(const QString &key)
     if (m_settingsKey.isEmpty()) {
         return;
     }
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     const QString storedPath = settings.value(m_settingsKey).toString();
     if (!storedPath.isEmpty() && QDir(storedPath).exists() && storedPath != m_rootPath) {
         setRootPath(storedPath);
@@ -360,7 +361,7 @@ bool FolderBrowserModel::showDirsFirst() const
  */
 QStringList FolderBrowserModel::junkExtensions()
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1")
         .toString().split(',', Qt::SkipEmptyParts);
 }
@@ -371,7 +372,7 @@ QStringList FolderBrowserModel::junkExtensions()
  */
 QString FolderBrowserModel::junkExtensionsString() const
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     return settings.value("junkFiles/extensions", ".jpg~,.png~,.blend1").toString();
 }
 
@@ -381,7 +382,7 @@ QString FolderBrowserModel::junkExtensionsString() const
  */
 void FolderBrowserModel::setJunkExtensionsList(const QString &extensions)
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.setValue("junkFiles/extensions", extensions);
 }
 

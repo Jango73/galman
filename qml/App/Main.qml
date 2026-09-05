@@ -10,7 +10,7 @@ ApplicationWindow {
     width: 1200
     height: 800
     visible: true
-    title: qsTr("Galman")
+    title: Qt.application.displayName
     onClosing: (close) => {
         stopActiveOperations()
     }
@@ -1422,7 +1422,7 @@ ApplicationWindow {
     AboutDialog {
         id: aboutDialog
         parent: window.contentItem
-        applicationName: qsTr("Galman")
+        applicationName: Qt.application.displayName
         applicationVersion: Qt.application.version
         applicationDescription: qsTr("Image gallery manager for fast browsing, comparison, and file operations.")
     }

@@ -19,6 +19,8 @@ find_package(Qt6 6.2 REQUIRED COMPONENTS Quick Concurrent Network Multimedia Sha
 qt_add_executable(galman
     src/main.cpp
         src/AppLogger.cpp
+        src/ApplicationInfo.cpp
+        src/ApplicationSettings.cpp
         src/ScriptEngine.cpp
         src/ScriptManager.cpp
         src/LanguageManager.cpp
@@ -79,6 +81,8 @@ qt_add_qml_module(galman
         src/ComfyPilotWorker.h
         src/ComfyPilotController.h
         src/PlatformUtils.h
+        src/ApplicationInfo.h
+        src/ApplicationSettings.h
         src/ImageMetadataUtils.h
         src/ImageMetadataUtils.cpp
         src/VideoThumbnailUtils.h

@@ -30,6 +30,7 @@
 #include <QVariantList>
 
 #include "ComfyClient.h"
+#include "ApplicationInfo.h"
 #include "PlatformUtils.h"
 #include "VideoThumbnailUtils.h"
 
@@ -272,7 +273,7 @@ QVariantMap ComfyPilotWorker::submitPrompt(const QString &serverUrl, const QJson
 
     ComfyClient client;
     QVariantMap comfyResult = client.runWorkflowCancellable(
-        serverUrl, payload, QStringLiteral("galman"),
+        serverUrl, payload, ApplicationInfo::applicationName().toLower(),
         PilotNetworkConstants::requestTimeoutMs,
         PilotNetworkConstants::pollIntervalMs,
         PilotNetworkConstants::maxPollMs,

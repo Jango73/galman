@@ -25,8 +25,8 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QSet>
-#include <QSettings>
 
+#include "ApplicationSettings.h"
 #include "ComfyClient.h"
 #include "ComfyPilotWorker.h"
 #include "ComfyPromptImporter.h"
@@ -756,7 +756,7 @@ void ComfyPilotController::cancel()
  */
 void ComfyPilotController::loadParameters()
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup(settingsGroup);
     m_serverUrl = settings.value(QStringLiteral("serverUrl"), m_serverUrl).toString();
     m_positivePrompt = settings.value(QStringLiteral("positivePrompt"), m_positivePrompt).toString();
@@ -792,7 +792,7 @@ void ComfyPilotController::loadParameters()
  */
 void ComfyPilotController::restoreOutputPath()
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup(settingsGroup);
     const QString savedPath = settings.value(QString::fromLatin1(settingsOutputPath)).toString();
     settings.endGroup();
@@ -818,7 +818,7 @@ void ComfyPilotController::restoreOutputPath()
  */
 void ComfyPilotController::saveParameters() const
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup(settingsGroup);
     settings.setValue(QStringLiteral("serverUrl"), m_serverUrl);
     settings.setValue(QStringLiteral("positivePrompt"), m_positivePrompt);
@@ -979,7 +979,7 @@ void ComfyPilotController::setOutputPath(const QString &value, bool isVideo)
 {
     m_outputPath = value;
     m_outputIsVideo = isVideo;
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup(settingsGroup);
     settings.setValue(QString::fromLatin1(settingsOutputPath), m_outputPath);
     settings.endGroup();

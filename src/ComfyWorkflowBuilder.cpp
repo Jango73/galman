@@ -19,6 +19,7 @@
 \************************************************************************/
 
 #include "ComfyWorkflowBuilder.h"
+#include "ApplicationInfo.h"
 
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -120,7 +121,7 @@ QString ComfyWorkflowBuilder::ModelConstants::faceMaskControl()
 
 QString ComfyWorkflowBuilder::ModelConstants::savePrefix()
 {
-    return QStringLiteral("Galman");
+    return ApplicationInfo::applicationName();
 }
 
 QString ComfyWorkflowBuilder::ModelConstants::videoUnetName()

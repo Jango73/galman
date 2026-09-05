@@ -19,9 +19,9 @@
 \************************************************************************/
 
 #include "FavoritePairsManager.h"
+#include "ApplicationSettings.h"
 
 #include <QDir>
-#include <QSettings>
 
 namespace {
 constexpr char favoritesGroup[] = "favorites";
@@ -110,7 +110,7 @@ bool FavoritePairsManager::isValid(const FavoritePair &pair) const
 void FavoritePairsManager::loadFromSettings()
 {
     m_pairs.clear();
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup(QLatin1String(favoritesGroup));
     const int count = settings.beginReadArray(QLatin1String(favoritesArray));
     for (int i = 0; i < count; ++i) {
@@ -128,7 +128,7 @@ void FavoritePairsManager::loadFromSettings()
 
 void FavoritePairsManager::saveToSettings() const
 {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Galman", "Galman");
+    ApplicationSettings settings;
     settings.beginGroup(QLatin1String(favoritesGroup));
     settings.remove(QLatin1String(""));
     settings.beginWriteArray(QLatin1String(favoritesArray));
