@@ -245,6 +245,7 @@ void FolderBrowserModel::setSettingsKey(const QString &key)
     if (!storedPath.isEmpty() && QDir(storedPath).exists() && storedPath != m_rootPath) {
         setRootPath(storedPath);
     }
+    restoreViewSettings();
 }
 
 QString FolderBrowserModel::nameFilter() const
@@ -1048,6 +1049,42 @@ void FolderBrowserModel::rebuildEntries()
         m_selectionManager.setSelectedKeys(nextSelection);
         notifySelectionChanged();
     }
+    saveViewSettings();
+}
+
+void FolderBrowserModel::saveViewSettings() const
+{
+    if (m_settingsKey.isEmpty()) {
+        return;
+    }
+    m_filterSettings.saveViewSettings(m_settingsKey + QStringLiteral("/view"));
+}
+
+void FolderBrowserModel::restoreViewSettings()
+{
+    qInfo() << "FolderBrowserModel::restoreViewSettings" << m_settingsKey;
+    if (m_settingsKey.isEmpty()) {
+        return;
+    }
+    FolderFilterSettings stored;
+    stored.loadViewSettings(m_settingsKey + QStringLiteral("/view"));
+    setNameFilter(stored.nameFilter());
+    const int sortKey = stored.sortKeyValue();
+    if (sortKey >= Name && sortKey <= Signature) {
+        setSortKey(static_cast<SortKey>(sortKey));
+    }
+    const int sortOrder = static_cast<int>(stored.sortOrder());
+    if (sortOrder == Qt::AscendingOrder || sortOrder == Qt::DescendingOrder) {
+        setSortOrder(static_cast<Qt::SortOrder>(sortOrder));
+    }
+    setShowDirsFirst(stored.showFoldersFirst());
+    setHideJunkFiles(stored.hideJunkFiles());
+    setMinimumByteSize(stored.minimumByteSize());
+    setMaximumByteSize(stored.maximumByteSize());
+    setMinimumImageWidth(stored.minimumImageWidth());
+    setMaximumImageWidth(stored.maximumImageWidth());
+    setMinimumImageHeight(stored.minimumImageHeight());
+    setMaximumImageHeight(stored.maximumImageHeight());
 }
 
 void FolderBrowserModel::requestImageSizeRefresh()

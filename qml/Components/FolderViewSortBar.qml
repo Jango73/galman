@@ -23,6 +23,7 @@ ColumnLayout {
     property Item previousFocusItem: null
     property Item nextFocusItem: null
     property bool filterSelectByMouseEnabled: true
+    property bool controlsReady: false
     property bool filterFieldActiveFocus: nameFilterField.activeFocus
         || minimumByteSizeField.activeFocus
         || maximumByteSizeField.activeFocus
@@ -114,6 +115,9 @@ ColumnLayout {
             KeyNavigation.backtab: refreshButton
             KeyNavigation.tab: sortOrderBox
             onCurrentIndexChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 if (root.browserModel) {
                     root.browserModel.sortKey = currentIndex
                 }
@@ -127,6 +131,9 @@ ColumnLayout {
             KeyNavigation.backtab: sortCombo
             KeyNavigation.tab: dirsFirstBox
             onToggled: {
+                if (!root.controlsReady) {
+                    return
+                }
                 if (root.browserModel) {
                     root.browserModel.sortOrder = sortOrderBox.checked ? Qt.DescendingOrder : Qt.AscendingOrder
                 }
@@ -140,6 +147,9 @@ ColumnLayout {
             KeyNavigation.backtab: sortOrderBox
             KeyNavigation.tab: hideJunkBox
             onToggled: {
+                if (!root.controlsReady) {
+                    return
+                }
                 if (root.browserModel) {
                     root.browserModel.showDirsFirst = dirsFirstBox.checked
                 }
@@ -154,6 +164,9 @@ ColumnLayout {
             KeyNavigation.tab: nameFilterField
             checked: true
             onToggled: {
+                if (!root.controlsReady) {
+                    return
+                }
                 if (root.browserModel) {
                     root.browserModel.hideJunkFiles = hideJunkBox.checked
                 }
@@ -189,6 +202,9 @@ ColumnLayout {
             KeyNavigation.backtab: hideJunkBox
             KeyNavigation.tab: minimumByteSizeField
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 if (root.browserModel) {
                     root.browserModel.nameFilter = nameFilterField.text
                 }
@@ -206,6 +222,9 @@ ColumnLayout {
             KeyNavigation.tab: maximumByteSizeField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 const value = parseNumberFilter(minimumByteSizeField.text)
                 setBrowserFilterValue((valueToSet) => { root.browserModel.minimumByteSize = valueToSet }, value)
                 root.minimumByteSizeChangedByUser(value)
@@ -222,6 +241,9 @@ ColumnLayout {
             KeyNavigation.tab: minimumImageWidthField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 const value = parseNumberFilter(maximumByteSizeField.text)
                 setBrowserFilterValue((valueToSet) => { root.browserModel.maximumByteSize = valueToSet }, value)
                 root.maximumByteSizeChangedByUser(value)
@@ -237,6 +259,9 @@ ColumnLayout {
             KeyNavigation.tab: minimumImageHeightField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 const value = parseNumberFilter(minimumImageWidthField.text)
                 setBrowserFilterValue((valueToSet) => { root.browserModel.minimumImageWidth = valueToSet }, value)
                 root.minimumImageWidthChangedByUser(value)
@@ -252,6 +277,9 @@ ColumnLayout {
             KeyNavigation.tab: maximumImageWidthField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 const value = parseNumberFilter(minimumImageHeightField.text)
                 setBrowserFilterValue((valueToSet) => { root.browserModel.minimumImageHeight = valueToSet }, value)
                 root.minimumImageHeightChangedByUser(value)
@@ -267,6 +295,9 @@ ColumnLayout {
             KeyNavigation.tab: maximumImageHeightField
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 const value = parseNumberFilter(maximumImageWidthField.text)
                 setBrowserFilterValue((valueToSet) => { root.browserModel.maximumImageWidth = valueToSet }, value)
                 root.maximumImageWidthChangedByUser(value)
@@ -282,6 +313,9 @@ ColumnLayout {
             KeyNavigation.tab: clearFiltersButton
             inputMethodHints: Qt.ImhDigitsOnly
             onTextChanged: {
+                if (!root.controlsReady) {
+                    return
+                }
                 const value = parseNumberFilter(maximumImageHeightField.text)
                 setBrowserFilterValue((valueToSet) => { root.browserModel.maximumImageHeight = valueToSet }, value)
                 root.maximumImageHeightChangedByUser(value)

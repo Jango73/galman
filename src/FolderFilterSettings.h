@@ -60,6 +60,9 @@ public:
     static qint64 normalizedByteSize(qint64 value);
     static int normalizedDimension(int value);
 
+    void saveViewSettings(const QString &group) const;
+    void loadViewSettings(const QString &group);
+
 private:
     QString m_nameFilter;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;

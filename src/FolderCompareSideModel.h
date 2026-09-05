@@ -234,6 +234,8 @@ private:
     void updateSelectionTotalsAsync();
     void setSelectionTotals(int fileCount, qint64 totalBytes);
     void rebuildSelectedPaths();
+    void saveViewSettings() const;
+    void restoreViewSettings();
 
     const CompareEntry *entryForRow(int row) const;
     CompareEntry *entryForRow(int row);

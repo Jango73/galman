@@ -208,6 +208,8 @@ private:
     void updateSelectionTotalsAsync();
     void setSelectionTotals(int fileCount, qint64 totalBytes);
     QString keyForRow(int row) const;
+    void saveViewSettings() const;
+    void restoreViewSettings();
 
     QString m_rootPath;
     QString m_settingsKey;

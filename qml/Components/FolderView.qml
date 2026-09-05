@@ -105,6 +105,7 @@ FocusScope {
         if (browserModel) {
             browserModel.settingsKey = settingsKey
         }
+        syncControlsFromModel()
         updateSelectedMediaPath()
     }
 
@@ -1004,10 +1005,12 @@ FocusScope {
         }
     }
 
-    Component.onCompleted: {
+    function syncControlsFromModel() {
         if (!browserModel) {
             return
         }
+        const wasReady = sortBar.controlsReady
+        sortBar.controlsReady = false
         sortBar.sortCombo.currentIndex = browserModel.sortKey
         sortBar.sortOrderBox.checked = browserModel.sortOrder === Qt.DescendingOrder
         sortBar.dirsFirstBox.checked = browserModel.showDirsFirst
@@ -1019,6 +1022,13 @@ FocusScope {
         sortBar.maximumImageWidthField.text = browserModel.maximumImageWidth < 0 ? "" : String(browserModel.maximumImageWidth)
         sortBar.minimumImageHeightField.text = browserModel.minimumImageHeight < 0 ? "" : String(browserModel.minimumImageHeight)
         sortBar.maximumImageHeightField.text = browserModel.maximumImageHeight < 0 ? "" : String(browserModel.maximumImageHeight)
+        sortBar.controlsReady = wasReady
+    }
+
+    Component.onCompleted: {
+        sortBar.controlsReady = false
+        syncControlsFromModel()
+        sortBar.controlsReady = true
         const volumeIndex = volumeModel.indexForPath(browserModel.rootPath)
         if (volumeIndex >= 0) {
             volumeUpdating = true

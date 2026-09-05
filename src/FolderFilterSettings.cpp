@@ -172,3 +172,50 @@ int FolderFilterSettings::normalizedDimension(int value)
 {
     return value < 0 ? unsetDimension : value;
 }
+
+void FolderFilterSettings::saveViewSettings(const QString &group) const
+{
+    if (group.isEmpty()) {
+        return;
+    }
+    ApplicationSettings settings;
+    settings.setValue(group + QStringLiteral("/nameFilter"), m_nameFilter);
+    settings.setValue(group + QStringLiteral("/sortKey"), m_sortKeyValue);
+    settings.setValue(group + QStringLiteral("/sortOrder"), static_cast<int>(m_sortOrder));
+    settings.setValue(group + QStringLiteral("/showFoldersFirst"), m_showFoldersFirst);
+    settings.setValue(group + QStringLiteral("/hideJunkFiles"), m_hideJunkFiles);
+    settings.setValue(group + QStringLiteral("/minimumByteSize"), m_minimumByteSize);
+    settings.setValue(group + QStringLiteral("/maximumByteSize"), m_maximumByteSize);
+    settings.setValue(group + QStringLiteral("/minimumImageWidth"), m_minimumImageWidth);
+    settings.setValue(group + QStringLiteral("/maximumImageWidth"), m_maximumImageWidth);
+    settings.setValue(group + QStringLiteral("/minimumImageHeight"), m_minimumImageHeight);
+    settings.setValue(group + QStringLiteral("/maximumImageHeight"), m_maximumImageHeight);
+}
+
+void FolderFilterSettings::loadViewSettings(const QString &group)
+{
+    if (group.isEmpty()) {
+        return;
+    }
+    ApplicationSettings settings;
+    m_nameFilter = settings.value(group + QStringLiteral("/nameFilter"), m_nameFilter).toString();
+    m_sortKeyValue = settings.value(group + QStringLiteral("/sortKey"), m_sortKeyValue).toInt();
+    m_sortOrder = static_cast<Qt::SortOrder>(
+        settings.value(group + QStringLiteral("/sortOrder"), static_cast<int>(m_sortOrder)).toInt());
+    m_showFoldersFirst =
+        settings.value(group + QStringLiteral("/showFoldersFirst"), m_showFoldersFirst).toBool();
+    m_hideJunkFiles =
+        settings.value(group + QStringLiteral("/hideJunkFiles"), m_hideJunkFiles).toBool();
+    m_minimumByteSize =
+        settings.value(group + QStringLiteral("/minimumByteSize"), m_minimumByteSize).toLongLong();
+    m_maximumByteSize =
+        settings.value(group + QStringLiteral("/maximumByteSize"), m_maximumByteSize).toLongLong();
+    m_minimumImageWidth =
+        settings.value(group + QStringLiteral("/minimumImageWidth"), m_minimumImageWidth).toInt();
+    m_maximumImageWidth =
+        settings.value(group + QStringLiteral("/maximumImageWidth"), m_maximumImageWidth).toInt();
+    m_minimumImageHeight =
+        settings.value(group + QStringLiteral("/minimumImageHeight"), m_minimumImageHeight).toInt();
+    m_maximumImageHeight =
+        settings.value(group + QStringLiteral("/maximumImageHeight"), m_maximumImageHeight).toInt();
+}
