@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/Jango73/galman/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Jango73/galman/actions/workflows/build.yml)
 
-Galman is an image gallery manager. It lets you browse folders, compare sets of files, preview images, and sort or move selections. The interface focuses on fast navigation and visual comparison.
+Galman is an image gallery manager. It lets you browse folders, compare sets of files, preview images, and sort or move selections. The interface focuses on fast navigation and visual comparison. It can also generate images and videos with ComfyUI.
 
 The app also supports automation scripts, and you can add your own JavaScript scripts by dropping them into the `data/scripts/` folder.
 
@@ -86,5 +86,5 @@ Interactive release helper:
 ## Architecture
 - **User interface (QML)**: `qml/App/Main.qml` drives the main screen. Reusable components live in `qml/Components`. Visual theme is defined in `qml/Theme.qml`.
 - **Models and logic (C++)**: `src` contains the QML-exposed models (`FolderBrowserModel`, `FolderCompareModel`, `VolumeModel`) and copy operations through `CopyWorker`. `ScriptEngine` and `ScriptManager` handle script execution and discovery.
-- **Integration**: `ComfyClient` and `ComfyWorkflowParser` handle external workflows related to image processing.
+- **Integration**: `ComfyClient` and `ComfyWorkflowParser` handle external ComfyUI workflows. `ComfyPilotController`/`ComfyPilotWorker`/`ComfyWorkflowBuilder` drive image and video generation, `ComfyPrerequisites` checks required nodes and models, and `ComfyPromptImporter` restores parameters from PNG files.
 - **Application entry**: `src/main.cpp` initializes Qt, loads the QML scene, and exposes C++ services to the interface.
